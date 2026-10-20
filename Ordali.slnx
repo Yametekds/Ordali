@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Ordali.Api/Ordali.Api.csproj" />
+    <Project Path="src/Ordali.Client/Ordali.Client.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ordali.Api.Tests/Ordali.Api.Tests.csproj" />
