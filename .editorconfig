@@ -391,3 +391,9 @@ dotnet_naming_style.s_camelcase.capitalization = camel_case
 # Test names use underscores for readability
 [tests/**.cs]
 dotnet_diagnostic.CA1707.severity = none
+# Inline arrays keep test data next to the assertion
+dotnet_diagnostic.CA1861.severity = none
+
+# EF Core migrations are generated
+[src/**/Migrations/*.cs]
+generated_code = true
