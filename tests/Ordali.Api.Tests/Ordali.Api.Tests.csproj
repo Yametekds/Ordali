@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ordali.Api\Ordali.Api.csproj" />
+    <ProjectReference Include="..\..\src\Ordali.Client\Ordali.Client.csproj" />
   </ItemGroup>
 
 </Project>

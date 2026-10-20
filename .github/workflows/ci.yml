@@ -26,6 +26,12 @@ jobs:
         run: docker compose up -d --build --wait
       - name: Check the API is ready
         run: curl --fail --retry 10 --retry-delay 3 --retry-all-errors http://localhost:8080/health/ready
+      - name: Sign in and read the catalogue
+        run: |
+          token=$(curl --fail -s http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@demo.local","password":"Demo1234!"}' | jq -r .accessToken)
+          curl --fail -s http://localhost:8080/api/v1/products -H "Authorization: Bearer $token" | jq -e 'length > 0'
       - name: Show logs on failure
         if: failure()
         run: docker compose logs
