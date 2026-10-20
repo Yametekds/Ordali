@@ -1,9 +1,8 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Ordali.Api.Tests;
 
-public class HealthEndpointsTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointsTests(OrdaliApiFactory factory) : IClassFixture<OrdaliApiFactory>
 {
     [Fact]
     public async Task Live_returns_healthy()
