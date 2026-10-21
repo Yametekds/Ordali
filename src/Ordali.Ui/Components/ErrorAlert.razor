@@ -1,0 +1,17 @@
+@if (Error is not null)
+{
+    <div class="alert alert-error" role="alert">
+        <Icon Name="alert" />
+        <span>@Message</span>
+    </div>
+}
+
+@code {
+    [Parameter] public Exception? Error { get; set; }
+
+    private string Message => Error switch
+    {
+        ApiException api => api.Message,
+        _ => "Algo ha fallado. Inténtalo de nuevo.",
+    };
+}

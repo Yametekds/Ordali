@@ -1,0 +1,151 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject AuthService Auth
+@inject SessionState Session
+@inject NavigationManager Navigation
+@inject OrdaliClientOptions Options
+
+<div class="shell @(menuOpen ? "menu-open" : "")">
+    <header class="topbar">
+        <button class="topbar-menu" type="button" aria-label="@(menuOpen ? "Cerrar menú" : "Abrir menú")" aria-expanded="@menuOpen" @onclick="ToggleMenu">
+            <Icon Name="@(menuOpen ? "close" : "menu")" />
+        </button>
+        <a class="topbar-brand" href=""><BrandLogo Size="34" /></a>
+        @if (Options.IsDemo)
+        {
+            <span class="pill pill-demo" title="Los datos son de ejemplo y se guardan solo en esta pestaña.">Demo</span>
+        }
+        <span class="topbar-spacer"></span>
+        @if (User is { } user)
+        {
+            <div class="user">
+                <span class="avatar">@Initials(user.Name)</span>
+                <span class="user-text">
+                    <strong>@user.Name</strong>
+                    <small>@Labels.Of(user.Category)</small>
+                </span>
+                <button class="btn btn-ghost btn-icon" title="Salir" aria-label="Salir" @onclick="LogoutAsync">
+                    <Icon Name="logout" />
+                </button>
+            </div>
+        }
+    </header>
+
+    <aside class="sidebar" aria-label="Menú">
+        <nav class="nav">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>Inicio</span></NavLink>
+
+            @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
+            {
+                <div class="nav-section">Operación</div>
+                @if (Can(Permissions.MovementsView))
+                {
+                    <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>Entradas</span></NavLink>
+                }
+                @if (Can(Permissions.MovementsCreate))
+                {
+                    <NavLink class="nav-link" href="traslados"><Icon Name="dolly" /><span>Traslados</span></NavLink>
+                }
+                @if (Can(Permissions.StockView))
+                {
+                    <NavLink class="nav-link" href="stock"><Icon Name="layers" /><span>Stock</span></NavLink>
+                }
+                @if (Can(Permissions.MovementsView))
+                {
+                    <NavLink class="nav-link" href="movimientos"><Icon Name="swap" /><span>Movimientos</span></NavLink>
+                }
+                @if (Can(Permissions.LocationsView))
+                {
+                    <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>Ubicaciones</span></NavLink>
+                }
+            }
+
+            @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))
+            {
+                <div class="nav-section">Registros</div>
+                @if (Can(Permissions.ProductsView))
+                {
+                    <NavLink class="nav-link" href="registros/productos"><Icon Name="box" /><span>Productos</span></NavLink>
+                }
+                @if (Can(Permissions.UsersView))
+                {
+                    <NavLink class="nav-link" href="registros/usuarios" Match="NavLinkMatch.All"><Icon Name="users" /><span>Usuarios</span></NavLink>
+                    <div class="nav-sub">
+                        @foreach (var category in Categories)
+                        {
+                            <a class="nav-link nav-link-sub @(IsCategoryActive(category) ? "active" : "")" href="registros/usuarios?categoria=@category">
+                                <span>@Labels.Plural(category)</span>
+                            </a>
+                        }
+                    </div>
+                }
+            }
+
+            @if (Can(Permissions.UsersCreate) || Can(Permissions.UsersView))
+            {
+                <div class="nav-section">Administración</div>
+                <NavLink class="nav-link" href="plantillas"><Icon Name="shield" /><span>Plantillas de perfil</span></NavLink>
+            }
+
+            @HostLinks
+        </nav>
+    </aside>
+    <div class="scrim" @onclick="CloseMenu"></div>
+
+    <main class="content">
+        @Body
+    </main>
+</div>
+
+@code {
+    private static readonly UserCategory[] Categories = [UserCategory.Admin, UserCategory.Supervisor, UserCategory.Operator];
+
+    [CascadingParameter(Name = "HostLinks")] private RenderFragment? HostLinks { get; set; }
+
+    private bool menuOpen;
+
+    private UserInfo? User => Session.IsAuthenticated ? Session.Current!.User : null;
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        Session.Changed += OnSessionChanged;
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+        Session.Changed -= OnSessionChanged;
+    }
+
+    private bool Can(string permission) => User?.Can(permission) ?? false;
+
+    private void ToggleMenu() => menuOpen = !menuOpen;
+
+    private void CloseMenu() => menuOpen = false;
+
+    // Closing the drawer on navigation also refreshes which user category link is highlighted.
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        menuOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnSessionChanged() => InvokeAsync(StateHasChanged);
+
+    private bool IsCategoryActive(UserCategory category)
+    {
+        var uri = new Uri(Navigation.Uri);
+        return Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("registros/usuarios", StringComparison.Ordinal)
+            && uri.Query.Contains($"categoria={category}", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task LogoutAsync()
+    {
+        await Auth.LogoutAsync();
+        Navigation.NavigateTo("login");
+    }
+
+    private static string Initials(string name) =>
+        string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => char.ToUpperInvariant(part[0])));
+}

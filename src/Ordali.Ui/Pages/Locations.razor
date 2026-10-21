@@ -1,0 +1,228 @@
+@page "/ubicaciones"
+@attribute [Authorize(Policy = Permissions.LocationsView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>Ubicaciones · Ordali</PageTitle>
+
+<PageHeader Title="Ubicaciones" Subtitle="Almacenes, zonas y huecos">
+    <Actions>
+        @if (sites is { Count: > 1 })
+        {
+            <select class="select" aria-label="Almacén" @onchange="OnSiteChangedAsync">
+                @foreach (var site in sites)
+                {
+                    <option value="@site.Id" selected="@(site.Id == siteId)">@site.Code · @site.Name</option>
+                }
+            </select>
+        }
+        else if (sites is { Count: 1 })
+        {
+            <span class="pill">@sites[0].Code · @sites[0].Name</span>
+        }
+        @if (CanCreate && !adding)
+        {
+            <button type="button" class="btn btn-primary" @onclick="StartAdding"><Icon Name="plus" /><span>Nueva ubicación</span></button>
+        }
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (created is not null)
+{
+    <div class="alert alert-ok" role="status"><Icon Name="check" /><span>Ubicación <strong class="mono">@created.Code</strong> creada en @created.Zone.</span></div>
+}
+
+@if (adding)
+{
+    <div class="card form-card">
+        <h2 class="card-title">Nueva ubicación</h2>
+        <EditForm Model="newLocation" OnValidSubmit="CreateAsync" FormName="location">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label class="field">
+                    <span>Código</span>
+                    <InputText @bind-Value="newLocation.Code" placeholder="A-03-01" autocomplete="off" />
+                    <ValidationMessage For="() => newLocation.Code" />
+                </label>
+                <label class="field">
+                    <span>Zona</span>
+                    <InputText @bind-Value="newLocation.Zone" list="zones" placeholder="Pasillo A" autocomplete="off" />
+                    <datalist id="zones">
+                        @foreach (var zone in (locations ?? []).Select(l => l.Zone).Distinct())
+                        {
+                            <option value="@zone"></option>
+                        }
+                    </datalist>
+                    <ValidationMessage For="() => newLocation.Zone" />
+                </label>
+                <label class="field">
+                    <span>Tipo</span>
+                    <InputSelect @bind-Value="newLocation.Type">
+                        @foreach (var type in Enum.GetValues<LocationType>())
+                        {
+                            <option value="@type">@Labels.Of(type)</option>
+                        }
+                    </InputSelect>
+                </label>
+            </div>
+
+            @if (duplicateWarning is not null)
+            {
+                <div class="alert alert-warning" role="alert">
+                    <Icon Name="alert" />
+                    <span>@duplicateWarning ¿Quieres crearla igualmente?</span>
+                </div>
+            }
+
+            <div class="form-actions">
+                <button type="button" class="btn" @onclick="CancelAdding">Cancelar</button>
+                @if (duplicateWarning is null)
+                {
+                    <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Creando…" : "Crear ubicación")</button>
+                }
+                else
+                {
+                    <button class="btn" type="submit" disabled="@busy">Comprobar otro código</button>
+                    <button class="btn btn-primary" type="button" disabled="@busy" @onclick="CreateDuplicateAsync">Crear igualmente</button>
+                }
+            </div>
+        </EditForm>
+    </div>
+}
+
+@if (locations is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (locations.Count == 0)
+{
+    <EmptyState IconName="map" Text="Este almacén no tiene ubicaciones." />
+}
+else
+{
+    @foreach (var zone in locations.GroupBy(l => l.Zone).OrderBy(g => g.Key, StringComparer.Ordinal))
+    {
+        <section class="zone">
+            <h2>@zone.Key</h2>
+            <div class="tiles">
+                @foreach (var location in zone)
+                {
+                    var lines = stock.Where(s => s.LocationId == location.Id).ToList();
+                    <a class="tile @(lines.Count == 0 ? "tile-empty" : "")" href="stock?ubicacion=@location.Id">
+                        <span class="tile-code">@location.Code</span>
+                        <span class="badge">@Labels.Of(location.Type)</span>
+                        <span class="muted small">
+                            @Summary(lines)
+                        </span>
+                    </a>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private IReadOnlyList<Site>? sites;
+    private IReadOnlyList<Location>? locations;
+    private IReadOnlyList<StockItem> stock = [];
+    private Guid? siteId;
+    private Exception? error;
+    private LocationInput newLocation = new();
+    private Location? created;
+    private string? duplicateWarning;
+    private bool adding;
+    private bool busy;
+
+    private bool CanCreate => Session.Current?.User.Can(Permissions.LocationsEdit) == true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            sites = await Api.GetSitesAsync();
+            siteId = sites.FirstOrDefault()?.Id;
+            stock = await Api.GetStockAsync();
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task OnSiteChangedAsync(ChangeEventArgs e)
+    {
+        siteId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        try
+        {
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private static string Summary(List<StockItem> lines)
+    {
+        if (lines.Count == 0)
+        {
+            return "Vacía";
+        }
+
+        var products = lines.Select(l => l.ProductId).Distinct().Count();
+        return $"{products} {(products == 1 ? "artículo" : "artículos")} · {Labels.Quantity(lines.Sum(l => l.Quantity))} uds";
+    }
+
+    private async Task LoadAsync() => locations = await Api.GetLocationsAsync(siteId);
+
+    private void StartAdding()
+    {
+        adding = true;
+        created = null;
+        newLocation = new LocationInput { SiteId = siteId };
+        duplicateWarning = null;
+    }
+
+    private void CancelAdding()
+    {
+        adding = false;
+        duplicateWarning = null;
+    }
+
+    private Task CreateAsync() => SaveAsync(allowDuplicate: false);
+
+    private Task CreateDuplicateAsync() => SaveAsync(allowDuplicate: true);
+
+    // A code that already exists comes back as 409: the user sees the warning first and can still go ahead.
+    private async Task SaveAsync(bool allowDuplicate)
+    {
+        busy = true;
+        error = null;
+        newLocation.AllowDuplicate = allowDuplicate;
+        try
+        {
+            created = await Api.CreateLocationAsync(newLocation);
+            adding = false;
+            duplicateWarning = null;
+            await LoadAsync();
+        }
+        catch (ApiException ex) when (ex.Status == HttpStatusCode.Conflict)
+        {
+            duplicateWarning = ex.Message;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

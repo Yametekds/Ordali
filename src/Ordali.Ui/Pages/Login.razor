@@ -1,0 +1,102 @@
+@page "/login"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject OrdaliClientOptions Options
+
+<PageTitle>Iniciar sesión · Ordali</PageTitle>
+
+<div class="auth-hero">
+    <BrandLogo Size="112" ShowName="false" />
+    <span class="auth-name">Ordali</span>
+    <span class="auth-tagline">Gestión de almacén</span>
+</div>
+
+<div class="auth-card">
+    <h1>Iniciar sesión</h1>
+
+    <EditForm Model="model" OnValidSubmit="SubmitAsync" FormName="login">
+        <DataAnnotationsValidator />
+        <label class="field">
+            <span>Email</span>
+            <InputText @bind-Value="model.Email" type="email" autocomplete="username" />
+            <ValidationMessage For="() => model.Email" />
+        </label>
+        <label class="field">
+            <span>Contraseña</span>
+            <InputText @bind-Value="model.Password" type="password" autocomplete="current-password" />
+            <ValidationMessage For="() => model.Password" />
+        </label>
+
+        <ErrorAlert Error="error" />
+
+        <button class="btn btn-primary btn-block" type="submit" disabled="@busy">
+            @(busy ? "Entrando…" : "Entrar")
+        </button>
+    </EditForm>
+
+    @if (Options.IsDemo)
+    {
+        <div class="demo-users">
+            <p class="muted">Modo demo, sin servidor. Entra con un usuario de ejemplo (contraseña Demo1234!):</p>
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("admin@demo.local")'>Administrador</button>
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("encargado@demo.local")'>Encargado</button>
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("mozo@demo.local")'>Mozo</button>
+        </div>
+    }
+    else
+    {
+        <p class="muted small">Conectado a @Options.ApiBaseUrl</p>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "volver")] public string? ReturnUrl { get; set; }
+
+    private readonly LoginModel model = new();
+    private Exception? error;
+    private bool busy;
+
+    private async Task SignInAsDemoAsync(string email)
+    {
+        model.Email = email;
+        model.Password = "Demo1234!";
+        await SubmitAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Auth.LoginAsync(model.Email, model.Password);
+            Navigation.NavigateTo(SafeReturnUrl());
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // Only relative paths, so a crafted link cannot send the user to another site after signing in.
+    private string SafeReturnUrl() =>
+        ReturnUrl is { Length: > 0 } url && !url.Contains(':', StringComparison.Ordinal) && !url.StartsWith("//", StringComparison.Ordinal)
+            ? url.TrimStart('/')
+            : "";
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Escribe tu email.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "El email no es válido.")]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Escribe la contraseña.")]
+        public string Password { get; set; } = "";
+    }
+}

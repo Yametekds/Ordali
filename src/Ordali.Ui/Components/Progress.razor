@@ -1,0 +1,14 @@
+<div class="progress-row">
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="@Total" aria-valuenow="@Done" aria-label="Ubicado">
+        <span style="width: @Percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+    </div>
+    <span class="small muted">@Labels.Quantity(Done) de @Labels.Quantity(Total) ubicado</span>
+</div>
+
+@code {
+    [Parameter] public decimal Done { get; set; }
+
+    [Parameter] public decimal Total { get; set; }
+
+    private decimal Percent => Total <= 0 ? 0 : Math.Clamp(Done / Total * 100, 0, 100);
+}

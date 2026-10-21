@@ -1,0 +1,147 @@
+@page "/plantillas/nueva"
+@page "/plantillas/{Id:guid}"
+@attribute [Authorize(Policy = Policies.Admin)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>@Title · Ordali</PageTitle>
+
+<PageHeader Title="@Title" Subtitle="Marca los permisos que tendrán los perfiles creados con esta plantilla" />
+
+@if (model is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <div class="card form-card form-card-wide">
+        <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" FormName="template">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label class="field">
+                    <span>Nombre</span>
+                    <InputText @bind-Value="model.Name" />
+                    <ValidationMessage For="() => model.Name" />
+                </label>
+                <label class="field">
+                    <span>Categoría</span>
+                    <InputSelect @bind-Value="model.Category">
+                        <option value="@UserCategory.Operator">@Labels.Of(UserCategory.Operator)</option>
+                        <option value="@UserCategory.Supervisor">@Labels.Of(UserCategory.Supervisor)</option>
+                    </InputSelect>
+                    <ValidationMessage For="() => model.Category" />
+                </label>
+                <label class="field field-wide">
+                    <span>Descripción</span>
+                    <InputText @bind-Value="model.Description" placeholder="Para qué puesto es" />
+                </label>
+            </div>
+
+            <div class="perm-header">
+                <h2 class="card-title">Permisos</h2>
+                <span class="perm-tools">
+                    <button type="button" class="btn btn-sm btn-ghost" @onclick="SelectAll">Todos</button>
+                    <button type="button" class="btn btn-sm btn-ghost" @onclick="SelectNone">Ninguno</button>
+                </span>
+            </div>
+            <PermissionChecklist Selected="model.Permissions" />
+            <p class="validation-message">@permissionError</p>
+
+            <ErrorAlert Error="error" />
+
+            <div class="form-actions">
+                @if (Id is not null)
+                {
+                    <button type="button" class="btn btn-danger-ghost" @onclick="DeleteAsync" disabled="@busy"><Icon Name="trash" /><span>Borrar</span></button>
+                    <span class="topbar-spacer"></span>
+                }
+                <a class="btn" href="plantillas">Cancelar</a>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Guardando…" : "Guardar")</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private ProfileTemplateInput? model;
+    private EditContext? editContext;
+    private ValidationMessageStore? serverErrors;
+    private Exception? error;
+    private string? permissionError;
+    private bool busy;
+
+    private string Title => Id is null ? "Nueva plantilla" : "Editar plantilla";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            model = Id is { } id ? ProfileTemplateInput.From(await Api.GetTemplateAsync(id)) : new ProfileTemplateInput();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            return;
+        }
+
+        editContext = new EditContext(model);
+        serverErrors = new ValidationMessageStore(editContext);
+        editContext.OnFieldChanged += (_, e) => serverErrors.Clear(e.FieldIdentifier);
+    }
+
+    private void SelectAll() => model!.Permissions = [.. Permissions.All];
+
+    private void SelectNone() => model!.Permissions = [];
+
+    private async Task SaveAsync()
+    {
+        permissionError = model!.Permissions.Count == 0 ? "Marca al menos un permiso." : null;
+        if (permissionError is not null)
+        {
+            return;
+        }
+
+        busy = true;
+        error = null;
+        try
+        {
+            _ = Id is { } id ? await Api.UpdateTemplateAsync(id, model) : await Api.CreateTemplateAsync(model);
+            Navigation.NavigateTo("plantillas");
+        }
+        catch (ApiException ex)
+        {
+            if (!FormErrors.Show(ex, editContext!, serverErrors!))
+            {
+                error = ex;
+            }
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        busy = true;
+        try
+        {
+            await Api.DeleteTemplateAsync(Id!.Value);
+            Navigation.NavigateTo("plantillas");
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
