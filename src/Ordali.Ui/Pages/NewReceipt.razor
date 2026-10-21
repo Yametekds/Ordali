@@ -1,0 +1,287 @@
+@page "/entradas/nueva"
+@attribute [Authorize(Policy = Permissions.MovementsCreate)]
+@inject IOrdaliApi Api
+
+<PageTitle>Nueva entrada · Ordali</PageTitle>
+
+<PageHeader Title="Nueva entrada" Subtitle="Registra lo que ha llegado. Queda en el muelle hasta que se ubica desde Traslados." />
+
+@if (products is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    @if (saved is not null)
+    {
+        <div class="alert alert-ok" role="status">
+            <Icon Name="check" />
+            <span>
+                Entrada <strong class="mono">@saved.Code</strong> registrada en @saved.DockLocationCode. Ya aparece en Traslados.
+                <a href="traslados?entrada=@Uri.EscapeDataString(saved.Code)">Ubicarla ahora</a>
+            </span>
+        </div>
+    }
+
+    <div class="card form-card">
+        <div class="form-grid">
+            <label class="field">
+                <span>Código de la entrada</span>
+                <input @ref="codeInput" type="text" @bind="code" @bind:event="oninput" @onkeydown="OnCodeKeyDownAsync"
+                       placeholder="Vacío = ENT-0000 automático" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" />
+                <small class="muted">Escanea o escribe el código que identificará la entrada, por ejemplo ENTRADA2.</small>
+            </label>
+            <label class="field">
+                <span>Referencia (opcional)</span>
+                <input type="text" @bind="reference" placeholder="Albarán, pedido, proveedor…" autocomplete="off" />
+            </label>
+        </div>
+
+        <h2 class="card-title">Artículos recibidos</h2>
+        <div class="form-grid">
+            <ScanField @ref="productScan" Id="receipt-product" Label="Artículo" Placeholder="Escanea el EAN o escribe el SKU"
+                       OnScan="OnProductScanned" Class="field-wide" />
+            <label class="field field-wide">
+                <span>O elige de la lista</span>
+                <select value="@(current?.Id.ToString() ?? "")" @onchange="OnProductPickedAsync">
+                    <option value="">Elige un artículo</option>
+                    @foreach (var product in products)
+                    {
+                        <option value="@product.Id">@product.Sku · @product.Name</option>
+                    }
+                </select>
+            </label>
+        </div>
+
+        @if (current is not null)
+        {
+            <form class="line-entry" @onsubmit="AddLine">
+                <div class="line-entry-product">
+                    <strong>@current.Sku</strong> @current.Name
+                </div>
+                @if (current.TracksLots)
+                {
+                    <label class="field">
+                        <span>Lote</span>
+                        <input @ref="lotInput" type="text" @bind="lot" @bind:event="oninput" autocomplete="off" spellcheck="false" enterkeyhint="next" />
+                    </label>
+                }
+                <label class="field">
+                    <span>Cantidad (@current.Unit)</span>
+                    <input @ref="quantityInput" type="number" min="0" step="any" inputmode="decimal" @bind="quantity" @bind:event="oninput" enterkeyhint="done" />
+                </label>
+                <button class="btn btn-primary" type="submit"><Icon Name="plus" /><span>Añadir</span></button>
+            </form>
+        }
+
+        @if (lineError is not null)
+        {
+            <div class="alert alert-error" role="alert"><Icon Name="alert" /><span>@lineError</span></div>
+        }
+
+        @if (lines.Count > 0)
+        {
+            <table class="table table-compact">
+                <thead>
+                    <tr><th>SKU</th><th>Artículo</th><th>Lote</th><th class="num">Cantidad</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in lines)
+                    {
+                        <tr>
+                            <td data-label="SKU"><strong>@line.Product.Sku</strong></td>
+                            <td data-label="Artículo">@line.Product.Name</td>
+                            <td data-label="Lote" class="mono">@(line.Lot ?? "—")</td>
+                            <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Product.Unit</td>
+                            <td class="row-actions">
+                                <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @line.Product.Sku"
+                                        @onclick="() => lines.Remove(line)">
+                                    <Icon Name="trash" />
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="muted small">Escanea cada artículo, escribe la cantidad y pulsa Intro.</p>
+        }
+
+        <ErrorAlert Error="error" />
+
+        <div class="form-actions">
+            <a class="btn" href="entradas">Cancelar</a>
+            <button class="btn btn-primary" type="button" disabled="@(busy || lines.Count == 0)" @onclick="SaveAsync">
+                @(busy ? "Registrando…" : lines.Count == 0 ? "Registrar entrada" : $"Registrar entrada ({lines.Count})")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Product>? products;
+    private readonly List<Draft> lines = [];
+    private ScanField? productScan;
+    private ElementReference codeInput;
+    private ElementReference lotInput;
+    private ElementReference quantityInput;
+    private string code = "";
+    private string? reference;
+    private Product? current;
+    private string lot = "";
+    private string quantity = "";
+    private string? lineError;
+    private Receipt? saved;
+    private Exception? error;
+    private bool busy;
+    private Func<Task>? focusAfterRender;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            products = await Api.GetProductsAsync();
+            focusAfterRender = () => codeInput.FocusAsync().AsTask();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusAfterRender is { } focus)
+        {
+            focusAfterRender = null;
+            try
+            {
+                await focus();
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException)
+            {
+                // The field isn't on screen any more.
+            }
+        }
+    }
+
+    private async Task OnCodeKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && productScan is not null)
+        {
+            await productScan.FocusAsync();
+        }
+    }
+
+    private void OnProductScanned(ScanEventArgs scan)
+    {
+        var product = products!.FirstOrDefault(p => Scanning.IsProduct(scan.Code, p.Sku, p.Gtin));
+        if (product is null)
+        {
+            lineError = $"No hay ningún artículo con el código {scan.Code}.";
+            scan.Reject();
+            return;
+        }
+
+        Select(product);
+    }
+
+    private Task OnProductPickedAsync(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id) && products!.FirstOrDefault(p => p.Id == id) is { } product)
+        {
+            Select(product);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void Select(Product product)
+    {
+        current = product;
+        lot = "";
+        quantity = "";
+        lineError = null;
+        focusAfterRender = product.TracksLots ? () => lotInput.FocusAsync().AsTask() : () => quantityInput.FocusAsync().AsTask();
+    }
+
+    private void AddLine()
+    {
+        lineError = null;
+        if (current is null)
+        {
+            return;
+        }
+
+        if (current.TracksLots && string.IsNullOrWhiteSpace(lot))
+        {
+            lineError = $"{current.Sku} se controla por lotes: escribe o escanea el lote.";
+            focusAfterRender = () => lotInput.FocusAsync().AsTask();
+            return;
+        }
+
+        // Enter in the lot box just moves on to the quantity.
+        if (string.IsNullOrWhiteSpace(quantity))
+        {
+            focusAfterRender = () => quantityInput.FocusAsync().AsTask();
+            return;
+        }
+
+        if (!decimal.TryParse(quantity, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        {
+            lineError = "Escribe una cantidad mayor que cero.";
+            focusAfterRender = () => quantityInput.FocusAsync().AsTask();
+            return;
+        }
+
+        var lotValue = current.TracksLots ? lot.Trim() : null;
+        var existing = lines.FindIndex(l => l.Product.Id == current.Id && string.Equals(l.Lot, lotValue, StringComparison.OrdinalIgnoreCase));
+        if (existing >= 0)
+        {
+            lines[existing] = lines[existing] with { Quantity = lines[existing].Quantity + amount };
+        }
+        else
+        {
+            lines.Add(new Draft(current, lotValue, amount));
+        }
+
+        current = null;
+        focusAfterRender = () => productScan!.FocusAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        saved = null;
+        try
+        {
+            saved = await Api.CreateReceiptAsync(new ReceiptInput
+            {
+                Code = string.IsNullOrWhiteSpace(code) ? null : code,
+                Reference = reference,
+                Lines = [.. lines.Select(l => new ReceiptLineInput { ProductId = l.Product.Id, Lot = l.Lot, Quantity = l.Quantity })],
+            });
+            lines.Clear();
+            code = "";
+            reference = null;
+            focusAfterRender = () => codeInput.FocusAsync().AsTask();
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m))) : ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private sealed record Draft(Product Product, string? Lot, decimal Quantity);
+}

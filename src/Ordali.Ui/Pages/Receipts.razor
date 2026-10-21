@@ -1,0 +1,100 @@
+@page "/entradas"
+@attribute [Authorize(Policy = Permissions.MovementsView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>Entradas · Ordali</PageTitle>
+
+<PageHeader Title="Entradas" Subtitle="Mercancía recibida en el muelle. Se ubica desde Traslados.">
+    <Actions>
+        @if (CanCreate)
+        {
+            <a class="btn" href="traslados"><Icon Name="dolly" /><span>Traslados</span></a>
+            <a class="btn btn-primary" href="entradas/nueva"><Icon Name="plus" /><span>Nueva entrada</span></a>
+        }
+    </Actions>
+</PageHeader>
+
+<nav class="tabs" aria-label="Estado">
+    <button type="button" class="tab @(pendingOnly ? "active" : "")" @onclick="() => ShowAsync(true)">Por ubicar</button>
+    <button type="button" class="tab @(pendingOnly ? "" : "active")" @onclick="() => ShowAsync(false)">Todas</button>
+</nav>
+
+<ErrorAlert Error="error" />
+
+@if (receipts is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (receipts.Count == 0)
+{
+    <EmptyState IconName="inbox" Text="@(pendingOnly ? "No hay mercancía pendiente de ubicar." : "Todavía no hay entradas.")" />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Referencia</th>
+                    <th>Artículos</th>
+                    <th class="num">Ubicado</th>
+                    <th>Estado</th>
+                    <th>Recibida</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var receipt in receipts)
+                {
+                    <tr>
+                        <td data-label="Código" class="mono"><strong>@receipt.Code</strong></td>
+                        <td data-label="Referencia" class="muted">@receipt.Reference</td>
+                        <td data-label="Artículos">@string.Join(", ", receipt.Lines.Select(l => l.Sku))</td>
+                        <td data-label="Ubicado" class="num">
+                            @Labels.Quantity(receipt.Quantity - receipt.Pending) / @Labels.Quantity(receipt.Quantity)
+                        </td>
+                        <td data-label="Estado">
+                            <span class="badge @(receipt.Status == ReceiptStatus.Pending ? "badge-warning" : "badge-receipt")">@Labels.Of(receipt.Status)</span>
+                        </td>
+                        <td data-label="Recibida">@receipt.UserName · @Labels.DateTime(receipt.CreatedAt)</td>
+                        <td class="row-actions">
+                            @if (CanCreate && receipt.Status == ReceiptStatus.Pending)
+                            {
+                                <a class="btn btn-sm" href="traslados?entrada=@Uri.EscapeDataString(receipt.Code)">Ubicar</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Receipt>? receipts;
+    private bool pendingOnly = true;
+    private Exception? error;
+
+    private bool CanCreate => Session.Current?.User.Can(Permissions.MovementsCreate) == true;
+
+    protected override Task OnInitializedAsync() => ShowAsync(true);
+
+    private async Task ShowAsync(bool pending)
+    {
+        pendingOnly = pending;
+        error = null;
+        try
+        {
+            receipts = await Api.GetReceiptsAsync(pendingOnly: pending);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+}

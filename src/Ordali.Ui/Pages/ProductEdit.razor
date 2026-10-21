@@ -1,0 +1,153 @@
+@page "/registros/productos/nuevo"
+@page "/registros/productos/{Id:guid}"
+@attribute [Authorize(Policy = Permissions.ProductsEdit)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+@inject SessionState Session
+
+<PageTitle>@Title · Ordali</PageTitle>
+
+<PageHeader Title="@Title" />
+
+@if (model is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <div class="card form-card">
+        <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" FormName="product">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label class="field">
+                    <span>SKU</span>
+                    <InputText @bind-Value="model.Sku" />
+                    <ValidationMessage For="() => model.Sku" />
+                </label>
+                <label class="field">
+                    <span>GTIN / EAN</span>
+                    <InputText @bind-Value="model.Gtin" inputmode="numeric" placeholder="Opcional" />
+                    <ValidationMessage For="() => model.Gtin" />
+                </label>
+                <label class="field field-wide">
+                    <span>Nombre</span>
+                    <InputText @bind-Value="model.Name" />
+                    <ValidationMessage For="() => model.Name" />
+                </label>
+                <label class="field">
+                    <span>Unidad</span>
+                    <InputSelect @bind-Value="model.Unit">
+                        @foreach (var unit in Units)
+                        {
+                            <option value="@unit">@unit</option>
+                        }
+                    </InputSelect>
+                </label>
+                <label class="field">
+                    <span>Stock mínimo</span>
+                    <InputNumber @bind-Value="model.MinStock" min="0" />
+                    <ValidationMessage For="() => model.MinStock" />
+                </label>
+                @if (locations is not null)
+                {
+                    <label class="field field-wide">
+                        <span>Ubicación predeterminada</span>
+                        <InputSelect @bind-Value="model.DefaultLocationId">
+                            <option value="">Sin ubicación predeterminada</option>
+                            @foreach (var location in locations)
+                            {
+                                <option value="@location.Id">@location.Code · @location.Zone</option>
+                            }
+                        </InputSelect>
+                        <small class="muted">Se propone al ubicar las entradas de este artículo.</small>
+                        <ValidationMessage For="() => model.DefaultLocationId" />
+                    </label>
+                }
+                <label class="check field-wide">
+                    <InputCheckbox @bind-Value="model.TracksLots" />
+                    <span>Controlar por lotes (obligatorio indicar el lote en cada movimiento)</span>
+                </label>
+            </div>
+
+            <ErrorAlert Error="error" />
+
+            <div class="form-actions">
+                <a class="btn" href="registros/productos">Cancelar</a>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Guardando…" : "Guardar")</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    private static readonly string[] Units = ["ud", "caja", "kg", "l", "rollo", "palé"];
+
+    [Parameter] public Guid? Id { get; set; }
+
+    private ProductInput? model;
+    private IReadOnlyList<Location>? locations;
+    private EditContext? editContext;
+    private ValidationMessageStore? serverErrors;
+    private Exception? error;
+    private bool busy;
+
+    private string Title => Id is null ? "Nuevo producto" : "Editar producto";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            model = Id is { } id ? ProductInput.From(await Api.GetProductAsync(id)) : new ProductInput();
+            // Without permission to see locations the field is hidden and the current value is kept.
+            locations = Session.Current?.User.Can(Permissions.LocationsView) == true ? await Api.GetLocationsAsync() : null;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            return;
+        }
+
+        editContext = new EditContext(model);
+        serverErrors = new ValidationMessageStore(editContext);
+        editContext.OnFieldChanged += (_, e) => serverErrors.Clear(e.FieldIdentifier);
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        serverErrors!.Clear();
+        try
+        {
+            _ = Id is { } id ? await Api.UpdateProductAsync(id, model!) : await Api.CreateProductAsync(model!);
+            Navigation.NavigateTo("registros/productos");
+        }
+        catch (ApiException ex)
+        {
+            // Field errors from the API go next to their inputs; the rest shows as a banner.
+            foreach (var (field, messages) in ex.Errors)
+            {
+                serverErrors.Add(editContext!.Field(FieldName(field)), messages);
+            }
+
+            if (ex.Errors.Count == 0)
+            {
+                error = ex;
+            }
+
+            editContext!.NotifyValidationStateChanged();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // ASP.NET Core returns camelCase keys ("sku"); the model properties are PascalCase.
+    private static string FieldName(string key) =>
+        key.Length == 0 ? key : char.ToUpperInvariant(key[0]) + key[1..];
+}

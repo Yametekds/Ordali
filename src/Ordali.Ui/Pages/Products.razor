@@ -1,0 +1,137 @@
+@page "/registros/productos"
+@attribute [Authorize(Policy = Permissions.ProductsView)]
+@inject IOrdaliApi Api
+
+<PageTitle>Productos · Ordali</PageTitle>
+
+<PageHeader Title="Productos" Subtitle="Registro de productos con SKU, GTIN y control de lotes">
+    <Actions>
+        <AuthorizeView Policy="@Permissions.ProductsEdit">
+            <a class="btn btn-primary" href="registros/productos/nuevo"><Icon Name="plus" /><span>Nuevo producto</span></a>
+        </AuthorizeView>
+    </Actions>
+</PageHeader>
+
+<div class="toolbar">
+    <label class="search">
+        <Icon Name="search" />
+        <input type="search" placeholder="Buscar por SKU, nombre o GTIN" aria-label="Buscar productos"
+               value="@search" @oninput="OnSearchAsync" />
+    </label>
+</div>
+
+<ErrorAlert Error="error" />
+
+@if (products is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (products.Count == 0)
+{
+    <EmptyState IconName="box" Text="@(string.IsNullOrWhiteSpace(search) ? "Todavía no hay productos." : "Ningún producto coincide con la búsqueda.")" />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Nombre</th>
+                    <th>GTIN</th>
+                    <th>Lotes</th>
+                    <th class="num">Stock</th>
+                    <th class="num">Mínimo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var product in products)
+                {
+                    var total = totals.GetValueOrDefault(product.Id);
+                    <tr>
+                        <td data-label="SKU"><strong>@product.Sku</strong></td>
+                        <td data-label="Nombre">@product.Name</td>
+                        <td data-label="GTIN" class="mono">@(product.Gtin ?? "—")</td>
+                        <td data-label="Lotes">@(product.TracksLots ? "Sí" : "No")</td>
+                        <td data-label="Stock" class="num">
+                            <a href="stock?articulo=@product.Id" class="@(total < product.MinStock ? "text-warning" : "")">
+                                @Labels.Quantity(total) @product.Unit
+                            </a>
+                        </td>
+                        <td data-label="Mínimo" class="num">@Labels.Quantity(product.MinStock)</td>
+                        <td class="row-actions">
+                            <AuthorizeView Policy="@Permissions.ProductsEdit">
+                                <a class="btn btn-ghost btn-icon" href="registros/productos/@product.Id" title="Editar" aria-label="Editar @product.Sku">
+                                    <Icon Name="edit" />
+                                </a>
+                            </AuthorizeView>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Product>? products;
+    private Dictionary<Guid, decimal> totals = [];
+    private string search = "";
+    private Exception? error;
+    private CancellationTokenSource? pending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var stock = await Api.GetStockAsync();
+            totals = stock.GroupBy(s => s.ProductId).ToDictionary(g => g.Key, g => g.Sum(s => s.Quantity));
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+
+        await LoadAsync(CancellationToken.None);
+    }
+
+    private async Task OnSearchAsync(ChangeEventArgs e)
+    {
+        search = e.Value?.ToString() ?? "";
+
+        // Wait for a short pause in typing so each keystroke does not hit the API.
+        if (pending is not null)
+        {
+            await pending.CancelAsync();
+            pending.Dispose();
+        }
+
+        pending = new CancellationTokenSource();
+        var token = pending.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            await LoadAsync(token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task LoadAsync(CancellationToken token)
+    {
+        try
+        {
+            products = await Api.GetProductsAsync(search, token);
+            error = null;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+}

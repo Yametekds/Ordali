@@ -1,0 +1,130 @@
+@page "/stock"
+@attribute [Authorize(Policy = Permissions.StockView)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+@inject SessionState Session
+
+<PageTitle>Stock · Ordali</PageTitle>
+
+<PageHeader Title="Stock" Subtitle="Existencias por ubicación y lote">
+    <Actions>
+        <AuthorizeView Policy="@Permissions.MovementsCreate">
+            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>Registrar movimiento</span></a>
+        </AuthorizeView>
+    </Actions>
+</PageHeader>
+
+<div class="toolbar">
+    <select class="select" aria-label="Artículo" @onchange="e => Filter(e, isProduct: true)">
+        <option value="">Todos los artículos</option>
+        @foreach (var product in products)
+        {
+            <option value="@product.Id" selected="@(product.Id == ProductId)">@product.Sku · @product.Name</option>
+        }
+    </select>
+    <select class="select" aria-label="Ubicación" @onchange="e => Filter(e, isProduct: false)">
+        <option value="">Todas las ubicaciones</option>
+        @foreach (var location in locations)
+        {
+            <option value="@location.Id" selected="@(location.Id == LocationId)">@location.Code</option>
+        }
+    </select>
+</div>
+
+<ErrorAlert Error="error" />
+
+@if (stock is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (stock.Count == 0)
+{
+    <EmptyState IconName="layers" Text="No hay stock con estos filtros." />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Artículo</th>
+                    <th>Ubicación</th>
+                    <th>Lote</th>
+                    <th class="num">Cantidad</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in stock)
+                {
+                    <tr>
+                        <td data-label="SKU"><strong>@item.Sku</strong></td>
+                        <td data-label="Artículo">@item.ProductName</td>
+                        <td data-label="Ubicación" class="mono">@item.LocationCode</td>
+                        <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
+                        <td data-label="Cantidad" class="num">@Labels.Quantity(item.Quantity)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4">Total</td>
+                    <td class="num">@Labels.Quantity(stock.Sum(s => s.Quantity))</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "articulo")] public Guid? ProductId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "ubicacion")] public Guid? LocationId { get; set; }
+
+    private IReadOnlyList<Product> products = [];
+    private IReadOnlyList<Location> locations = [];
+    private IReadOnlyList<StockItem>? stock;
+    private Exception? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // The filters are a convenience: a profile without these permissions just doesn't get them.
+            var user = Session.Current?.User;
+            products = user?.Can(Permissions.ProductsView) == true ? await Api.GetProductsAsync() : [];
+            locations = user?.Can(Permissions.LocationsView) == true ? await Api.GetLocationsAsync() : [];
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            stock = await Api.GetStockAsync(ProductId, LocationId);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    // Filters live in the query string so a filtered view can be bookmarked or linked to.
+    private void Filter(ChangeEventArgs e, bool isProduct)
+    {
+        Guid? value = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["articulo"] = isProduct ? value : ProductId,
+            ["ubicacion"] = isProduct ? LocationId : value,
+        });
+        Navigation.NavigateTo(uri);
+    }
+}

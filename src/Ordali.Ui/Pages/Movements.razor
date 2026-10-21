@@ -1,0 +1,80 @@
+@page "/movimientos"
+@attribute [Authorize(Policy = Permissions.MovementsView)]
+@inject IOrdaliApi Api
+
+<PageTitle>Movimientos · Ordali</PageTitle>
+
+<PageHeader Title="Movimientos" Subtitle="Registro inmutable: cada movimiento guarda quién lo hizo y cuándo">
+    <Actions>
+        <AuthorizeView Policy="@Permissions.MovementsCreate">
+            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>Registrar movimiento</span></a>
+        </AuthorizeView>
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (movements is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (movements.Count == 0)
+{
+    <EmptyState IconName="swap" Text="Todavía no hay movimientos." />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo</th>
+                    <th>SKU</th>
+                    <th>Lote</th>
+                    <th>Origen → destino</th>
+                    <th class="num">Cantidad</th>
+                    <th>Usuario</th>
+                    <th>Entrada</th>
+                    <th>Motivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var m in movements)
+                {
+                    <tr>
+                        <td data-label="Fecha">@Labels.DateTime(m.CreatedAt)</td>
+                        <td data-label="Tipo"><MovementTypeBadge Type="m.Type" /></td>
+                        <td data-label="SKU"><strong>@m.Sku</strong></td>
+                        <td data-label="Lote" class="mono">@(m.Lot ?? "—")</td>
+                        <td data-label="Ruta" class="mono">@(m.FromLocationCode ?? "—") → @(m.ToLocationCode ?? "—")</td>
+                        <td data-label="Cantidad" class="num">@(m.Type == MovementType.Adjustment ? Labels.SignedQuantity(m.Quantity) : Labels.Quantity(m.Quantity))</td>
+                        <td data-label="Usuario">@m.UserName</td>
+                        <td data-label="Entrada" class="mono">@m.Reference</td>
+                        <td data-label="Motivo" class="muted">@m.Reason</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Movement>? movements;
+    private Exception? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            movements = await Api.GetMovementsAsync(take: 200);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+}

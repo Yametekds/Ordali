@@ -1,0 +1,440 @@
+@page "/traslados"
+@attribute [Authorize(Policy = Permissions.MovementsCreate)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Traslados · Ordali</PageTitle>
+
+<PageHeader Title="Traslados" Subtitle="Ubica la mercancía de las entradas: entrada, artículo, ubicación y cantidad.">
+    <Actions>
+        <a class="btn" href="movimientos/nuevo?tipo=Transfer"><Icon Name="swap" /><span>Traslado sin entrada</span></a>
+    </Actions>
+</PageHeader>
+
+@if (message is not null)
+{
+    <div class="alert alert-ok" role="status"><Icon Name="check" /><span>@message</span></div>
+}
+@if (problem is not null)
+{
+    <div class="alert alert-error" role="alert"><Icon Name="alert" /><span>@problem</span></div>
+}
+<ErrorAlert Error="error" />
+
+@if (pending is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (receipt is null)
+{
+    <div class="card scan-card">
+        <ol class="steps" aria-label="Pasos">
+            <li class="active">Entrada</li><li>Artículo</li><li>Ubicación y cantidad</li>
+        </ol>
+        <ScanField Id="putaway-receipt" Label="Entrada" Placeholder="Escanea o escribe el código, por ejemplo ENTRADA2" AutoFocus="true"
+                   OnScan="OnReceiptScanned" />
+    </div>
+
+    <h2 class="section-title">Pendientes de ubicar</h2>
+    @if (pending.Count == 0)
+    {
+        <EmptyState IconName="inbox" Text="No hay entradas pendientes. Las nuevas entradas aparecerán aquí." />
+    }
+    else
+    {
+        <div class="receipt-grid">
+            @foreach (var item in pending)
+            {
+                <button type="button" class="receipt-card" @onclick="() => SelectReceipt(item)">
+                    <span class="receipt-code">@item.Code</span>
+                    @if (item.Reference is not null)
+                    {
+                        <span class="muted small">@item.Reference</span>
+                    }
+                    <span class="small">@string.Join(", ", item.Lines.Where(l => l.Pending > 0).Select(l => l.Sku))</span>
+                    <Progress Done="@(item.Quantity - item.Pending)" Total="@item.Quantity" />
+                    <span class="muted small">@item.UserName · @Labels.DateTime(item.CreatedAt)</span>
+                </button>
+            }
+        </div>
+    }
+}
+else
+{
+    <div class="card scan-card">
+        <div class="receipt-head">
+            <div>
+                <span class="muted small">Entrada</span>
+                <div class="receipt-code">@receipt.Code</div>
+                @if (receipt.Reference is not null)
+                {
+                    <span class="muted small">@receipt.Reference</span>
+                }
+            </div>
+            <button type="button" class="btn btn-sm" @onclick="ClearReceipt">Cambiar de entrada</button>
+        </div>
+        <Progress Done="@(receipt.Quantity - receipt.Pending)" Total="@receipt.Quantity" />
+
+        @if (line is null)
+        {
+            <ol class="steps" aria-label="Pasos">
+                <li class="done">Entrada</li><li class="active">Artículo</li><li>Ubicación y cantidad</li>
+            </ol>
+            <ScanField @key="receipt.Id" Id="putaway-product" Label="Artículo" Placeholder="Escanea el EAN o escribe el SKU" AutoFocus="true"
+                       OnScan="OnProductScanned" />
+
+            @if (lotChoices is not null)
+            {
+                <div class="choices">
+                    <span class="muted small">Ese artículo llegó en varios lotes. ¿Cuál mueves?</span>
+                    @foreach (var choice in lotChoices)
+                    {
+                        <button type="button" class="btn" @onclick="() => SelectLine(choice)">@choice.Lot · quedan @Labels.Quantity(choice.Pending)</button>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <ol class="steps" aria-label="Pasos">
+                <li class="done">Entrada</li><li class="done">Artículo</li><li class="active">Ubicación y cantidad</li>
+            </ol>
+            <div class="putaway-item">
+                <div>
+                    <strong>@line.Sku</strong> @line.ProductName
+                    @if (line.Lot is not null)
+                    {
+                        <span class="badge">Lote @line.Lot</span>
+                    }
+                </div>
+                <span class="muted">Quedan <strong>@Labels.Quantity(line.Pending) @line.Unit</strong> en @receipt.DockLocationCode</span>
+            </div>
+
+            <div class="destination @(destination is null ? "destination-empty" : "")">
+                <span class="muted small">Destino</span>
+                @if (destination is null)
+                {
+                    <strong>Sin ubicación predeterminada</strong>
+                }
+                else
+                {
+                    <strong class="mono">@destination.Code</strong>
+                    <span class="muted small">@destination.Zone · @(destination.Id == line.DefaultLocationId ? "predeterminada" : "elegida")</span>
+                }
+            </div>
+
+            <div class="form-grid">
+                <ScanField @key="line" Id="putaway-location" Label="@(destination is null ? "Ubicación de destino" : "Otra ubicación")"
+                           Placeholder="Escanea la etiqueta del hueco" AutoFocus="@(destination is null)" OnScan="OnLocationScanned" />
+                <label class="field">
+                    <span>O elige de la lista</span>
+                    <select value="@(destination?.Id.ToString() ?? "")" @onchange="OnLocationPicked">
+                        <option value="">Elige una ubicación</option>
+                        @foreach (var location in Targets)
+                        {
+                            <option value="@location.Id">@location.Code · @location.Zone</option>
+                        }
+                    </select>
+                </label>
+            </div>
+
+            @if (locationChoices is not null)
+            {
+                <div class="choices">
+                    <span class="muted small">Hay varias ubicaciones con ese código. Elige la tuya:</span>
+                    @foreach (var choice in locationChoices)
+                    {
+                        <button type="button" class="btn" @onclick="() => SelectDestination(choice)">@choice.Code · @choice.Zone · @Labels.Of(choice.Type)</button>
+                    }
+                </div>
+            }
+
+            <form class="line-entry" @onsubmit="PutAwayAsync">
+                <label class="field">
+                    <span>Cantidad que mueves (@line.Unit)</span>
+                    <input @ref="quantityInput" type="number" min="0" step="any" inputmode="decimal" @bind="quantity" @bind:event="oninput"
+                           placeholder="Quedan @Labels.Quantity(line.Pending)" enterkeyhint="done" />
+                </label>
+                <button type="button" class="btn" @onclick="FillAll">Todo (@Labels.Quantity(line.Pending))</button>
+                <button class="btn btn-primary" type="submit" disabled="@busy"><Icon Name="dolly" /><span>@(busy ? "Trasladando…" : "Trasladar")</span></button>
+            </form>
+            <div class="form-actions">
+                <button type="button" class="btn btn-ghost" @onclick="ClearLine">Elegir otro artículo</button>
+            </div>
+        }
+    </div>
+
+    @if (line is null)
+    {
+        <div class="card card-flush">
+            <table class="table">
+                <thead>
+                    <tr><th>SKU</th><th>Artículo</th><th>Lote</th><th class="num">Quedan</th><th>Predeterminada</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in receipt.Lines)
+                    {
+                        <tr class="@(item.Pending <= 0 ? "row-inactive" : "")">
+                            <td data-label="SKU"><strong>@item.Sku</strong></td>
+                            <td data-label="Artículo">@item.ProductName</td>
+                            <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
+                            <td data-label="Quedan" class="num">@Labels.Quantity(item.Pending) / @Labels.Quantity(item.Quantity) @item.Unit</td>
+                            <td data-label="Predeterminada" class="mono">@(item.DefaultLocationCode ?? "—")</td>
+                            <td class="row-actions">
+                                @if (item.Pending > 0)
+                                {
+                                    <button type="button" class="btn btn-sm" @onclick="() => SelectLine(item)">Ubicar</button>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-receipt">Ubicado</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "entrada")] public string? InitialCode { get; set; }
+
+    private List<Receipt>? pending;
+    private IReadOnlyList<Location> locations = [];
+    private Receipt? receipt;
+    private ReceiptLine? line;
+    private Location? destination;
+    private List<ReceiptLine>? lotChoices;
+    private List<Location>? locationChoices;
+    private ElementReference quantityInput;
+    private string quantity = "";
+    private string? message;
+    private string? problem;
+    private Exception? error;
+    private bool busy;
+    private bool focusQuantity;
+
+    // The dock the goods are on is never a destination.
+    private IEnumerable<Location> Targets => locations.Where(l => l.Id != receipt?.DockLocationId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            locations = await Api.GetLocationsAsync();
+            await LoadPendingAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(InitialCode))
+        {
+            OnReceiptScanned(new ScanEventArgs(InitialCode));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (focusQuantity && line is not null)
+        {
+            focusQuantity = false;
+            try
+            {
+                await quantityInput.FocusAsync();
+            }
+            catch (Exception ex) when (ex is JSException or InvalidOperationException)
+            {
+                // The quantity box isn't on screen any more.
+            }
+        }
+    }
+
+    private async Task LoadPendingAsync() => pending = [.. await Api.GetReceiptsAsync(pendingOnly: true)];
+
+    private void OnReceiptScanned(ScanEventArgs scan)
+    {
+        message = null;
+        var match = pending?.FirstOrDefault(r => Scanning.IsCode(scan.Code, r.Code));
+        if (match is null)
+        {
+            problem = $"No hay ninguna entrada pendiente con el código {Scanning.Clean(scan.Code)}.";
+            scan.Reject();
+            return;
+        }
+
+        SelectReceipt(match);
+    }
+
+    private void SelectReceipt(Receipt selected)
+    {
+        receipt = selected;
+        problem = null;
+        ClearLine();
+    }
+
+    private void ClearReceipt()
+    {
+        receipt = null;
+        message = null;
+        ClearLine();
+        Navigation.NavigateTo("traslados", replace: true);
+    }
+
+    private void OnProductScanned(ScanEventArgs scan)
+    {
+        message = null;
+        var lines = receipt!.Lines.Where(l => Scanning.IsProduct(scan.Code, l.Sku, l.Gtin)).ToList();
+        if (lines.Count == 0)
+        {
+            problem = $"El código {Scanning.Clean(scan.Code)} no corresponde a ningún artículo de la entrada {receipt.Code}.";
+            scan.Reject();
+            return;
+        }
+
+        var open = lines.Where(l => l.Pending > 0).ToList();
+        if (open.Count == 0)
+        {
+            problem = $"{lines[0].Sku} ya está ubicado del todo.";
+            scan.Reject();
+            return;
+        }
+
+        problem = null;
+        if (open.Count > 1)
+        {
+            lotChoices = open;
+        }
+        else
+        {
+            SelectLine(open[0]);
+        }
+
+    }
+
+    private void SelectLine(ReceiptLine selected)
+    {
+        line = selected;
+        lotChoices = null;
+        locationChoices = null;
+        problem = null;
+        quantity = "";
+        destination = selected.DefaultLocationId is { } id ? locations.FirstOrDefault(l => l.Id == id) : null;
+        focusQuantity = destination is not null;
+    }
+
+    private void ClearLine()
+    {
+        line = null;
+        lotChoices = null;
+        locationChoices = null;
+        destination = null;
+        quantity = "";
+    }
+
+    private void OnLocationScanned(ScanEventArgs scan)
+    {
+        message = null;
+        var matches = Targets.Where(l => Scanning.IsCode(scan.Code, l.Code)).ToList();
+        if (matches.Count == 0)
+        {
+            problem = receipt is not null && locations.Any(l => l.Id == receipt.DockLocationId && Scanning.IsCode(scan.Code, l.Code))
+                ? "Esa es la ubicación de recepción: escanea dónde vas a dejar la mercancía."
+                : $"No hay ninguna ubicación con el código {Scanning.Clean(scan.Code)}.";
+            scan.Reject();
+            return;
+        }
+
+        problem = null;
+        if (matches.Count > 1)
+        {
+            locationChoices = matches;
+        }
+        else
+        {
+            SelectDestination(matches[0]);
+        }
+
+    }
+
+    private void OnLocationPicked(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id) && locations.FirstOrDefault(l => l.Id == id) is { } location)
+        {
+            SelectDestination(location);
+        }
+    }
+
+    private void SelectDestination(Location location)
+    {
+        destination = location;
+        locationChoices = null;
+        focusQuantity = true;
+    }
+
+    private void FillAll()
+    {
+        quantity = line!.Pending.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        focusQuantity = true;
+    }
+
+    private async Task PutAwayAsync()
+    {
+        message = null;
+        problem = null;
+        if (destination is null)
+        {
+            problem = "Escanea o elige la ubicación de destino.";
+            return;
+        }
+
+        if (!decimal.TryParse(quantity, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
+        {
+            problem = "Escribe la cantidad que mueves.";
+            focusQuantity = true;
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            var moved = line!;
+            var updated = await Api.PutAwayAsync(receipt!.Id, new PutAwayInput
+            {
+                ProductId = moved.ProductId,
+                Lot = moved.Lot,
+                ToLocationId = destination.Id,
+                Quantity = amount,
+            });
+            message = $"Trasladado: {Labels.Quantity(amount)} {moved.Unit} de {moved.Sku} a {destination.Code}.";
+            ClearLine();
+            if (updated.Status == ReceiptStatus.Completed)
+            {
+                message += $" La entrada {updated.Code} está ubicada del todo.";
+                receipt = null;
+                await LoadPendingAsync();
+            }
+            else
+            {
+                receipt = updated;
+                pending = [.. pending!.Select(r => r.Id == updated.Id ? updated : r)];
+            }
+        }
+        catch (ApiException ex)
+        {
+            problem = ex.Errors.Count > 0 ? string.Join(" ", ex.Errors.Values.SelectMany(m => m)) : ex.Message;
+            focusQuantity = true;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

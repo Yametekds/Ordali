@@ -1,0 +1,15 @@
+<span class="logo @Class">
+    <img src="_content/Ordali.Ui/img/ordali-logo.png" alt="" width="@Size" height="@Size" />
+    @if (ShowName)
+    {
+        <span class="logo-name">Ordali</span>
+    }
+</span>
+
+@code {
+    [Parameter] public int Size { get; set; } = 36;
+
+    [Parameter] public bool ShowName { get; set; } = true;
+
+    [Parameter] public string? Class { get; set; }
+}
