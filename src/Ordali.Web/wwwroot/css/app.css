@@ -1,0 +1,96 @@
+/* Only what the web host needs before Blazor starts; the app styles come from Ordali.Ui. */
+
+#blazor-error-ui {
+    background: #fff3df;
+    color: #17202e;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, .2);
+    display: none;
+    left: 0;
+    padding: .6rem 1.25rem .7rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: .75rem;
+    top: .5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "Ha ocurrido un error.";
+}
+
+.loading-progress {
+    position: absolute;
+    display: block;
+    width: 6rem;
+    height: 6rem;
+    inset: 30vh 0 auto 0;
+    margin: 0 auto;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: .5rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--primary);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * .8), 500%;
+    transition: stroke-dasharray .05s ease-in-out;
+}
+
+.loading-progress-text {
+    position: absolute;
+    text-align: center;
+    font-weight: 600;
+    color: var(--muted);
+    inset: calc(30vh + 2.4rem) 0 auto 0;
+}
+
+.loading-progress-text::after {
+    content: var(--blazor-load-percentage-text, "Cargando");
+}
+
+body { background: var(--frame); }
+.shell, .auth { background-color: var(--bg); }
+.auth { background-color: var(--frame); }
+.loading-progress-text { color: var(--frame-muted); }
+
+/* Install sheet, web only: the native apps are already installed. */
+.install-backdrop { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, .6); }
+.install-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+    padding: 28px 22px calc(18px + env(safe-area-inset-bottom));
+    background: var(--frame); color: var(--frame-text);
+    border-top: 4px solid var(--red); border-radius: 14px 14px 0 0;
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, .5);
+    animation: sheet-in .25s ease-out;
+}
+.install-sheet h2 { color: #fff; font-size: 1.5rem; text-transform: uppercase; letter-spacing: .04em; }
+.install-sheet p { margin: 0 0 6px; max-width: 420px; color: var(--frame-text); }
+.install-logo { border-radius: 18px; }
+.install-close { position: absolute; top: 10px; right: 10px; background: none; border: 0; color: var(--frame-muted); padding: 8px; cursor: pointer; }
+.install-steps { text-align: left; margin: 4px 0 10px; padding: 14px 18px 14px 36px; background: var(--frame-2); border-radius: 4px; width: 100%; max-width: 420px; }
+.install-steps li { margin: 6px 0; }
+.install-steps strong { color: #fff; }
+.inline-icon { vertical-align: -3px; color: #4ea3ff; }
+.install-sheet .btn-ghost { color: var(--frame-muted); }
+.install-sheet .btn-ghost:hover { background: var(--frame-2); color: #fff; }
+.btn-lg { min-height: 52px; font-size: 1rem; }
+.nav-link-install { width: 100%; background: none; border-top: 0; border-right: 0; border-bottom: 0; font: inherit; font-weight: 500; text-align: left; cursor: pointer; color: var(--gold); }
+@keyframes sheet-in { from { transform: translateY(100%); } }
