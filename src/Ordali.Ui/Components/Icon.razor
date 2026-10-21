@@ -1,0 +1,94 @@
+@* Line icons drawn inline so the library needs no icon font or CDN. *@
+<svg class="icon @Class" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    @switch (Name)
+    {
+        case "home":
+            <path d="M3 10.5 12 3l9 7.5" /><path d="M5 9v11h14V9" /><path d="M10 20v-6h4v6" />
+            break;
+        case "box":
+            <path d="M21 8 12 3 3 8v8l9 5 9-5z" /><path d="m3 8 9 5 9-5" /><path d="M12 13v8" />
+            break;
+        case "map":
+            <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" />
+            break;
+        case "layers":
+            <path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" />
+            break;
+        case "swap":
+            <path d="M7 4 3 8l4 4" /><path d="M3 8h14" /><path d="m17 20 4-4-4-4" /><path d="M21 16H7" />
+            break;
+        case "plus":
+            <path d="M12 5v14" /><path d="M5 12h14" />
+            break;
+        case "search":
+            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+            break;
+        case "logout":
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
+            break;
+        case "alert":
+            <path d="M12 3 2 20h20z" /><path d="M12 10v4" /><path d="M12 17h.01" />
+            break;
+        case "edit":
+            <path d="M4 20h4L19 9l-4-4L4 16z" />
+            break;
+        case "arrow-right":
+            <path d="M5 12h14" /><path d="m13 6 6 6-6 6" />
+            break;
+        case "info":
+            <circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 8h.01" />
+            break;
+        case "users":
+            <circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 4.5a3.5 3.5 0 0 1 0 7" /><path d="M18 14a6.5 6.5 0 0 1 3.5 6" />
+            break;
+        case "shield":
+            <path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z" /><path d="m9 12 2 2 4-4" />
+            break;
+        case "folder":
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            break;
+        case "menu":
+            <path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" />
+            break;
+        case "close":
+            <path d="M6 6l12 12" /><path d="M18 6 6 18" />
+            break;
+        case "download":
+            <path d="M12 4v11" /><path d="m7 10 5 5 5-5" /><path d="M5 20h14" />
+            break;
+        case "share":
+            <path d="M12 3v12" /><path d="m8 7 4-4 4 4" /><path d="M6 11H5v10h14V11h-1" />
+            break;
+        case "chevron":
+            <path d="m9 6 6 6-6 6" />
+            break;
+        case "trash":
+            <path d="M4 7h16" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M6 7l1 13h10l1-13" /><path d="M9 7V4h6v3" />
+            break;
+        case "scan":
+            <path d="M4 8V5a1 1 0 0 1 1-1h3" /><path d="M16 4h3a1 1 0 0 1 1 1v3" /><path d="M20 16v3a1 1 0 0 1-1 1h-3" /><path d="M8 20H5a1 1 0 0 1-1-1v-3" /><path d="M8 9v6" /><path d="M11 9v6" /><path d="M14 9v6" /><path d="M17 9v6" />
+            break;
+        case "camera":
+            <path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" />
+            break;
+        case "inbox":
+            <path d="M3 13h5l1 3h6l1-3h5" /><path d="M5 5h14l2 8v6H3v-6z" />
+            break;
+        case "dolly":
+            <path d="M4 4h3l3 12" /><circle cx="10" cy="19" r="2" /><path d="M12 18h8" /><path d="M11 8h8v7h-6" />
+            break;
+        case "check":
+            <path d="m5 12 5 5 9-10" />
+            break;
+        default:
+            <circle cx="12" cy="12" r="9" />
+            break;
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter] public string? Class { get; set; }
+}

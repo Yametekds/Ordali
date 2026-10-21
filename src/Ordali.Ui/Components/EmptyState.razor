@@ -1,0 +1,13 @@
+<div class="empty">
+    <Icon Name="@IconName" />
+    <p>@Text</p>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    [Parameter] public string IconName { get; set; } = "info";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
