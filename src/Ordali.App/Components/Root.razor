@@ -1,0 +1,7 @@
+@* The pages and layout come from Ordali.Ui; this assembly only adds the settings page. *@
+<OrdaliRoutes AdditionalAssemblies="[typeof(MauiProgram).Assembly]" HostLinks="settingsLink" />
+
+@code {
+    private readonly RenderFragment settingsLink =
+        @<NavLink class="nav-link" href="ajustes"><Icon Name="edit" /><span>Ajustes</span></NavLink>;
+}
