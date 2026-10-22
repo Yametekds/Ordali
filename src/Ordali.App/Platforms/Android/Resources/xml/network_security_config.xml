@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The demo API runs over plain HTTP on the user's computer, reached from a phone by its
+  local IP (192.168.x.x) or from the emulator through 10.0.2.2, so cleartext is allowed.
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
