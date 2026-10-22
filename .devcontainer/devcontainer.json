@@ -1,0 +1,16 @@
+{
+  "name": "Ordali",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": { "version": "10.0" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [8080, 8081],
+  "portsAttributes": {
+    "8080": { "label": "API", "onAutoForward": "notify" },
+    "8081": { "label": "Web", "onAutoForward": "openPreview" }
+  },
+  "postCreateCommand": "dotnet restore src/Ordali.Api && dotnet restore src/Ordali.Web && dotnet restore tests/Ordali.Api.Tests && dotnet restore tests/Ordali.Ui.Tests",
+  "postStartCommand": "sh .devcontainer/start.sh"
+}
