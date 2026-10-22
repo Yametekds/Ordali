@@ -2,8 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/Ordali.Api/Ordali.Api.csproj" />
     <Project Path="src/Ordali.Client/Ordali.Client.csproj" />
+    <Project Path="src/Ordali.Ui/Ordali.Ui.csproj" />
+    <Project Path="src/Ordali.Web/Ordali.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Ordali.Api.Tests/Ordali.Api.Tests.csproj" />
+    <Project Path="tests/Ordali.Ui.Tests/Ordali.Ui.Tests.csproj" />
   </Folder>
 </Solution>

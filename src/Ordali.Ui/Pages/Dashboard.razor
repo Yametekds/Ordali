@@ -1,0 +1,146 @@
+@page "/"
+@attribute [Authorize]
+@inject IOrdaliApi Api
+@inject TimeProvider Time
+@inject SessionState Session
+
+<PageTitle>Inicio · Ordali</PageTitle>
+
+<PageHeader Title="@($"Hola, {FirstName}")" Subtitle="Resumen del almacén">
+    <Actions>
+        <AuthorizeView Policy="@Permissions.MovementsCreate">
+            <a class="btn" href="entradas/nueva"><Icon Name="inbox" /><span>Nueva entrada</span></a>
+            <a class="btn btn-primary" href="traslados"><Icon Name="dolly" /><span>Traslados</span></a>
+        </AuthorizeView>
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (!loaded)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <section class="stats">
+        @if (Can(Permissions.ProductsView))
+        {
+            <StatCard Label="Productos" Value="@products.Count.ToString(Labels.Culture)" />
+        }
+        @if (Can(Permissions.StockView))
+        {
+            <StatCard Label="Unidades en stock" Value="@Labels.Quantity(stock.Sum(s => s.Quantity))" Hint="@($"{stock.Count} líneas de stock")" />
+        }
+        @if (Can(Permissions.ProductsView) && Can(Permissions.StockView))
+        {
+            <StatCard Label="Bajo mínimo" Value="@lowStock.Count.ToString(Labels.Culture)" Tone="@(lowStock.Count > 0 ? "warning" : "ok")" />
+        }
+        @if (Can(Permissions.MovementsView))
+        {
+            <StatCard Label="Entradas por ubicar" Value="@pendingReceipts.Count.ToString(Labels.Culture)" Tone="@(pendingReceipts.Count > 0 ? "warning" : "ok")"
+                      Hint="@(pendingReceipts.Count > 0 ? string.Join(", ", pendingReceipts.Select(r => r.Code)) : null)" />
+            <StatCard Label="Movimientos hoy" Value="@movementsToday.ToString(Labels.Culture)" />
+        }
+    </section>
+
+    <div class="grid-2">
+        @if (Can(Permissions.ProductsView) && Can(Permissions.StockView))
+        {
+            <section class="card">
+                <h2 class="card-title">Productos bajo mínimo</h2>
+                @if (lowStock.Count == 0)
+                {
+                    <EmptyState Text="Todo el stock está por encima del mínimo." />
+                }
+                else
+                {
+                    <ul class="list">
+                        @foreach (var item in lowStock)
+                        {
+                            <li>
+                                <a href="stock?articulo=@item.Product.Id">
+                                    <strong>@item.Product.Sku</strong> @item.Product.Name
+                                </a>
+                                <span class="badge badge-warning">@Labels.Quantity(item.Total) / @Labels.Quantity(item.Product.MinStock)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+
+        @if (Can(Permissions.MovementsView))
+        {
+            <section class="card">
+                <h2 class="card-title">Últimos movimientos</h2>
+                @if (movements.Count == 0)
+                {
+                    <EmptyState Text="Todavía no hay movimientos." />
+                }
+                else
+                {
+                    <ul class="list">
+                        @foreach (var movement in movements.Take(6))
+                        {
+                            <li>
+                                <span><MovementTypeBadge Type="movement.Type" /> <strong>@movement.Sku</strong> @Labels.SignedQuantity(Signed(movement))</span>
+                                <small class="muted">@movement.UserName · @Labels.Relative(movement.CreatedAt, now)</small>
+                            </li>
+                        }
+                    </ul>
+                    <a class="link" href="movimientos">Ver todos <Icon Name="arrow-right" /></a>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Product> products = [];
+    private IReadOnlyList<StockItem> stock = [];
+    private IReadOnlyList<Movement> movements = [];
+    private IReadOnlyList<Receipt> pendingReceipts = [];
+    private List<(Product Product, decimal Total)> lowStock = [];
+    private int movementsToday;
+    private DateTimeOffset now;
+    private bool loaded;
+    private Exception? error;
+
+    private string FirstName => Session.Current?.User.Name.Split(' ')[0] ?? "";
+
+    private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Each profile only loads the figures its permissions allow.
+            products = Can(Permissions.ProductsView) ? await Api.GetProductsAsync() : [];
+            stock = Can(Permissions.StockView) ? await Api.GetStockAsync() : [];
+            movements = Can(Permissions.MovementsView) ? await Api.GetMovementsAsync(take: 100) : [];
+            pendingReceipts = Can(Permissions.MovementsView) ? await Api.GetReceiptsAsync(pendingOnly: true) : [];
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            return;
+        }
+
+        now = Time.GetUtcNow();
+        var totals = stock.GroupBy(s => s.ProductId).ToDictionary(g => g.Key, g => g.Sum(s => s.Quantity));
+        lowStock = [.. products
+            .Select(p => (Product: p, Total: totals.GetValueOrDefault(p.Id)))
+            .Where(x => x.Total < x.Product.MinStock)
+            .OrderBy(x => x.Total / Math.Max(x.Product.MinStock, 1))];
+        var today = now.ToLocalTime().Date;
+        movementsToday = movements.Count(m => m.CreatedAt.ToLocalTime().Date == today);
+        loaded = true;
+    }
+
+    // Shipments take stock out, so they read as negative next to entries.
+    private static decimal Signed(Movement m) => m.Type == MovementType.Shipment ? -m.Quantity : m.Quantity;
+}

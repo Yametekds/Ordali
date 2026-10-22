@@ -1,0 +1,51 @@
+name: Web demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/Ordali.Client/**
+      - src/Ordali.Ui/**
+      - src/Ordali.Web/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Publish
+        run: dotnet publish src/Ordali.Web -c Release -o publish
+      - name: Adapt to the GitHub Pages subfolder
+        run: |
+          site=publish/wwwroot
+          sed -i "s|<base href=\"/\" />|<base href=\"/${{ github.event.repository.name }}/\" />|" $site/index.html
+          # GitHub Pages has no SPA fallback: serving index.html as 404 lets deep links load the app.
+          cp $site/index.html $site/404.html
+          touch $site/.nojekyll
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

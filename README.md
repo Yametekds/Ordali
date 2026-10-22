@@ -1,8 +1,8 @@
 # Ordali
 
-Sistema de gestión de almacén (SGA) con ASP.NET Core, EF Core y SQL Server, pensado para funcionar igual en un servidor local que en la nube.
+Sistema de gestión de almacén (SGA): una API con ASP.NET Core, EF Core y SQL Server, pensada para funcionar igual en un servidor local que en la nube, y una web que la usa.
 
-> Estado: en desarrollo. Ya funcionan el login con JWT, los perfiles con permisos y plantillas, el catálogo de artículos, las ubicaciones, el stock, las entradas y el registro de movimientos. La web y la app llegarán en las próximas versiones.
+> Estado: en desarrollo. Ya funcionan el login con JWT, los perfiles con permisos y plantillas, el catálogo de artículos, las ubicaciones, el stock, las entradas y el registro de movimientos. La web Blazor (PWA) ya usa la API; la app de escritorio y Android llegará en la próxima versión.
 
 ## Probarlo en un minuto
 
@@ -14,7 +14,14 @@ cd Ordali
 docker compose up --build
 ```
 
-Después abre http://localhost:8080/swagger, entra con `POST /api/v1/auth/login` (usuario `admin@demo.local`, contraseña `Demo1234!`) y pega el token en el botón *Authorize*.
+Después abre:
+
+- http://localhost:8081: la web (usuarios demo `admin@demo.local`, `encargado@demo.local` y `mozo@demo.local`, contraseña `Demo1234!`).
+- http://localhost:8080/swagger: la documentación interactiva de la API.
+
+### Demo online
+
+La web en modo demo (datos de ejemplo en el navegador, sin servidor) se publica en GitHub Pages: `https://yametekds.github.io/Ordali/`. Más detalles en [src/Ordali.Web/README.md](src/Ordali.Web/README.md).
 
 ## Desarrollo local
 
@@ -22,7 +29,7 @@ Requisitos: [.NET 10 SDK](https://dotnet.microsoft.com/download) y Docker.
 
 ```bash
 dotnet run --project src/Ordali.Api
-dotnet test tests/Ordali.Api.Tests
+dotnet test
 ```
 
 Sin cadena de conexión, la API usa una base de datos en memoria con los datos de demo, así que no hace falta nada más. Para trabajar contra SQL Server:
@@ -60,6 +67,8 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 1. **Entrada:** el mozo registra lo que llega con un código (por ejemplo `ENTRADA2`, o `ENT-0003` si lo deja vacío). La mercancía queda en la ubicación de recepción.
 2. **Traslado:** otro mozo escanea `ENTRADA2`, escanea el artículo y le aparece su ubicación predeterminada; si no tiene, escanea o elige otra. Escribe la cantidad y la entrada se cierra cuando no queda nada en recepción.
 
+Las pantallas funcionan con lectores USB, Bluetooth y terminales Android (Zebra, Honeywell…) que escriben el código y pulsan Intro: cada paso deja el cursor en el campo siguiente y avisa con un pitido si el código no encaja. En móviles con Chrome o Edge también se puede escanear con la cámara.
+
 ## Perfiles y permisos
 
 Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lista de **permisos** que se marcan uno a uno: ver artículos, editarlos, ver stock, registrar movimientos, registrar ajustes, ver usuarios, crear perfiles...
@@ -83,13 +92,17 @@ Cada movimiento guarda el usuario y la hora, y no se puede modificar ni borrar: 
 ```
 src/Ordali.Api                    API (módulos de identidad, catálogo, ubicaciones e inventario)
 src/Ordali.Client                 Cliente de la API para las interfaces
+src/Ordali.Ui                     Componentes Razor compartidos por las interfaces
+src/Ordali.Web                    Web Blazor WebAssembly (PWA)
 tests/Ordali.Api.Tests            Tests de integración de la API con WebApplicationFactory
+tests/Ordali.Ui.Tests             Tests de los componentes de la interfaz
 .github/workflows/ci.yml          Build, tests y prueba del stack con Docker Compose
+.github/workflows/pages.yml       Publica la demo web en GitHub Pages
 ```
 
 ## Hoja de ruta
 
-1. **Interfaces:** web Blazor (PWA) y app .NET MAUI.
+1. **Interfaces:** app .NET MAUI para escritorio y Android.
 2. **Operación:** salidas, órdenes y tareas de almacén, webhooks.
 3. **Sector:** GS1 (GTIN, SSCC), EDI y asistente con permisos por rol.
 4. **Escala:** caché distribuida, colas y réplica de lectura.

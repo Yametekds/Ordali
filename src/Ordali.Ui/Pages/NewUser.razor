@@ -1,0 +1,127 @@
+@page "/registros/usuarios/nuevo"
+@attribute [Authorize(Policy = Permissions.UsersCreate)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+@inject SessionState Session
+
+<PageTitle>Nuevo perfil · Ordali</PageTitle>
+
+<PageHeader Title="Nuevo perfil" Subtitle="Los permisos salen de la plantilla que elijas" />
+
+@if (templates is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <div class="card form-card form-card-wide">
+        <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" FormName="user">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label class="field">
+                    <span>Nombre y apellidos</span>
+                    <InputText @bind-Value="model.Name" autocomplete="off" />
+                    <ValidationMessage For="() => model.Name" />
+                </label>
+                <label class="field">
+                    <span>Email</span>
+                    <InputText @bind-Value="model.Email" type="email" autocomplete="off" />
+                    <ValidationMessage For="() => model.Email" />
+                </label>
+                <label class="field">
+                    <span>Contraseña inicial</span>
+                    <InputText @bind-Value="model.Password" type="password" autocomplete="new-password" />
+                    <ValidationMessage For="() => model.Password" />
+                </label>
+                <label class="field">
+                    <span>Plantilla</span>
+                    <InputSelect @bind-Value="model.TemplateId">
+                        <option value="">Elige una plantilla</option>
+                        @foreach (var template in templates)
+                        {
+                            <option value="@template.Id">@template.Name (@Labels.Of(template.Category))</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="() => model.TemplateId" />
+                </label>
+            </div>
+
+            @if (Selected is { } selected)
+            {
+                <div class="perm-header">
+                    <h2 class="card-title">Permisos de «@selected.Name»</h2>
+                </div>
+                @if (selected.Description is not null)
+                {
+                    <p class="muted">@selected.Description</p>
+                }
+                <PermissionChecklist Selected="@(selected.Permissions.ToHashSet())" Disabled="true" IdPrefix="new" />
+                <p class="muted small">Si necesita permisos especiales o subir de categoría, el administrador puede cambiarlo después.</p>
+            }
+
+            <ErrorAlert Error="error" />
+
+            <div class="form-actions">
+                <a class="btn" href="registros/usuarios">Cancelar</a>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Creando…" : "Crear perfil")</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "plantilla")] public Guid? InitialTemplate { get; set; }
+
+    private readonly NewUserInput model = new();
+    private EditContext editContext = default!;
+    private ValidationMessageStore serverErrors = default!;
+    private IReadOnlyList<ProfileTemplate>? templates;
+    private Exception? error;
+    private bool busy;
+
+    private ProfileTemplate? Selected => templates?.FirstOrDefault(t => t.Id == model.TemplateId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        editContext = new EditContext(model);
+        serverErrors = new ValidationMessageStore(editContext);
+        editContext.OnFieldChanged += (_, e) => serverErrors.Clear(e.FieldIdentifier);
+        try
+        {
+            // Only templates whose permissions this user holds can be handed out by them.
+            var me = Session.Current!.User;
+            templates = [.. (await Api.GetTemplatesAsync()).Where(t => t.Permissions.All(me.Can))];
+            model.TemplateId = templates.Any(t => t.Id == InitialTemplate) ? InitialTemplate : null;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            var user = await Api.CreateUserAsync(model);
+            Navigation.NavigateTo($"registros/usuarios?categoria={user.Category}");
+        }
+        catch (ApiException ex)
+        {
+            if (!FormErrors.Show(ex, editContext, serverErrors))
+            {
+                error = ex;
+            }
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
