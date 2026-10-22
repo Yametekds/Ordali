@@ -1,0 +1,111 @@
+name: Apps
+
+# Builds the desktop and Android apps. A tag such as v0.1.0 also publishes them to GitHub Releases.
+# Restoring the project needs the Android workload on every runner, since Android is always a target.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    paths:
+      - "src/Ordali.App/**"
+      - ".github/workflows/apps.yml"
+  workflow_dispatch:
+
+env:
+  PROJECT: src/Ordali.App/Ordali.App.csproj
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Set version
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - run: dotnet workload install maui-android
+      - name: Install Android SDK packages
+        run: >
+          dotnet build ${{ env.PROJECT }} -f net10.0-android -t:InstallAndroidDependencies
+          -p:AndroidSdkDirectory="$ANDROID_HOME" -p:AcceptAndroidSDKLicenses=true
+      - name: Publish APK
+        run: >
+          dotnet publish ${{ env.PROJECT }} -f net10.0-android -c Release -o out
+          -p:AndroidSdkDirectory="$ANDROID_HOME"
+          -p:ApplicationDisplayVersion="$VERSION" -p:ApplicationVersion=${{ github.run_number }}
+      - run: mv out/*-Signed.apk Ordali-android.apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: Ordali-android.apk
+
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Set version
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+      - run: dotnet workload install maui-windows maui-android
+      - name: Publish
+        run: >
+          dotnet publish ${{ env.PROJECT }} -f net10.0-windows10.0.19041.0 -c Release -o out
+          -p:RuntimeIdentifierOverride=win-x64 -p:SelfContained=true
+          -p:ApplicationDisplayVersion="$VERSION" -p:ApplicationVersion=${{ github.run_number }}
+      - run: 7z a Ordali-windows-x64.zip ./out/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: Ordali-windows-x64.zip
+
+  macos:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Set version
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+      - run: dotnet workload install maui-maccatalyst maui-android
+      - name: Build universal app
+        run: >
+          dotnet build ${{ env.PROJECT }} -f net10.0-maccatalyst -c Release
+          -p:RuntimeIdentifiers="maccatalyst-arm64%3Bmaccatalyst-x64"
+          -p:CodesignKey=- -p:CreatePackage=false
+          -p:ApplicationDisplayVersion="$VERSION" -p:ApplicationVersion=${{ github.run_number }}
+      # Ad-hoc signed only: on first launch macOS asks to confirm in System Settings > Privacy & Security.
+      - run: ditto -c -k --sequesterRsrc --keepParent "$(find src/Ordali.App/bin/Release -maxdepth 2 -name '*.app' | head -1)" Ordali-macos.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: Ordali-macos.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [android, windows, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${{ github.ref_name }}" Ordali-*
+          --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
