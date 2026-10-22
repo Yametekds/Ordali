@@ -1,8 +1,8 @@
 # Ordali
 
-Sistema de gestión de almacén (SGA): una API con ASP.NET Core, EF Core y SQL Server, pensada para funcionar igual en un servidor local que en la nube, y una web que la usa.
+Sistema de gestión de almacén (SGA): una API con ASP.NET Core, EF Core y SQL Server, pensada para funcionar igual en un servidor local que en la nube, y una web y una app que la usan.
 
-> Estado: en desarrollo. Ya funcionan el login con JWT, los perfiles con permisos y plantillas, el catálogo de artículos, las ubicaciones, el stock, las entradas y el registro de movimientos. La web Blazor (PWA) ya usa la API; la app de escritorio y Android llegará en la próxima versión.
+> Estado: en desarrollo. Ya funcionan el login con JWT, los perfiles con permisos y plantillas, el catálogo de artículos, las ubicaciones, el stock, las entradas y el registro de movimientos. La web Blazor (PWA) y la app .NET MAUI para Android, Windows y macOS usan la misma API. Las instrucciones de la app están en [src/Ordali.App/README.md](src/Ordali.App/README.md).
 
 ## Probarlo en un minuto
 
@@ -94,15 +94,16 @@ src/Ordali.Api                    API (módulos de identidad, catálogo, ubicaci
 src/Ordali.Client                 Cliente de la API para las interfaces
 src/Ordali.Ui                     Componentes Razor compartidos por las interfaces
 src/Ordali.Web                    Web Blazor WebAssembly (PWA)
+src/Ordali.App                    App .NET MAUI para Android, Windows y macOS
 tests/Ordali.Api.Tests            Tests de integración de la API con WebApplicationFactory
 tests/Ordali.Ui.Tests             Tests de los componentes de la interfaz
 .github/workflows/ci.yml          Build, tests y prueba del stack con Docker Compose
 .github/workflows/pages.yml       Publica la demo web en GitHub Pages
+.github/workflows/apps.yml        Compila la app y, con una etiqueta v*, la publica en Releases
 ```
 
 ## Hoja de ruta
 
-1. **Interfaces:** app .NET MAUI para escritorio y Android.
-2. **Operación:** salidas, órdenes y tareas de almacén, webhooks.
-3. **Sector:** GS1 (GTIN, SSCC), EDI y asistente con permisos por rol.
-4. **Escala:** caché distribuida, colas y réplica de lectura.
+1. **Operación:** salidas, órdenes y tareas de almacén, webhooks.
+2. **Sector:** GS1 (GTIN, SSCC), EDI y asistente con permisos por rol.
+3. **Escala:** caché distribuida, colas y réplica de lectura.
