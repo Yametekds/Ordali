@@ -1,0 +1,135 @@
+@page "/registros/usuarios/{Id:guid}"
+@attribute [Authorize(Policy = Policies.Admin)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>Editar perfil · Ordali</PageTitle>
+
+@if (user is null || model is null)
+{
+    <PageHeader Title="Editar perfil" />
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <PageHeader Title="@user.Name" Subtitle="@($"{user.Email} · alta el {Labels.DateTime(user.CreatedAt)}")" />
+
+    <div class="card form-card form-card-wide">
+        <section class="form-section">
+            <h2 class="card-title">Categoría</h2>
+            <div class="segmented" role="radiogroup" aria-label="Categoría">
+                @foreach (var category in Categories)
+                {
+                    <button type="button" role="radio" aria-checked="@(model.Category == category ? "true" : "false")"
+                            class="@(model.Category == category ? "active" : "")" disabled="@IsSelf"
+                            @onclick="() => model.Category = category">
+                        @Labels.Of(category)
+                    </button>
+                }
+            </div>
+            @if (model.Category > user.Category)
+            {
+                <p class="note note-up">Vas a subir este perfil de @Labels.Of(user.Category) a @Labels.Of(model.Category).</p>
+            }
+            else if (model.Category < user.Category)
+            {
+                <p class="note">Vas a bajar este perfil de @Labels.Of(user.Category) a @Labels.Of(model.Category).</p>
+            }
+        </section>
+
+        <section class="form-section">
+            <div class="perm-header">
+                <h2 class="card-title">Permisos</h2>
+                @if (user.TemplateName is not null)
+                {
+                    <span class="muted small">Plantilla de origen: @user.TemplateName</span>
+                }
+            </div>
+            @if (model.Category == UserCategory.Admin)
+            {
+                <div class="alert alert-info"><Icon Name="info" /><span>Un administrador tiene todos los permisos.</span></div>
+            }
+            else
+            {
+                <PermissionChecklist Selected="model.Permissions" Highlight="templatePermissions" IdPrefix="edit" />
+                <p class="muted small">Los permisos marcados como <span class="badge badge-special">Especial</span> no vienen de su plantilla.</p>
+            }
+        </section>
+
+        <section class="form-section">
+            <label class="check">
+                <input type="checkbox" checked="@model.Active" disabled="@IsSelf" @onchange="e => model.Active = e.Value is true" />
+                <span>Perfil activo (si lo desactivas no podrá entrar)</span>
+            </label>
+        </section>
+
+        <ErrorAlert Error="error" />
+        @if (saved)
+        {
+            <div class="alert alert-ok" role="status">Cambios guardados. Se aplican la próxima vez que entre.</div>
+        }
+
+        <div class="form-actions">
+            <a class="btn" href="registros/usuarios?categoria=@user.Category">Volver</a>
+            <button class="btn btn-primary" type="button" disabled="@busy" @onclick="SaveAsync">@(busy ? "Guardando…" : "Guardar cambios")</button>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly UserCategory[] Categories = [UserCategory.Operator, UserCategory.Supervisor, UserCategory.Admin];
+
+    [Parameter] public Guid Id { get; set; }
+
+    private UserProfile? user;
+    private UserAccessInput? model;
+    private IReadOnlyCollection<string>? templatePermissions;
+    private Exception? error;
+    private bool busy;
+    private bool saved;
+
+    // An admin cannot demote or deactivate themself, so those controls are locked on their own profile.
+    private bool IsSelf => Session.Current?.User.Id == Id;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            user = await Api.GetUserAsync(Id);
+            model = UserAccessInput.From(user);
+            if (user.TemplateId is { } templateId)
+            {
+                templatePermissions = (await Api.GetTemplatesAsync()).FirstOrDefault(t => t.Id == templateId)?.Permissions;
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        saved = false;
+        try
+        {
+            user = await Api.UpdateUserAccessAsync(Id, model!);
+            model = UserAccessInput.From(user);
+            saved = true;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

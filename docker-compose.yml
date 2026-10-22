@@ -22,8 +22,20 @@ services:
       # Demo key: set JWT_SIGNING_KEY to your own value outside the demo.
       Jwt__SigningKey: ${JWT_SIGNING_KEY:-demo-signing-key-change-me-0123456789abcdef}
       Swagger__Enabled: "true"
+      Cors__AllowedOrigins__0: "http://localhost:8081"
     ports:
       - "8080:8080"
     depends_on:
       sqlserver:
         condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Ordali.Web/Dockerfile
+    environment:
+      API_BASE_URL: "http://localhost:8080"
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
