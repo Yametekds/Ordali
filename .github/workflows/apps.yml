@@ -79,13 +79,10 @@ jobs:
           global-json-file: global.json
       - name: Set version
         run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
-      - run: dotnet workload install maui-maccatalyst maui-android
-      # The Mac Catalyst workload follows the latest Xcode, which is often not the runner's default one.
-      - name: Use the newest Xcode
-        run: |
-          ls -d /Applications/Xcode*.app
-          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
-          xcodebuild -version
+      # Each Mac Catalyst workload needs a given Xcode, and the newest ones often need an Xcode the
+      # runner doesn't have yet. Workload set 10.0.401 ships Mac Catalyst 26.5, built for Xcode 26.6,
+      # which is the runner's default.
+      - run: dotnet workload install maui-maccatalyst maui-android --version 10.0.401
       - name: Build universal app
         run: >
           dotnet build ${{ env.PROJECT }} -f net10.0-maccatalyst -c Release
