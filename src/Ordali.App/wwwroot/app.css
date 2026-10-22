@@ -1,0 +1,51 @@
+/* Only what the MAUI host needs; the app styles come from Ordali.Ui. */
+
+html, body {
+    --maui-status-bar-safe-area-background: #0f1b2d;
+}
+
+.status-bar-safe-area {
+    display: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+    .status-bar-safe-area {
+        display: flex;
+        position: sticky;
+        top: 0;
+        height: env(safe-area-inset-top);
+        background-color: var(--maui-status-bar-safe-area-background);
+        width: 100%;
+        z-index: 1;
+    }
+}
+
+#blazor-error-ui {
+    background: #fff3df;
+    color: #17202e;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, .2);
+    display: none;
+    left: 0;
+    padding: .6rem 1.25rem .7rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: .75rem;
+    top: .5rem;
+}
+
+.blazor-error-boundary {
+    background: #b32121;
+    padding: 1rem;
+    color: white;
+}
+
+.blazor-error-boundary::after {
+    content: "Ha ocurrido un error.";
+}
