@@ -59,7 +59,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-El número de la etiqueta pasa a ser la versión de la app.
+El número de la etiqueta pasa a ser la versión de la app. También se puede hacer sin terminal: en **Actions → Apps → Run workflow**, escribe la versión (por ejemplo `0.1.0`) y el workflow crea la etiqueta y la release.
 
 ## Detalles
 

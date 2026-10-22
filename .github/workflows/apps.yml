@@ -9,7 +9,12 @@ on:
     paths:
       - "src/Ordali.App/**"
       - ".github/workflows/apps.yml"
+  # Running it by hand with a version (for example 0.1.0) also publishes that release.
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, such as 0.1.0. Leave empty to only build."
+        required: false
 
 env:
   PROJECT: src/Ordali.App/Ordali.App.csproj
@@ -28,7 +33,9 @@ jobs:
         with:
           global-json-file: global.json
       - name: Set version
-        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo "${INPUT_VERSION:-0.0.0}")" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -57,7 +64,9 @@ jobs:
         with:
           global-json-file: global.json
       - name: Set version
-        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo "${INPUT_VERSION:-0.0.0}")" >> "$GITHUB_ENV"
       - run: dotnet workload install maui-windows maui-android
       - name: Publish
         run: >
@@ -78,7 +87,9 @@ jobs:
         with:
           global-json-file: global.json
       - name: Set version
-        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo 0.0.0)" >> "$GITHUB_ENV"
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: echo "VERSION=$([[ "$GITHUB_REF" == refs/tags/v* ]] && echo "${GITHUB_REF_NAME#v}" || echo "${INPUT_VERSION:-0.0.0}")" >> "$GITHUB_ENV"
       # Each Mac Catalyst workload needs a given Xcode, and the newest ones often need an Xcode the
       # runner doesn't have yet. Workload set 10.0.401 ships Mac Catalyst 26.5, built for Xcode 26.6,
       # which is the runner's default.
@@ -96,7 +107,7 @@ jobs:
           path: Ordali-macos.zip
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
     needs: [android, windows, macos]
     runs-on: ubuntu-24.04
     permissions:
@@ -108,6 +119,7 @@ jobs:
       - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', inputs.version) }}
         run: >
-          gh release create "${{ github.ref_name }}" Ordali-*
-          --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --generate-notes
+          gh release create "$TAG" Ordali-* --target "${{ github.sha }}"
+          --repo "${{ github.repository }}" --title "$TAG" --generate-notes
