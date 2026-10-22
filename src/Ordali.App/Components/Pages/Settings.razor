@@ -1,0 +1,133 @@
+@page "/ajustes"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject ApiSettings Backend
+@inject OrdaliClientOptions Options
+@inject IHttpClientFactory HttpClientFactory
+
+<PageTitle>Ajustes · Ordali</PageTitle>
+
+<div class="auth-card">
+    <h1>Ajustes</h1>
+    <p class="muted">Elige de dónde saca los datos la app. El cambio se aplica al volver a abrirla.</p>
+
+    <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="settings">
+        <label class="check">
+            <input type="radio" name="mode" checked="@(!useApi)" @onchange="() => useApi = false" />
+            <span>Datos de ejemplo, sin servidor</span>
+        </label>
+        <label class="check">
+            <input type="radio" name="mode" checked="@useApi" @onchange="() => useApi = true" />
+            <span>Mi API de Ordali</span>
+        </label>
+
+        @if (useApi)
+        {
+            <label class="field">
+                <span>URL de la API</span>
+                <InputText @bind-Value="baseUrl" inputmode="url" autocomplete="url" />
+            </label>
+            <p class="muted small">
+                Con Docker en tu ordenador: <code>http://localhost:8080/</code> en el mismo equipo,
+                <code>http://10.0.2.2:8080/</code> en el emulador de Android o la IP local del ordenador
+                (por ejemplo <code>http://192.168.1.20:8080/</code>) desde un móvil en la misma wifi.
+            </p>
+        }
+
+        @if (message is not null)
+        {
+            <div class="alert @(ok ? "alert-ok" : "alert-error")" role="status">
+                <Icon Name="@(ok ? "info" : "alert")" />
+                <span>@message</span>
+            </div>
+        }
+
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Comprobando…" : "Guardar")</button>
+            @if (saved)
+            {
+                <button class="btn" type="button" @onclick="Quit">Cerrar la app</button>
+            }
+            else
+            {
+                <a class="btn btn-ghost" href="">Volver</a>
+            }
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private bool useApi;
+    private string baseUrl = "";
+    private string? message;
+    private bool ok;
+    private bool busy;
+    private bool saved;
+
+    protected override void OnInitialized()
+    {
+        useApi = Backend.BaseUrl is not null;
+        baseUrl = (Backend.BaseUrl ?? ApiSettings.SuggestedBaseUrl).AbsoluteUri;
+    }
+
+    private async Task SaveAsync()
+    {
+        message = null;
+        if (!useApi)
+        {
+            Backend.UseDemo();
+            Done(Options.IsDemo ? "Ya estás usando los datos de ejemplo." : "Guardado.");
+            return;
+        }
+
+        if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out Uri? url) || url.Scheme is not ("http" or "https"))
+        {
+            (ok, message) = (false, "La URL no es válida. Tiene que empezar por http:// o https://.");
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            url = ApiSettings.Normalize(url);
+            baseUrl = url.AbsoluteUri;
+            string? problem = await CheckAsync(url);
+            if (problem is not null)
+            {
+                (ok, message) = (false, problem);
+                return;
+            }
+
+            Backend.UseApi(url);
+            Done(url == Options.ApiBaseUrl ? "La API responde. Ya estás conectado a ella." : "La API responde. Guardado.");
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void Done(string text)
+    {
+        bool changed = Backend.BaseUrl != Options.ApiBaseUrl;
+        saved = changed;
+        (ok, message) = (true, changed ? text + " Cierra la app y vuelve a abrirla para usar el cambio." : text);
+    }
+
+    private async Task<string?> CheckAsync(Uri url)
+    {
+        using HttpClient client = HttpClientFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(5);
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(new Uri(url, "health/live"));
+            return response.IsSuccessStatusCode ? null : $"La API respondió con el código {(int)response.StatusCode}.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            return "No se pudo conectar. Comprueba que la API está en marcha y que la URL es correcta.";
+        }
+    }
+
+    private static void Quit() => Application.Current?.Quit();
+}

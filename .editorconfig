@@ -397,3 +397,7 @@ dotnet_diagnostic.CA1861.severity = none
 # EF Core migrations are generated
 [src/**/Migrations/*.cs]
 generated_code = true
+
+# AppDelegate and SceneDelegate are the names Apple's templates and Info.plist expect
+[src/Ordali.App/Platforms/MacCatalyst/*.cs]
+dotnet_diagnostic.CA1711.severity = none

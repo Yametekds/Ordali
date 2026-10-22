@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/Ordali.Api/Ordali.Api.csproj" />
     <Project Path="src/Ordali.Client/Ordali.Client.csproj" />
+    <Project Path="src/Ordali.App/Ordali.App.csproj" />
     <Project Path="src/Ordali.Ui/Ordali.Ui.csproj" />
     <Project Path="src/Ordali.Web/Ordali.Web.csproj" />
   </Folder>
