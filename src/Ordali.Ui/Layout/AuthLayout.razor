@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<div class="auth">
+    <div class="auth-column">
+        @Body
+        @if (HostLinks is not null)
+        {
+            <nav class="auth-links" aria-label="Opciones">@HostLinks</nav>
+        }
+    </div>
+</div>
+
+@code {
+    [CascadingParameter(Name = "HostLinks")] private RenderFragment? HostLinks { get; set; }
+}

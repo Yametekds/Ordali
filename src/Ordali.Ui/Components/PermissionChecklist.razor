@@ -1,0 +1,49 @@
+@* Checkboxes for every grantable permission, grouped by area. Edits the set in place. *@
+<div class="perm-grid">
+    @foreach (var (area, permissions) in Labels.PermissionAreas)
+    {
+        <fieldset class="perm-group">
+            <legend>@area</legend>
+            @foreach (var permission in permissions)
+            {
+                var id = $"perm-{IdPrefix}-{permission.Replace('.', '-')}";
+                <label class="check" for="@id">
+                    <input id="@id" type="checkbox" checked="@Selected.Contains(permission)" disabled="@Disabled"
+                           @onchange="e => Toggle(permission, e.Value is true)" />
+                    <span>@Labels.Permission(permission)</span>
+                    @if (Highlight?.Contains(permission) == false && Selected.Contains(permission))
+                    {
+                        <span class="badge badge-special" title="No viene de la plantilla">Especial</span>
+                    }
+                </label>
+            }
+        </fieldset>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HashSet<string> Selected { get; set; } = [];
+
+    [Parameter] public EventCallback SelectedChanged { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The template's permissions; anything selected outside it is marked as special.</summary>
+    [Parameter] public IReadOnlyCollection<string>? Highlight { get; set; }
+
+    [Parameter] public string IdPrefix { get; set; } = "p";
+
+    private async Task Toggle(string permission, bool on)
+    {
+        if (on)
+        {
+            Selected.Add(permission);
+        }
+        else
+        {
+            Selected.Remove(permission);
+        }
+
+        await SelectedChanged.InvokeAsync();
+    }
+}

@@ -1,0 +1,23 @@
+@inject NavigationManager Navigation
+
+@if (signedIn)
+{
+    <EmptyState IconName="alert" Text="No tienes permiso para ver esta página." />
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthState { get; set; } = default!;
+
+    private bool signedIn;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState;
+        signedIn = state.User.Identity?.IsAuthenticated ?? false;
+        if (!signedIn)
+        {
+            var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+            Navigation.NavigateTo(string.IsNullOrEmpty(returnUrl) ? "login" : $"login?volver={Uri.EscapeDataString(returnUrl)}");
+        }
+    }
+}

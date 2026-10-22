@@ -1,0 +1,85 @@
+@page "/plantillas"
+@attribute [Authorize(Policy = Policies.SeeTemplates)]
+@inject IOrdaliApi Api
+
+<PageTitle>Plantillas de perfil · Ordali</PageTitle>
+
+<PageHeader Title="Plantillas de perfil" Subtitle="Conjuntos de permisos para dar de alta perfiles nuevos">
+    <Actions>
+        <AuthorizeView Policy="@Policies.Admin">
+            <a class="btn btn-primary" href="plantillas/nueva"><Icon Name="plus" /><span>Nueva plantilla</span></a>
+        </AuthorizeView>
+    </Actions>
+</PageHeader>
+
+<AuthorizeView Policy="@Policies.Admin">
+    <NotAuthorized>
+        <div class="alert alert-info"><Icon Name="info" /><span>Puedes usar estas plantillas al crear perfiles. Solo el administrador puede crearlas o cambiarlas.</span></div>
+    </NotAuthorized>
+</AuthorizeView>
+
+<ErrorAlert Error="error" />
+
+@if (templates is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (templates.Count == 0)
+{
+    <EmptyState IconName="shield" Text="Todavía no hay plantillas." />
+}
+else
+{
+    <div class="template-grid">
+        @foreach (var template in templates)
+        {
+            <article class="template-card">
+                <header>
+                    <h2>@template.Name</h2>
+                    <span class="badge badge-category">@Labels.Of(template.Category)</span>
+                </header>
+                @if (template.Description is not null)
+                {
+                    <p class="muted">@template.Description</p>
+                }
+                <ul class="perm-list">
+                    @foreach (var permission in template.Permissions)
+                    {
+                        <li>@Labels.Permission(permission)</li>
+                    }
+                </ul>
+                <footer>
+                    <span class="muted small">@template.Permissions.Count de @Permissions.All.Count permisos</span>
+                    <span class="template-actions">
+                        <AuthorizeView Policy="@Permissions.UsersCreate">
+                            <a class="btn btn-sm" href="registros/usuarios/nuevo?plantilla=@template.Id">Usar</a>
+                        </AuthorizeView>
+                        <AuthorizeView Policy="@Policies.Admin">
+                            <a class="btn btn-sm btn-ghost" href="plantillas/@template.Id" aria-label="Editar @template.Name"><Icon Name="edit" /></a>
+                        </AuthorizeView>
+                    </span>
+                </footer>
+            </article>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<ProfileTemplate>? templates;
+    private Exception? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            templates = await Api.GetTemplatesAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+}

@@ -1,0 +1,174 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+@* A text box for barcode scanners: they type the code and press Enter. Phones get a camera button
+   where the browser can read barcodes. Keep it outside forms so Enter doesn't submit them. *@
+<div class="field scan-field @Class">
+    <label for="@Id">@Label</label>
+    <div class="scan-input">
+        <Icon Name="scan" />
+        <input @ref="input" id="@Id" type="text" @bind="text" @bind:event="oninput" @onkeydown="OnKeyDownAsync"
+               placeholder="@Placeholder" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
+        @if (cameraSupported)
+        {
+            <button type="button" class="btn btn-icon scan-camera" title="Escanear con la cámara" aria-label="Escanear con la cámara"
+                    @onclick="ScanWithCameraAsync">
+                <Icon Name="camera" />
+            </button>
+        }
+    </div>
+    @if (cameraError is not null)
+    {
+        <small class="validation-message">@cameraError</small>
+    }
+    else if (Hint is not null)
+    {
+        <small class="muted">@Hint</small>
+    }
+</div>
+
+@code {
+    private ElementReference input;
+    private IJSObjectReference? module;
+    private string text = "";
+    private bool cameraSupported;
+    private string? cameraError;
+
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    [Parameter] public string? Hint { get; set; }
+
+    [Parameter] public string? Class { get; set; }
+
+    [Parameter] public bool AutoFocus { get; set; }
+
+    /// <summary>
+    /// Receives the cleaned-up code. Unless the handler rejects it, the box empties and a short beep
+    /// confirms it; a rejected code stays selected so the next scan replaces it.
+    /// </summary>
+    [Parameter, EditorRequired] public EventCallback<ScanEventArgs> OnScan { get; set; }
+
+    public async Task FocusAsync()
+    {
+        try
+        {
+            await input.FocusAsync();
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // Nothing to focus while prerendering or after the page has moved on.
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        if (AutoFocus)
+        {
+            await FocusAsync();
+        }
+
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Ordali.Ui/scanner.js");
+            await InvokeModuleAsync("guardEnter", input);
+            cameraSupported = module is not null && await module.InvokeAsync<bool>("isCameraSupported");
+            StateHasChanged();
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            cameraSupported = false;
+        }
+    }
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SubmitAsync(text);
+        }
+    }
+
+    private async Task ScanWithCameraAsync()
+    {
+        cameraError = null;
+        try
+        {
+            var code = await module!.InvokeAsync<string?>("scanWithCamera", Label);
+            if (code is not null)
+            {
+                text = code;
+                await SubmitAsync(code);
+            }
+        }
+        catch (JSException)
+        {
+            cameraError = "No se puede usar la cámara. Revisa el permiso del navegador o escribe el código.";
+        }
+    }
+
+    private async Task SubmitAsync(string value)
+    {
+        var code = Scanning.Clean(value);
+        if (code.Length == 0)
+        {
+            return;
+        }
+
+        var scan = new ScanEventArgs(code);
+        await OnScan.InvokeAsync(scan);
+        var accepted = !scan.Rejected;
+        await SignalAsync(accepted);
+        if (accepted)
+        {
+            text = "";
+        }
+        else
+        {
+            text = code;
+            await InvokeModuleAsync("selectAll", input);
+        }
+    }
+
+    private Task SignalAsync(bool ok) => InvokeModuleAsync("signal", ok);
+
+    private async Task InvokeModuleAsync(string identifier, params object?[] args)
+    {
+        if (module is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await module.InvokeVoidAsync(identifier, args);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or TaskCanceledException)
+        {
+            // Beeps and selection are conveniences; scanning works without them.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The page is already gone.
+            }
+        }
+    }
+}

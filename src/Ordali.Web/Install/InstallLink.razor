@@ -1,0 +1,19 @@
+@implements IDisposable
+@inject InstallState State
+
+@* Menu entry that brings the install sheet back after "Ahora no". *@
+@if (State.Offer)
+{
+    <div class="nav-section">App</div>
+    <button type="button" class="nav-link nav-link-install" @onclick="State.Open">
+        <Icon Name="download" /><span>Instalar la app</span>
+    </button>
+}
+
+@code {
+    protected override void OnInitialized() => State.Changed += OnChanged;
+
+    public void Dispose() => State.Changed -= OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+}

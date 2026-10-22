@@ -1,0 +1,31 @@
+@using System.Reflection
+
+@* Everything a host needs to render the app: routing, sign-in redirects and the shared layout. *@
+<CascadingAuthenticationState>
+    <CascadingValue Name="HostLinks" Value="HostLinks" IsFixed="true">
+        <Router AppAssembly="typeof(OrdaliRoutes).Assembly" AdditionalAssemblies="AdditionalAssemblies" NotFoundPage="typeof(Pages.NotFound)">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                    <Authorizing>
+                        <Loading />
+                    </Authorizing>
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </Found>
+        </Router>
+    </CascadingValue>
+</CascadingAuthenticationState>
+
+@code {
+    /// <summary>Extra assemblies with pages of the host itself.</summary>
+    [Parameter] public IEnumerable<Assembly>? AdditionalAssemblies { get; set; }
+
+    /// <summary>
+    /// Links to the host's own pages, such as a settings page in the native app. They show at the
+    /// end of the main menu and under the login card. Use the nav-link class to match the menu.
+    /// </summary>
+    [Parameter] public RenderFragment? HostLinks { get; set; }
+}
