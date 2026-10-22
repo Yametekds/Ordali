@@ -23,6 +23,10 @@ Después abre:
 
 La web en modo demo (datos de ejemplo en el navegador, sin servidor) se publica en GitHub Pages: `https://yametekds.github.io/Ordali/`. Más detalles en [src/Ordali.Web/README.md](src/Ordali.Web/README.md).
 
+### Sin instalar nada
+
+Pulsa **Code → Codespaces → Create codespace** en GitHub. El entorno arranca la API, la web y SQL Server solo, y abre la web en el navegador; la API queda en el puerto 8080. Usa la cuota gratuita mensual de tu cuenta de GitHub.
+
 ## Desarrollo local
 
 Requisitos: [.NET 10 SDK](https://dotnet.microsoft.com/download) y Docker.
@@ -100,6 +104,7 @@ tests/Ordali.Ui.Tests             Tests de los componentes de la interfaz
 .github/workflows/ci.yml          Build, tests y prueba del stack con Docker Compose
 .github/workflows/pages.yml       Publica la demo web en GitHub Pages
 .github/workflows/apps.yml        Compila la app y, con una etiqueta v*, la publica en Releases
+.devcontainer/                    Configuración de GitHub Codespaces
 ```
 
 ## Hoja de ruta
