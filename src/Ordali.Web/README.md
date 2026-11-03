@@ -84,4 +84,4 @@ Los modelos exactos están en `src/Ordali.Client/Models`.
 ## Logo y fuentes
 
 - `src/Ordali.Ui/wwwroot/img/ordali-logo.png`: logo sin fondo. `ordali-icon.png`: logo sobre fondo oscuro, para iconos de app.
-- Roboto y Roboto Condensed van incluidas en `src/Ordali.Ui/wwwroot/fonts` (licencia SIL OFL), para que la app funcione sin conexión.
+- Atkinson Hyperlegible Next (texto) y Atkinson Hyperlegible Mono (códigos de artículo, ubicación y lote) van incluidas en `src/Ordali.Ui/wwwroot/fonts` (licencia SIL OFL), para que la app funcione sin conexión. Se eligieron porque distinguen bien caracteres parecidos (0/O, 1/l/I, 5/S), algo que importa al leer códigos en una pistola o un móvil.
