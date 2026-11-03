@@ -48,7 +48,7 @@ else
                     <tr>
                         <td data-label="Fecha">@Labels.DateTime(m.CreatedAt)</td>
                         <td data-label="Tipo"><MovementTypeBadge Type="m.Type" /></td>
-                        <td data-label="SKU"><strong>@m.Sku</strong></td>
+                        <td data-label="SKU"><strong class="mono">@m.Sku</strong></td>
                         <td data-label="Lote" class="mono">@(m.Lot ?? "—")</td>
                         <td data-label="Ruta" class="mono">@(m.FromLocationCode ?? "—") → @(m.ToLocationCode ?? "—")</td>
                         <td data-label="Cantidad" class="num">@(m.Type == MovementType.Adjustment ? Labels.SignedQuantity(m.Quantity) : Labels.Quantity(m.Quantity))</td>

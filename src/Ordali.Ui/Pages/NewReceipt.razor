@@ -61,7 +61,7 @@ else
         {
             <form class="line-entry" @onsubmit="AddLine">
                 <div class="line-entry-product">
-                    <strong>@current.Sku</strong> @current.Name
+                    <strong class="mono">@current.Sku</strong> @current.Name
                 </div>
                 @if (current.TracksLots)
                 {
@@ -93,7 +93,7 @@ else
                     @foreach (var line in lines)
                     {
                         <tr>
-                            <td data-label="SKU"><strong>@line.Product.Sku</strong></td>
+                            <td data-label="SKU"><strong class="mono">@line.Product.Sku</strong></td>
                             <td data-label="Artículo">@line.Product.Name</td>
                             <td data-label="Lote" class="mono">@(line.Lot ?? "—")</td>
                             <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Product.Unit</td>
