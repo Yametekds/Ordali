@@ -6,7 +6,7 @@
 
 <PageTitle>Inicio · Ordali</PageTitle>
 
-<PageHeader Title="@($"Hola, {FirstName}")" Subtitle="@Today">
+<PageHeader Title="@Today">
     <Actions>
         <AuthorizeView Policy="@Permissions.MovementsCreate">
             <a class="btn" href="entradas/nueva"><Icon Name="inbox" /><span>Nueva entrada</span></a>
@@ -125,15 +125,13 @@ else
     private bool loaded;
     private Exception? error;
 
-    private string FirstName => Session.Current?.User.Name.Split(' ')[0] ?? "";
-
     private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;
 
     private bool ShowsPending => Can(Permissions.MovementsView) || (Can(Permissions.ProductsView) && Can(Permissions.StockView));
 
     private int PendingCount => pendingReceipts.Count + lowStock.Count;
 
-    // "Lunes, 3 de noviembre": the date says more than a generic subtitle.
+    // "Lunes, 3 de noviembre": the date is what the home page is about, so it is the title.
     private string Today
     {
         get
