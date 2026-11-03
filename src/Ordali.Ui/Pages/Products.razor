@@ -53,7 +53,7 @@ else
                 {
                     var total = totals.GetValueOrDefault(product.Id);
                     <tr>
-                        <td data-label="SKU"><strong>@product.Sku</strong></td>
+                        <td data-label="SKU"><strong class="mono">@product.Sku</strong></td>
                         <td data-label="Nombre">@product.Name</td>
                         <td data-label="GTIN" class="mono">@(product.Gtin ?? "—")</td>
                         <td data-label="Lotes">@(product.TracksLots ? "Sí" : "No")</td>
