@@ -1,7 +1,7 @@
 /* Only what the MAUI host needs; the app styles come from Ordali.Ui. */
 
 html, body {
-    --maui-status-bar-safe-area-background: #0f1b2d;
+    --maui-status-bar-safe-area-background: #1e1b18;
 }
 
 .status-bar-safe-area {

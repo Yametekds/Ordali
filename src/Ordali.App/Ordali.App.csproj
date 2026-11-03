@@ -41,8 +41,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\ordali_logo.png" ForegroundScale="0.7" Color="#0B1323" />
-    <MauiSplashScreen Include="Resources\AppIcon\ordali_logo.png" Color="#0B1323" BaseSize="160,160" />
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\ordali_logo.png" ForegroundScale="0.7" Color="#1E1B18" />
+    <MauiSplashScreen Include="Resources\AppIcon\ordali_logo.png" Color="#1E1B18" BaseSize="160,160" />
     <MauiFont Include="Resources\Fonts\*" />
   </ItemGroup>
 
