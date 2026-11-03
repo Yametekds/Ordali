@@ -264,7 +264,7 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 .home > :only-child { grid-column: 1 / -1; }
 .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
 .panel-head h2 { font-size: 1.05rem; }
-.count { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 7px; margin-left: 6px; border-radius: 999px; background: var(--accent); color: #fff; font-size: .8rem; font-weight: 700; vertical-align: 2px; }
+.count { margin-left: 4px; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
 
 .tasks { list-style: none; margin: 0; padding: 0; }
 .tasks li + li { border-top: 1px solid var(--border); }
@@ -406,19 +406,28 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 .scan-aim { position: absolute; left: 10%; right: 10%; top: 50%; height: 2px; background: var(--accent); }
 
 /* Sign-in: the brand on the dark side, the form on the light one */
-.auth { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); background: var(--bg); }
-.auth-side { display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: 40px 48px; background: var(--ink); color: var(--ink-text); }
+.auth { min-height: 100vh; display: grid; grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr); background: var(--bg); }
+.auth-side { display: flex; flex-direction: column; justify-content: flex-start; gap: 32px; padding: 40px 48px; background: var(--ink); color: var(--ink-text); }
 .auth-column { width: 100%; max-width: 400px; margin: auto; padding: 40px 24px; }
 .auth-hero { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .auth-name { font-size: 2.4rem; font-weight: 700; letter-spacing: -.02em; color: var(--cream); margin-top: 12px; }
 .auth-tagline { color: var(--ink-muted); font-size: 1.05rem; max-width: 30ch; }
-.auth-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; color: var(--ink-muted); font-size: .94rem; }
-.auth-facts strong { color: var(--ink-text); font-weight: 600; }
 .auth-card h1 { font-size: 1.5rem; margin-bottom: 22px; }
 .auth-card .field { margin-bottom: 16px; }
 .auth-card .btn-primary { min-height: 46px; margin-top: 4px; }
-.demo-users { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.demo-users p { grid-column: 1 / -1; margin: 0 0 4px; font-size: .9rem; }
+.demo-users { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+.demo-users h2 { font-size: 1rem; }
+.demo-users p { margin: 0 0 4px; }
+.demo-users p:last-child { margin: 4px 0 0; }
+.demo-user {
+    display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 10px 14px; text-align: left; cursor: pointer;
+    font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.demo-user:hover:not(:disabled) { border-color: var(--accent); }
+.demo-user:disabled { opacity: .55; cursor: progress; }
+.demo-user strong { font-weight: 700; }
+.demo-user span { color: var(--muted); font-size: .875rem; line-height: 1.4; }
 .auth-links { display: flex; gap: 16px; margin-top: 20px; }
 .auth-links .nav-link { color: var(--muted); padding: 6px 0; }
 .auth-links .nav-link:hover { background: none; color: var(--text); }
@@ -454,7 +463,6 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 
     .auth { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
     .auth-side { padding: 28px 24px 24px; }
-    .auth-facts { display: none; }
     .auth-column { margin: 0 auto; padding: 28px 20px 40px; }
 }
 
@@ -468,7 +476,6 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
     .card { padding: 18px; }
     .card-flush { padding: 0; }
     .form-card { padding: 18px; }
-    .demo-users { grid-template-columns: 1fr; }
     .receipt-head { flex-direction: column; }
     .line-entry .btn { flex: 1 1 auto; }
     .summary { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin-bottom: 20px; }

@@ -32,12 +32,18 @@
 
     @if (Options.IsDemo)
     {
-        <div class="demo-users">
-            <p class="muted">Es una demo sin servidor: los datos son de ejemplo. Entra como uno de estos perfiles (contraseña <span class="mono">Demo1234!</span>):</p>
-            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("admin@demo.local")'>Administrador</button>
-            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("encargado@demo.local")'>Encargado</button>
-            <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("mozo@demo.local")'>Mozo</button>
-        </div>
+        <section class="demo-users" aria-labelledby="demo-title">
+            <h2 id="demo-title">Probar la demo</h2>
+            <p class="muted small">Funciona sin servidor y con datos de ejemplo. Cada perfil ve un menú distinto según sus permisos.</p>
+            @foreach (var demo in DemoProfiles)
+            {
+                <button class="demo-user" type="button" disabled="@busy" @onclick="() => SignInAsDemoAsync(demo.Email)">
+                    <strong>@demo.Role</strong>
+                    <span>@demo.Can</span>
+                </button>
+            }
+            <p class="muted small">Contraseña de todos: <span class="mono">Demo1234!</span></p>
+        </section>
     }
     else
     {
@@ -47,6 +53,13 @@
 
 @code {
     [SupplyParameterFromQuery(Name = "volver")] public string? ReturnUrl { get; set; }
+
+    private static readonly (string Role, string Can, string Email)[] DemoProfiles =
+    [
+        ("Administrador", "Todo, incluidas las plantillas y los permisos de cada perfil.", "admin@demo.local"),
+        ("Encargado", "Entradas, traslados, ajustes de inventario, catálogo y altas de personal.", "encargado@demo.local"),
+        ("Mozo", "Escanea entradas y traslados y consulta el stock.", "mozo@demo.local"),
+    ];
 
     private readonly LoginModel model = new();
     private Exception? error;

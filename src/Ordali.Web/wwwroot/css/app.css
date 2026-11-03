@@ -85,12 +85,16 @@ body { background: var(--frame); }
 .install-sheet p { margin: 0 0 6px; max-width: 420px; color: var(--frame-text); }
 .install-logo { border-radius: 18px; }
 .install-close { position: absolute; top: 10px; right: 10px; background: none; border: 0; color: var(--frame-muted); padding: 8px; cursor: pointer; }
-.install-steps { text-align: left; margin: 4px 0 10px; padding: 14px 18px 14px 36px; background: var(--frame-2); border-radius: 10px; width: 100%; max-width: 420px; }
+.install-steps { text-align: left; margin: 4px 0 10px; padding: 14px 0 0 22px; border-top: 1px solid var(--ink-line); width: 100%; max-width: 420px; }
 .install-steps li { margin: 6px 0; }
 .install-steps strong { color: #fff; }
 .inline-icon { vertical-align: -3px; color: #4ea3ff; }
 .install-sheet .btn-ghost { color: var(--frame-muted); }
 .install-sheet .btn-ghost:hover { background: var(--frame-2); color: #fff; }
 .btn-lg { min-height: 52px; font-size: 1rem; }
-.nav-link-install { width: 100%; background: none; border-top: 0; border-right: 0; border-bottom: 0; font: inherit; font-weight: 500; text-align: left; cursor: pointer; color: var(--cream); }
+.nav-link-install { width: 100%; background: none; border: 0; font: inherit; font-weight: 400; text-align: left; cursor: pointer; color: var(--cream); }
+/* On the sign-in page the link sits on the light side, under the form. */
+.auth-links .nav-section { display: none; }
+.auth-links .nav-link-install { width: auto; color: var(--muted); }
+.auth-links .nav-link-install:hover { color: var(--text); }
 @keyframes sheet-in { from { transform: translateY(100%); } }
