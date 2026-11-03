@@ -7,12 +7,6 @@
 
 <PageTitle>Iniciar sesión · Ordali</PageTitle>
 
-<div class="auth-hero">
-    <BrandLogo Size="112" ShowName="false" />
-    <span class="auth-name">Ordali</span>
-    <span class="auth-tagline">Gestión de almacén</span>
-</div>
-
 <div class="auth-card">
     <h1>Iniciar sesión</h1>
 
@@ -39,7 +33,7 @@
     @if (Options.IsDemo)
     {
         <div class="demo-users">
-            <p class="muted">Modo demo, sin servidor. Entra con un usuario de ejemplo (contraseña Demo1234!):</p>
+            <p class="muted">Es una demo sin servidor: los datos son de ejemplo. Entra como uno de estos perfiles (contraseña <span class="mono">Demo1234!</span>):</p>
             <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("admin@demo.local")'>Administrador</button>
             <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("encargado@demo.local")'>Encargado</button>
             <button class="btn btn-sm" type="button" disabled="@busy" @onclick='() => SignInAsDemoAsync("mozo@demo.local")'>Mozo</button>
