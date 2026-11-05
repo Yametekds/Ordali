@@ -1,0 +1,509 @@
+@page "/pedidos/nuevo"
+@page "/pedidos/{Id:guid}"
+@attribute [Authorize(Policy = Permissions.OrdersView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@Title · Ordali</PageTitle>
+
+<PageHeader Title="@Title" Subtitle="@Subtitle">
+    <Actions>
+        @if (order is not null)
+        {
+            <button class="btn" type="button" @onclick="PrintAsync"><Icon Name="printer" /><span>Imprimir</span></button>
+        }
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (loading)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (Editable)
+{
+    <div class="card form-card form-card-wide">
+        <div class="form-grid">
+            <label class="field">
+                <span>Distribuidor</span>
+                <select value="@(supplierId?.ToString() ?? "")" @onchange="OnSupplierChangedAsync" disabled="@(order is not null)">
+                    <option value="">Elige un distribuidor</option>
+                    @foreach (var supplier in suppliers.Where(s => s.Active || s.Id == supplierId))
+                    {
+                        <option value="@supplier.Id">@supplier.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="field">
+                <span>Entrega deseada (opcional)</span>
+                <input type="date" @bind="deliveryDate" />
+            </label>
+            <label class="field field-wide">
+                <span>Notas para el distribuidor (opcional)</span>
+                <textarea rows="2" maxlength="500" @bind="notes" placeholder="Horario de descarga, muelle, referencia interna…"></textarea>
+            </label>
+        </div>
+
+        @if (existingDraft is not null)
+        {
+            <div class="alert alert-info" role="status">
+                <Icon Name="info" />
+                <span>Ya hay un borrador para este distribuidor: <a href="pedidos/@existingDraft.Id">@existingDraft.Code</a>.</span>
+            </div>
+        }
+
+        @if (supplierId is not null)
+        {
+            <h2 class="card-title">Artículos del pedido</h2>
+            @if (SuggestedCount > 0)
+            {
+                <p class="muted small">
+                    @SuggestedCount @(SuggestedCount == 1 ? "artículo ha bajado" : "artículos han bajado") del rango seguro. La cantidad propuesta lo devuelve al máximo; cámbiala si hace falta.
+                </p>
+            }
+            else if (order is null)
+            {
+                <p class="muted small">Ningún artículo de este distribuidor está por debajo de su mínimo. Añade abajo lo que quieras pedir.</p>
+            }
+
+            @if (lines.Count > 0)
+            {
+                <table class="table table-compact">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Artículo</th>
+                            <th class="num">Stock</th>
+                            <th class="num">Rango seguro</th>
+                            <th class="num">Cantidad</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in lines)
+                        {
+                            <tr>
+                                <td data-label="SKU"><strong>@line.Sku</strong></td>
+                                <td data-label="Artículo">
+                                    @line.Name
+                                    @if (line.Suggested is null)
+                                    {
+                                        <span class="badge badge-draft">Añadido</span>
+                                    }
+                                </td>
+                                <td data-label="Stock" class="num">
+                                    @if (line.Available is { } available)
+                                    {
+                                        <span class="@(line.Min > 0 && available < line.Min ? "text-warning" : "")">@Labels.Quantity(available)</span>
+                                        @if (line.OnOrder > 0)
+                                        {
+                                            <small class="muted"> (+@Labels.Quantity(line.OnOrder) en camino)</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="muted">—</span>
+                                    }
+                                </td>
+                                <td data-label="Rango seguro" class="num range">@(line.Min > 0 ? Labels.SafeRange(line.Min, line.Max) : "—")</td>
+                                <td data-label="Cantidad">
+                                    <div class="qty-cell">
+                                        <input class="qty-input" type="number" min="0" step="any" inputmode="decimal"
+                                               aria-label="Cantidad de @line.Sku" @bind="line.Quantity" @bind:event="oninput" />
+                                        <span>@line.Unit</span>
+                                    </div>
+                                    @if (line.Suggested is { } suggested && suggested != line.Quantity)
+                                    {
+                                        <div class="qty-changed">Propuesto: @Labels.Quantity(suggested)</div>
+                                    }
+                                </td>
+                                <td class="row-actions">
+                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @line.Sku" @onclick="() => lines.Remove(line)">
+                                        <Icon Name="trash" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            @if (products is not null)
+            {
+                <h3 class="card-title">Añadir otros artículos</h3>
+                <form class="add-line" @onsubmit="AddLine">
+                    <label class="field">
+                        <span>Artículo</span>
+                        <select value="@(pickedId?.ToString() ?? "")" @onchange="OnPicked" aria-label="Artículo para añadir">
+                            <option value="">Elige un artículo</option>
+                            @if (Pickable(own: true).Any())
+                            {
+                                <optgroup label="De este distribuidor">
+                                    @foreach (var product in Pickable(own: true))
+                                    {
+                                        <option value="@product.Id">@product.Sku · @product.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                            @if (Pickable(own: false).Any())
+                            {
+                                <optgroup label="Otros artículos">
+                                    @foreach (var product in Pickable(own: false))
+                                    {
+                                        <option value="@product.Id">@product.Sku · @product.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
+                    </label>
+                    <label class="field field-qty">
+                        <span>Cantidad</span>
+                        <input type="number" min="0" step="any" inputmode="decimal" @bind="pickedQuantity" aria-label="Cantidad para añadir" />
+                    </label>
+                    <button class="btn" type="submit" disabled="@(pickedId is null)"><Icon Name="plus" /><span>Añadir</span></button>
+                </form>
+                @if (lineError is not null)
+                {
+                    <div class="alert alert-error" role="alert"><Icon Name="alert" /><span>@lineError</span></div>
+                }
+            }
+        }
+
+        <ErrorAlert Error="saveError" />
+
+        <div class="form-actions">
+            @if (order is not null)
+            {
+                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">Anular</button>
+                <span class="topbar-spacer"></span>
+            }
+            <a class="btn" href="pedidos">Volver</a>
+            <button class="btn" type="button" disabled="@(busy || !CanSave)" @onclick="() => SaveAsync(send: false)">Guardar borrador</button>
+            <button class="btn btn-primary" type="button" disabled="@(busy || !CanSave)" @onclick="() => SaveAsync(send: true)">
+                <Icon Name="send" /><span>@(busy ? "Guardando…" : "Guardar y marcar enviado")</span>
+            </button>
+        </div>
+    </div>
+}
+else if (order is not null)
+{
+    <div class="card form-card form-card-wide order-sheet">
+        <div class="print-only"><BrandLogo Size="34" /></div>
+        <div class="order-sheet-head">
+            <dl>
+                <dt>Pedido</dt><dd class="mono"><strong>@order.Code</strong></dd>
+                <dt>Estado</dt><dd><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></dd>
+                <dt>Fecha</dt><dd>@Labels.DateTime(order.SentAt ?? order.CreatedAt)</dd>
+                <dt>Entrega</dt><dd>@(order.DeliveryDate is { } date ? Labels.Date(date) : "Lo antes posible")</dd>
+            </dl>
+            <dl>
+                <dt>Distribuidor</dt><dd><strong>@order.SupplierName</strong></dd>
+                @if (Supplier is { } supplier)
+                {
+                    @if (supplier.ContactName is not null)
+                    {
+                        <dt>Contacto</dt><dd>@supplier.ContactName</dd>
+                    }
+                    @if (supplier.Email is not null)
+                    {
+                        <dt>Email</dt><dd>@supplier.Email</dd>
+                    }
+                    @if (supplier.Phone is not null)
+                    {
+                        <dt>Teléfono</dt><dd>@supplier.Phone</dd>
+                    }
+                }
+                <dt>Preparado por</dt><dd>@order.UserName</dd>
+            </dl>
+        </div>
+
+        <table class="table table-compact">
+            <thead>
+                <tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var line in order.Lines)
+                {
+                    <tr>
+                        <td data-label="SKU"><strong>@line.Sku</strong></td>
+                        <td data-label="Artículo">@line.ProductName</td>
+                        <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Unit</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (order.Notes is not null)
+        {
+            <p><strong>Notas:</strong> @order.Notes</p>
+        }
+
+        <ErrorAlert Error="saveError" />
+
+        <div class="form-actions">
+            <a class="btn" href="pedidos">Volver</a>
+            @if (CanEdit && order.Status == PurchaseOrderStatus.Sent)
+            {
+                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">Anular</button>
+                <button class="btn btn-primary" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Received)">
+                    <Icon Name="check" /><span>Marcar recibido</span>
+                </button>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "distribuidor")] public Guid? SupplierQuery { get; set; }
+
+    private readonly List<DraftLine> lines = [];
+    private IReadOnlyList<Supplier> suppliers = [];
+    private IReadOnlyList<Product>? products;
+    private IReadOnlyList<PurchaseOrder> drafts = [];
+    private Dictionary<Guid, decimal>? stock;
+    private PurchaseOrder? order;
+    private PurchaseOrder? existingDraft;
+    private Guid? supplierId;
+    private DateOnly? deliveryDate;
+    private string? notes;
+    private Guid? pickedId;
+    private decimal? pickedQuantity;
+    private string? lineError;
+    private Exception? error;
+    private Exception? saveError;
+    private bool loading = true;
+    private bool busy;
+
+    private bool CanEdit => Session.Current?.User.Can(Permissions.OrdersEdit) == true;
+
+    private bool Editable => CanEdit && (order is null || order.Status == PurchaseOrderStatus.Draft);
+
+    private bool CanSave => supplierId is not null && lines.Count > 0;
+
+    private int SuggestedCount => lines.Count(l => l.Suggested is not null);
+
+    private Supplier? Supplier => order is null ? null : suppliers.FirstOrDefault(s => s.Id == order.SupplierId);
+
+    private string Title => order is null ? "Nuevo pedido" : $"Pedido {order.Code}";
+
+    private string? Subtitle => order is null
+        ? "Elige el distribuidor: se cargan solos los artículos que han bajado de su rango seguro."
+        : order.SupplierName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        error = null;
+        lines.Clear();
+        order = null;
+        try
+        {
+            var user = Session.Current?.User;
+            suppliers = await Api.GetSuppliersAsync();
+            if (user?.Can(Permissions.OrdersEdit) == true)
+            {
+                products = user.Can(Permissions.ProductsView) ? await Api.GetProductsAsync() : null;
+                stock = user.Can(Permissions.StockView)
+                    ? (await Api.GetStockAsync()).GroupBy(s => s.ProductId).ToDictionary(g => g.Key, g => g.Sum(s => s.Quantity))
+                    : null;
+                drafts = await Api.GetPurchaseOrdersAsync(PurchaseOrderStatus.Draft);
+            }
+
+            if (Id is { } id)
+            {
+                order = await Api.GetPurchaseOrderAsync(id);
+                supplierId = order.SupplierId;
+                deliveryDate = order.DeliveryDate;
+                notes = order.Notes;
+                lines.AddRange(order.Lines.Select(l => FromProduct(l.ProductId, l.Sku, l.ProductName, l.Unit, l.Quantity, l.SuggestedQuantity)));
+            }
+            else if (SupplierQuery is { } preselected && suppliers.Any(s => s.Id == preselected && s.Active))
+            {
+                await SelectSupplierAsync(preselected);
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private Task OnSupplierChangedAsync(ChangeEventArgs e) =>
+        Guid.TryParse(e.Value?.ToString(), out var id) ? SelectSupplierAsync(id) : SelectSupplierAsync(null);
+
+    // Proposed lines follow the distributor; anything added by hand stays.
+    private async Task SelectSupplierAsync(Guid? id)
+    {
+        supplierId = id;
+        lines.RemoveAll(l => l.Suggested is not null);
+        existingDraft = id is null ? null : drafts.FirstOrDefault(d => d.SupplierId == id);
+        if (id is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var suggestion = (await Api.GetReorderSuggestionsAsync(id)).FirstOrDefault(s => s.SupplierId == id);
+            var proposed = suggestion?.Lines ?? [];
+            lines.RemoveAll(l => proposed.Any(p => p.ProductId == l.ProductId));
+            lines.InsertRange(0, proposed.Select(p => new DraftLine
+            {
+                ProductId = p.ProductId, Sku = p.Sku, Name = p.ProductName, Unit = p.Unit, Available = p.Available, OnOrder = p.OnOrder,
+                Min = p.MinStock, Max = p.MaxStock, Quantity = p.SuggestedQuantity, Suggested = p.SuggestedQuantity,
+            }));
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private IEnumerable<Product> Pickable(bool own) =>
+        (products ?? []).Where(p => (p.SupplierId == supplierId) == own && lines.All(l => l.ProductId != p.Id));
+
+    private void OnPicked(ChangeEventArgs e)
+    {
+        pickedId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+        lineError = null;
+        // A preselected value the user can change: what is missing up to the maximum, or 1.
+        if (pickedId is { } picked && products!.FirstOrDefault(p => p.Id == picked) is { } product)
+        {
+            var available = stock?.GetValueOrDefault(product.Id) ?? 0;
+            var toMax = Math.Ceiling(Math.Max(product.MinStock, product.MaxStock) - available);
+            pickedQuantity = toMax > 0 ? toMax : 1;
+        }
+    }
+
+    private void AddLine()
+    {
+        lineError = null;
+        if (pickedId is not { } id || products!.FirstOrDefault(p => p.Id == id) is not { } product)
+        {
+            return;
+        }
+
+        if (pickedQuantity is not { } quantity || quantity <= 0)
+        {
+            lineError = "Escribe una cantidad mayor que cero.";
+            return;
+        }
+
+        lines.Add(FromProduct(product.Id, product.Sku, product.Name, product.Unit, quantity, null));
+        pickedId = null;
+        pickedQuantity = null;
+    }
+
+    private DraftLine FromProduct(Guid productId, string sku, string name, string unit, decimal quantity, decimal? suggested)
+    {
+        var product = products?.FirstOrDefault(p => p.Id == productId);
+        return new DraftLine
+        {
+            ProductId = productId, Sku = sku, Name = name, Unit = unit, Quantity = quantity, Suggested = suggested,
+            Available = stock is null ? null : stock.GetValueOrDefault(productId),
+            Min = product?.MinStock ?? 0, Max = product?.MaxStock ?? 0,
+        };
+    }
+
+    private async Task SaveAsync(bool send)
+    {
+        saveError = null;
+        if (lines.FirstOrDefault(l => l.Quantity <= 0) is { } empty)
+        {
+            saveError = new ApiException(HttpStatusCode.BadRequest, $"La cantidad de {empty.Sku} tiene que ser mayor que cero, o quita la línea.");
+            return;
+        }
+
+        busy = true;
+        try
+        {
+            var input = new PurchaseOrderInput
+            {
+                SupplierId = supplierId,
+                DeliveryDate = deliveryDate,
+                Notes = notes,
+                Lines = [.. lines.Select(l => new PurchaseOrderLineInput { ProductId = l.ProductId, Quantity = l.Quantity, SuggestedQuantity = l.Suggested })],
+            };
+            var saved = order is null ? await Api.CreatePurchaseOrderAsync(input) : await Api.UpdatePurchaseOrderAsync(order.Id, input);
+            if (send)
+            {
+                saved = await Api.ChangePurchaseOrderStatusAsync(saved.Id, PurchaseOrderStatus.Sent);
+            }
+
+            Navigation.NavigateTo($"pedidos/{saved.Id}");
+        }
+        catch (ApiException ex)
+        {
+            saveError = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m))) : ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task MoveAsync(PurchaseOrderStatus status)
+    {
+        busy = true;
+        saveError = null;
+        try
+        {
+            order = await Api.ChangePurchaseOrderStatusAsync(order!.Id, status);
+        }
+        catch (ApiException ex)
+        {
+            saveError = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("print");
+        }
+        catch (JSException)
+        {
+            // Printing isn't available in this host.
+        }
+    }
+
+    private sealed class DraftLine
+    {
+        public Guid ProductId { get; init; }
+
+        public required string Sku { get; init; }
+
+        public required string Name { get; init; }
+
+        public required string Unit { get; init; }
+
+        public decimal? Available { get; init; }
+
+        public decimal OnOrder { get; init; }
+
+        public decimal Min { get; init; }
+
+        public decimal Max { get; init; }
+
+        public decimal Quantity { get; set; }
+
+        public decimal? Suggested { get; init; }
+    }
+}

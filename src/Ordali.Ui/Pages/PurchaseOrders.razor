@@ -1,0 +1,147 @@
+@page "/pedidos"
+@attribute [Authorize(Policy = Permissions.OrdersView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>Pedidos · Ordali</PageTitle>
+
+<PageHeader Title="Pedidos a distribuidores" Subtitle="Lo que baja del rango seguro se propone solo; después se ajusta y se añade lo que haga falta.">
+    <Actions>
+        @if (CanEdit)
+        {
+            <a class="btn" href="distribuidores"><Icon Name="truck" /><span>Distribuidores</span></a>
+            <a class="btn btn-primary" href="pedidos/nuevo"><Icon Name="plus" /><span>Nuevo pedido</span></a>
+        }
+    </Actions>
+</PageHeader>
+
+@if (CanEdit && suggestions is not null)
+{
+    <section class="group">
+        <h2 class="group-title">Por pedir</h2>
+        @if (suggestions.Count == 0)
+        {
+            <p class="muted">Todo el stock está dentro de su rango seguro.</p>
+        }
+        else
+        {
+            <div class="reorder-grid">
+                @foreach (var suggestion in suggestions)
+                {
+                    var draft = suggestion.SupplierId is { } supplierId ? Draft(supplierId) : null;
+                    <article class="reorder-card">
+                        <h3>@(suggestion.SupplierName ?? "Sin distribuidor asignado")</h3>
+                        <span class="muted small">
+                            @suggestion.Lines.Count @(suggestion.Lines.Count == 1 ? "artículo" : "artículos") por debajo del mínimo
+                        </span>
+                        <ul>
+                            @foreach (var line in suggestion.Lines.Take(4))
+                            {
+                                <li><strong>@line.Sku</strong> · quedan @Labels.Quantity(line.Available), pedir @Labels.Quantity(line.SuggestedQuantity) @line.Unit</li>
+                            }
+                            @if (suggestion.Lines.Count > 4)
+                            {
+                                <li class="muted">y @(suggestion.Lines.Count - 4) más</li>
+                            }
+                        </ul>
+                        @if (suggestion.SupplierId is null)
+                        {
+                            <span class="muted small">Asigna un distribuidor en la ficha de cada artículo para pedirlos.</span>
+                        }
+                        else if (draft is not null)
+                        {
+                            <a class="btn btn-sm" href="pedidos/@draft.Id">Seguir con el borrador @draft.Code</a>
+                        }
+                        else
+                        {
+                            <a class="btn btn-sm btn-primary" href="pedidos/nuevo?distribuidor=@suggestion.SupplierId">Preparar pedido</a>
+                        }
+                    </article>
+                }
+            </div>
+        }
+    </section>
+}
+
+<nav class="tabs" aria-label="Estado">
+    <button type="button" class="tab @(openOnly ? "active" : "")" @onclick="() => openOnly = true">Abiertos</button>
+    <button type="button" class="tab @(openOnly ? "" : "active")" @onclick="() => openOnly = false">Todos</button>
+</nav>
+
+<ErrorAlert Error="error" />
+
+@if (orders is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (Visible.Count == 0)
+{
+    <EmptyState IconName="cart" Text="@(openOnly ? "No hay pedidos en curso." : "Todavía no hay pedidos.")" />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Distribuidor</th>
+                    <th class="num">Líneas</th>
+                    <th>Entrega</th>
+                    <th>Estado</th>
+                    <th>Preparado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Visible)
+                {
+                    <tr>
+                        <td data-label="Pedido" class="mono"><strong>@order.Code</strong></td>
+                        <td data-label="Distribuidor">@order.SupplierName</td>
+                        <td data-label="Líneas" class="num">@order.Lines.Count</td>
+                        <td data-label="Entrega">@(order.DeliveryDate is { } date ? Labels.Date(date) : "—")</td>
+                        <td data-label="Estado"><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></td>
+                        <td data-label="Preparado">@order.UserName · @Labels.DateTime(order.CreatedAt)</td>
+                        <td class="row-actions">
+                            <a class="btn btn-sm" href="pedidos/@order.Id">@(order.Status == PurchaseOrderStatus.Draft && CanEdit ? "Editar" : "Ver")</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<PurchaseOrder>? orders;
+    private IReadOnlyList<ReorderSuggestion>? suggestions;
+    private bool openOnly = true;
+    private Exception? error;
+
+    private bool CanEdit => Session.Current?.User.Can(Permissions.OrdersEdit) == true;
+
+    private List<PurchaseOrder> Visible => [.. orders!.Where(o => !openOnly || o.IsOpen)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            orders = await Api.GetPurchaseOrdersAsync();
+            if (CanEdit)
+            {
+                suggestions = await Api.GetReorderSuggestionsAsync();
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private PurchaseOrder? Draft(Guid supplierId) =>
+        orders?.FirstOrDefault(o => o.SupplierId == supplierId && o.Status == PurchaseOrderStatus.Draft);
+}

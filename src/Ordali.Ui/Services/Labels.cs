@@ -33,6 +33,23 @@ public static class Labels
         _ => status.ToString(),
     };
 
+    public static string Of(PurchaseOrderStatus status) => status switch
+    {
+        PurchaseOrderStatus.Draft => "Borrador",
+        PurchaseOrderStatus.Sent => "Enviado",
+        PurchaseOrderStatus.Received => "Recibido",
+        PurchaseOrderStatus.Cancelled => "Anulado",
+        _ => status.ToString(),
+    };
+
+    public static string BadgeClass(PurchaseOrderStatus status) => status switch
+    {
+        PurchaseOrderStatus.Draft => "badge-draft",
+        PurchaseOrderStatus.Sent => "badge-sent",
+        PurchaseOrderStatus.Received => "badge-receipt",
+        _ => "badge-cancelled",
+    };
+
     public static string Of(UserCategory category) => category switch
     {
         UserCategory.Admin => "Administrador",
@@ -61,6 +78,8 @@ public static class Labels
         Permissions.MovementsAdjust => "Hacer ajustes de inventario",
         Permissions.UsersView => "Ver perfiles de usuario",
         Permissions.UsersCreate => "Crear perfiles desde una plantilla",
+        Permissions.OrdersView => "Ver pedidos y distribuidores",
+        Permissions.OrdersEdit => "Preparar y enviar pedidos a distribuidores",
         _ => permission,
     };
 
@@ -70,12 +89,19 @@ public static class Labels
         ("Catálogo", [Permissions.ProductsView, Permissions.ProductsEdit]),
         ("Almacén", [Permissions.LocationsView, Permissions.LocationsEdit, Permissions.StockView]),
         ("Movimientos", [Permissions.MovementsView, Permissions.MovementsCreate, Permissions.MovementsAdjust]),
+        ("Compras", [Permissions.OrdersView, Permissions.OrdersEdit]),
         ("Personal", [Permissions.UsersView, Permissions.UsersCreate]),
     ];
 
     public static string Quantity(decimal value) => value.ToString("#,0.##", Culture);
 
+    /// <summary>"80 – 200", or just the minimum when no maximum is set.</summary>
+    public static string SafeRange(decimal min, decimal max) =>
+        max > 0 ? $"{Quantity(min)} – {Quantity(max)}" : $"mín. {Quantity(min)}";
+
     public static string SignedQuantity(decimal value) => value > 0 ? "+" + Quantity(value) : Quantity(value);
+
+    public static string Date(DateOnly value) => value.ToString("dd/MM/yyyy", Culture);
 
     public static string DateTime(DateTimeOffset value) => value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", Culture);
 

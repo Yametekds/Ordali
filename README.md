@@ -59,6 +59,10 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 | `GET`/`POST /api/v1/receipts` | Entradas: la mercancía queda en recepción hasta que se ubica; `?pending=true` lista las pendientes |
 | `POST /api/v1/receipts/{id}/putaway` | Traslada parte de una entrada desde recepción a su ubicación |
 | `GET`/`POST /api/v1/movements` | Movimientos (salidas, traslados y ajustes) con quién los hizo y la entrada a la que pertenecen |
+| `GET`/`POST`/`PUT /api/v1/suppliers` | Distribuidores; cada artículo indica a cuál se le pide |
+| `GET /api/v1/purchase-orders/suggestions` | Artículos por debajo de su rango seguro, agrupados por distribuidor, con la cantidad que los devuelve al máximo |
+| `GET`/`POST`/`PUT /api/v1/purchase-orders` | Pedidos a distribuidores; se editan mientras están en borrador |
+| `POST /api/v1/purchase-orders/{id}/status` | Borrador → Enviado o Anulado; Enviado → Recibido o Anulado |
 | `GET /api/v1/permissions` | Los permisos que se pueden marcar en una plantilla |
 | `/api/v1/profile-templates` | Plantillas de perfil: las crea el administrador y las usan quienes pueden crear perfiles |
 | `GET`/`POST /api/v1/users` | Perfiles por categoría y alta a partir de una plantilla |
@@ -72,6 +76,15 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 2. **Traslado:** otro mozo escanea `ENTRADA2`, escanea el artículo y le aparece su ubicación predeterminada; si no tiene, escanea o elige otra. Escribe la cantidad y la entrada se cierra cuando no queda nada en recepción.
 
 Las pantallas funcionan con lectores USB, Bluetooth y terminales Android (Zebra, Honeywell…) que escriben el código y pulsan Intro: cada paso deja el cursor en el campo siguiente y avisa con un pitido si el código no encaja. En móviles con Chrome o Edge también se puede escanear con la cámara.
+
+## Pedidos a distribuidores
+
+Cada artículo tiene un **rango seguro** (stock mínimo y máximo) y un distribuidor habitual.
+
+1. En **Pedidos**, la sección *Por pedir* agrupa por distribuidor los artículos que han bajado del mínimo. Lo que ya está pedido y no ha llegado cuenta como stock, para no pedirlo dos veces.
+2. *Preparar pedido* abre la lista de ese distribuidor con la cantidad propuesta (lo que falta hasta el máximo) ya escrita; se puede cambiar o quitar cada línea.
+3. Debajo se añaden otros artículos del catálogo con la cantidad que se quiera, sean o no de ese distribuidor.
+4. El pedido se guarda como borrador o se marca como enviado, y se puede imprimir o guardar en PDF desde el navegador.
 
 ## Perfiles y permisos
 
