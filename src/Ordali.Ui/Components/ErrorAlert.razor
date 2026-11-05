@@ -11,7 +11,8 @@
 
     private string Message => Error switch
     {
-        ApiException api => api.Message,
-        _ => "Algo ha fallado. Inténtalo de nuevo.",
+        // Messages from the API arrive in Spanish; known ones are shown in the current language.
+        ApiException api => L[api.Message],
+        _ => L["Algo ha fallado. Inténtalo de nuevo."],
     };
 }

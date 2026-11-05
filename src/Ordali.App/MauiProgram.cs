@@ -1,8 +1,11 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 
 using Ordali.Client.Auth;
+using Ordali.Client.Localization;
 using Ordali.App.Services;
 using Ordali.Ui;
+using Ordali.Ui.Localization;
 
 namespace Ordali.App;
 
@@ -22,6 +25,12 @@ public static class MauiProgram
         builder.Services.AddSingleton(settings);
         builder.Services.AddSingleton(SecureStorage.Default);
         builder.Services.AddScoped<ISessionStorage, SecureSessionStorage>();
+
+        // The saved language, or the device's on first launch, applies before anything renders.
+        PreferencesLanguageStore language = new(Preferences.Default);
+        Ordali.Client.Localization.Language.Set(language.Saved ?? CultureInfo.CurrentUICulture.Name);
+        builder.Services.AddSingleton<ILanguageStore>(language);
+        builder.Services.AddSingleton(new Translations(AppTexts.English));
         builder.Services.AddHttpClient();
         builder.Services.AddOrdaliUi(settings.BaseUrl);
 

@@ -2,12 +2,12 @@
 @attribute [Authorize(Policy = Permissions.ProductsView)]
 @inject IOrdaliApi Api
 
-<PageTitle>Productos · Ordali</PageTitle>
+<PageTitle>@L["Productos"] · Ordali</PageTitle>
 
-<PageHeader Title="Productos">
+<PageHeader Title="@L["Productos"]">
     <Actions>
         <AuthorizeView Policy="@Permissions.ProductsEdit">
-            <a class="btn btn-primary" href="registros/productos/nuevo"><Icon Name="plus" /><span>Nuevo producto</span></a>
+            <a class="btn btn-primary" href="registros/productos/nuevo"><Icon Name="plus" /><span>@L["Nuevo producto"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
@@ -15,7 +15,7 @@
 <div class="toolbar">
     <label class="search">
         <Icon Name="search" />
-        <input type="search" placeholder="Buscar por SKU, nombre o GTIN" aria-label="Buscar productos"
+        <input type="search" placeholder="@L["Buscar por SKU, nombre o GTIN"]" aria-label="@L["Buscar productos"]"
                value="@search" @oninput="OnSearchAsync" />
     </label>
 </div>
@@ -31,7 +31,7 @@
 }
 else if (products.Count == 0)
 {
-    <EmptyState IconName="box" Text="@(string.IsNullOrWhiteSpace(search) ? "Todavía no hay productos." : "Ningún producto coincide con la búsqueda.")" />
+    <EmptyState IconName="box" Text="@(string.IsNullOrWhiteSpace(search) ? L["Todavía no hay productos."] : L["Ningún producto coincide con la búsqueda."])" />
 }
 else
 {
@@ -40,11 +40,11 @@ else
             <thead>
                 <tr>
                     <th>SKU</th>
-                    <th>Nombre</th>
+                    <th>@L["Nombre"]</th>
                     <th>GTIN</th>
-                    <th>Lotes</th>
+                    <th>@L["Lotes"]</th>
                     <th class="num">Stock</th>
-                    <th class="num">Mínimo</th>
+                    <th class="num">@L["Mínimo"]</th>
                     <th></th>
                 </tr>
             </thead>
@@ -54,18 +54,18 @@ else
                     var total = totals.GetValueOrDefault(product.Id);
                     <tr>
                         <td data-label="SKU"><strong class="mono">@product.Sku</strong></td>
-                        <td data-label="Nombre">@product.Name</td>
+                        <td data-label="@L["Nombre"]">@product.Name</td>
                         <td data-label="GTIN" class="mono">@(product.Gtin ?? "—")</td>
-                        <td data-label="Lotes">@(product.TracksLots ? "Sí" : "No")</td>
+                        <td data-label="@L["Lotes"]">@(product.TracksLots ? L["Sí"] : L["No"])</td>
                         <td data-label="Stock" class="num">
                             <a href="stock?articulo=@product.Id" class="@(total < product.MinStock ? "text-warning" : "")">
-                                @Labels.Quantity(total) @product.Unit
+                                @Labels.Quantity(total) @Labels.Unit(product.Unit)
                             </a>
                         </td>
-                        <td data-label="Mínimo" class="num">@Labels.Quantity(product.MinStock)</td>
+                        <td data-label="@L["Mínimo"]" class="num">@Labels.Quantity(product.MinStock)</td>
                         <td class="row-actions">
                             <AuthorizeView Policy="@Permissions.ProductsEdit">
-                                <a class="btn btn-ghost btn-icon" href="registros/productos/@product.Id" title="Editar" aria-label="Editar @product.Sku">
+                                <a class="btn btn-ghost btn-icon" href="registros/productos/@product.Id" title="@L["Editar"]" aria-label="@L["Editar {0}", product.Sku]">
                                     <Icon Name="edit" />
                                 </a>
                             </AuthorizeView>

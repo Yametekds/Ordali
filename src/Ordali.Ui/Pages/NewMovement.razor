@@ -3,9 +3,9 @@
 @inject IOrdaliApi Api
 @inject SessionState Session
 
-<PageTitle>Registrar movimiento · Ordali</PageTitle>
+<PageTitle>@L["Registrar movimiento"] · Ordali</PageTitle>
 
-<PageHeader Title="Registrar movimiento" />
+<PageHeader Title="@L["Registrar movimiento"]" />
 
 @if (products is null)
 {
@@ -19,13 +19,13 @@ else
 {
     <div class="alert alert-info">
         <Icon Name="info" />
-        <span>Las entradas se registran en <a href="entradas/nueva">Nueva entrada</a> y se ubican desde <a href="traslados">Traslados</a>.</span>
+        <span>@L["Las entradas se registran en"] <a href="entradas/nueva">@L["Nueva entrada"]</a> @L["y se ubican desde"] <a href="traslados">@L["Traslados"]</a>.</span>
     </div>
     <div class="card form-card">
-        <ScanField Id="movement-product" Label="Escanear artículo" Placeholder="EAN o SKU" AutoFocus="true" OnScan="OnProductScannedAsync"
-                   Hint="Con un lector de códigos de barras, escanea y el artículo se elige solo." />
+        <ScanField Id="movement-product" Label="@L["Escanear artículo"]" Placeholder="@L["EAN o SKU"]" AutoFocus="true" OnScan="OnProductScannedAsync"
+                   Hint="@L["Con un lector de códigos de barras, escanea y el artículo se elige solo."]" />
         <EditForm EditContext="editContext" OnSubmit="SubmitAsync" FormName="movement">
-            <div class="segmented" role="radiogroup" aria-label="Tipo de movimiento">
+            <div class="segmented" role="radiogroup" aria-label="@L["Tipo de movimiento"]">
                 @foreach (var type in AllowedTypes)
                 {
                     <button type="button" role="radio" aria-checked="@(model.Type == type ? "true" : "false")"
@@ -38,51 +38,51 @@ else
 
             <div class="form-grid">
                 <label class="field field-wide">
-                    <span>Artículo</span>
+                    <span>@L["Artículo"]</span>
                     <InputSelect TValue="Guid?" Value="model.ProductId" ValueExpression="() => model.ProductId" ValueChanged="OnProductChangedAsync">
-                        <option value="">Elige un artículo</option>
+                        <option value="">@L["Elige un artículo"]</option>
                         @foreach (var product in products)
                         {
                             <option value="@product.Id">@product.Sku · @product.Name</option>
                         }
                     </InputSelect>
-                    <ValidationMessage For="() => model.ProductId" />
+                    <FieldError For="() => model.ProductId" />
                 </label>
 
                 @if (MovementRules.NeedsFrom(model.Type))
                 {
                     <label class="field">
-                        <span>Origen</span>
+                        <span>@L["Origen"]</span>
                         <InputSelect @bind-Value="model.FromLocationId">
-                            <option value="">Elige el origen</option>
+                            <option value="">@L["Elige el origen"]</option>
                             @foreach (var location in OriginLocations)
                             {
                                 <option value="@location.Id">@location.Code (@Labels.Quantity(Available(location.Id, null)))</option>
                             }
                         </InputSelect>
-                        <ValidationMessage For="() => model.FromLocationId" />
+                        <FieldError For="() => model.FromLocationId" />
                     </label>
                 }
 
                 @if (MovementRules.NeedsTo(model.Type))
                 {
                     <label class="field">
-                        <span>@(model.Type == MovementType.Adjustment ? "Ubicación" : "Destino")</span>
+                        <span>@(model.Type == MovementType.Adjustment ? L["Ubicación"] : L["Destino"])</span>
                         <InputSelect @bind-Value="model.ToLocationId">
-                            <option value="">Elige la ubicación</option>
+                            <option value="">@L["Elige la ubicación"]</option>
                             @foreach (var location in locations)
                             {
                                 <option value="@location.Id">@location.Code · @Labels.Of(location.Type)</option>
                             }
                         </InputSelect>
-                        <ValidationMessage For="() => model.ToLocationId" />
+                        <FieldError For="() => model.ToLocationId" />
                     </label>
                 }
 
                 @if (SelectedProduct?.TracksLots == true)
                 {
                     <label class="field">
-                        <span>Lote</span>
+                        <span>@L["Lote"]</span>
                         <InputText @bind-Value="model.Lot" list="lots" autocomplete="off" />
                         <datalist id="lots">
                             @foreach (var lot in productStock.Where(s => s.Lot is not null).Select(s => s.Lot).Distinct())
@@ -90,28 +90,28 @@ else
                                 <option value="@lot"></option>
                             }
                         </datalist>
-                        <ValidationMessage For="() => model.Lot" />
+                        <FieldError For="() => model.Lot" />
                     </label>
                 }
 
                 <label class="field">
-                    <span>Cantidad @(SelectedProduct is null ? "" : $"({SelectedProduct.Unit})")</span>
+                    <span>@L["Cantidad"] @(SelectedProduct is null ? "" : $"({Labels.Unit(SelectedProduct.Unit)})")</span>
                     <InputNumber @bind-Value="model.Quantity" step="any" inputmode="decimal" />
                     @if (model.Type == MovementType.Adjustment)
                     {
-                        <small class="muted">Positiva para sumar, negativa para restar.</small>
+                        <small class="muted">@L["Positiva para sumar, negativa para restar."]</small>
                     }
                     else if (model.FromLocationId is { } from)
                     {
-                        <small class="muted">Disponible en origen: @Labels.Quantity(Available(from, model.Lot))</small>
+                        <small class="muted">@L["Disponible en origen: {0}", Labels.Quantity(Available(from, model.Lot))]</small>
                     }
-                    <ValidationMessage For="() => model.Quantity" />
+                    <FieldError For="() => model.Quantity" />
                 </label>
 
                 <label class="field field-wide">
-                    <span>Motivo @(model.Type == MovementType.Adjustment ? "" : "(opcional)")</span>
-                    <InputText @bind-Value="model.Reason" placeholder="Pedido, albarán, recuento…" />
-                    <ValidationMessage For="() => model.Reason" />
+                    <span>@L["Motivo"] @(model.Type == MovementType.Adjustment ? "" : L["(opcional)"])</span>
+                    <InputText @bind-Value="model.Reason" placeholder="@L["Pedido, albarán, recuento…"]" />
+                    <FieldError For="() => model.Reason" />
                 </label>
             </div>
 
@@ -119,14 +119,14 @@ else
             @if (saved is not null)
             {
                 <div class="alert alert-ok" role="status">
-                    Registrado: @Labels.Of(saved.Type) de @Labels.Quantity(saved.Quantity) de @saved.Sku.
-                    <a href="movimientos">Ver movimientos</a>
+                    @L["Registrado: {0} de {1} de {2}.", Labels.Of(saved.Type), Labels.Quantity(saved.Quantity), saved.Sku]
+                    <a href="movimientos">@L["Ver movimientos"]</a>
                 </div>
             }
 
             <div class="form-actions">
-                <a class="btn" href="movimientos">Cancelar</a>
-                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Registrando…" : "Registrar")</button>
+                <a class="btn" href="movimientos">@L["Cancelar"]</a>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? L["Registrando…"] : L["Registrar"])</button>
             </div>
         </EditForm>
     </div>
@@ -201,7 +201,7 @@ else
         var product = products?.FirstOrDefault(p => Scanning.IsProduct(scan.Code, p.Sku, p.Gtin));
         if (product is null)
         {
-            error = new ApiException(HttpStatusCode.NotFound, $"No hay ningún artículo con el código {scan.Code}.");
+            error = new ApiException(HttpStatusCode.NotFound, L["No hay ningún artículo con el código {0}.", scan.Code]);
             scan.Reject();
             return;
         }
@@ -263,11 +263,11 @@ else
         editContext.NotifyValidationStateChanged();
     }
 
-    private static string Help(MovementType type) => type switch
+    private string Help(MovementType type) => type switch
     {
-        MovementType.Shipment => "Mercancía que sale del almacén hacia un cliente.",
-        MovementType.Transfer => "Cambio de ubicación dentro del almacén, por ejemplo para reponer picking.",
-        MovementType.Adjustment => "Corrección tras un recuento o por rotura. Siempre con motivo.",
+        MovementType.Shipment => L["Mercancía que sale del almacén hacia un cliente."],
+        MovementType.Transfer => L["Cambio de ubicación dentro del almacén, por ejemplo para reponer picking."],
+        MovementType.Adjustment => L["Corrección tras un recuento o por rotura. Siempre con motivo."],
         _ => "",
     };
 }

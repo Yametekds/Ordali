@@ -13,7 +13,7 @@
                     <span>@Labels.Permission(permission)</span>
                     @if (Highlight?.Contains(permission) == false && Selected.Contains(permission))
                     {
-                        <span class="badge badge-special" title="No viene de la plantilla">Especial</span>
+                        <span class="badge badge-special" title="@L["No viene de la plantilla"]">@L["Especial"]</span>
                     }
                 </label>
             }

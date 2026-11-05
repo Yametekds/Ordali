@@ -2,19 +2,19 @@
 @attribute [Authorize(Policy = Policies.SeeTemplates)]
 @inject IOrdaliApi Api
 
-<PageTitle>Plantillas de perfil · Ordali</PageTitle>
+<PageTitle>@L["Plantillas de perfil"] · Ordali</PageTitle>
 
-<PageHeader Title="Plantillas de perfil" Subtitle="Al dar de alta un perfil se elige una plantilla y recibe sus permisos.">
+<PageHeader Title="@L["Plantillas de perfil"]" Subtitle="@L["Al dar de alta un perfil se elige una plantilla y recibe sus permisos."]">
     <Actions>
         <AuthorizeView Policy="@Policies.Admin">
-            <a class="btn btn-primary" href="plantillas/nueva"><Icon Name="plus" /><span>Nueva plantilla</span></a>
+            <a class="btn btn-primary" href="plantillas/nueva"><Icon Name="plus" /><span>@L["Nueva plantilla"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
 
 <AuthorizeView Policy="@Policies.Admin">
     <NotAuthorized>
-        <div class="alert alert-info"><Icon Name="info" /><span>Puedes usar estas plantillas al crear perfiles. Solo el administrador puede crearlas o cambiarlas.</span></div>
+        <div class="alert alert-info"><Icon Name="info" /><span>@L["Puedes usar estas plantillas al crear perfiles. Solo el administrador puede crearlas o cambiarlas."]</span></div>
     </NotAuthorized>
 </AuthorizeView>
 
@@ -29,7 +29,7 @@
 }
 else if (templates.Count == 0)
 {
-    <EmptyState IconName="shield" Text="Todavía no hay plantillas." />
+    <EmptyState IconName="shield" Text="@L["Todavía no hay plantillas."]" />
 }
 else
 {
@@ -52,13 +52,13 @@ else
                     }
                 </ul>
                 <footer>
-                    <span class="muted small">@template.Permissions.Count de @Permissions.All.Count permisos</span>
+                    <span class="muted small">@L["{0} de {1} permisos", template.Permissions.Count, Permissions.All.Count]</span>
                     <span class="template-actions">
                         <AuthorizeView Policy="@Permissions.UsersCreate">
-                            <a class="btn btn-sm" href="registros/usuarios/nuevo?plantilla=@template.Id">Usar</a>
+                            <a class="btn btn-sm" href="registros/usuarios/nuevo?plantilla=@template.Id">@L["Usar"]</a>
                         </AuthorizeView>
                         <AuthorizeView Policy="@Policies.Admin">
-                            <a class="btn btn-sm btn-ghost" href="plantillas/@template.Id" aria-label="Editar @template.Name"><Icon Name="edit" /></a>
+                            <a class="btn btn-sm btn-ghost" href="plantillas/@template.Id" aria-label="@L["Editar {0}", template.Name]"><Icon Name="edit" /></a>
                         </AuthorizeView>
                     </span>
                 </footer>

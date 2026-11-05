@@ -5,14 +5,15 @@
         <div class="auth-hero">
             <BrandLogo Size="72" ShowName="false" />
             <span class="auth-name">Ordali</span>
-            <span class="auth-tagline">Entradas, ubicaciones y stock de tu almacén, al día desde el móvil o el ordenador.</span>
+            <span class="auth-tagline">@L["Entradas, ubicaciones y stock de tu almacén, al día desde el móvil o el ordenador."]</span>
         </div>
     </aside>
     <div class="auth-column">
+        <LanguagePicker Class="auth-lang" />
         @Body
         @if (HostLinks is not null)
         {
-            <nav class="auth-links" aria-label="Opciones">@HostLinks</nav>
+            <nav class="auth-links" aria-label="@L["Opciones"]">@HostLinks</nav>
         }
     </div>
 </div>

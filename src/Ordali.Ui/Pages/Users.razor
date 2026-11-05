@@ -2,18 +2,18 @@
 @attribute [Authorize(Policy = Permissions.UsersView)]
 @inject IOrdaliApi Api
 
-<PageTitle>Usuarios · Ordali</PageTitle>
+<PageTitle>@L["Usuarios"] · Ordali</PageTitle>
 
-<PageHeader Title="Usuarios">
+<PageHeader Title="@L["Usuarios"]">
     <Actions>
         <AuthorizeView Policy="@Permissions.UsersCreate">
-            <a class="btn btn-primary" href="registros/usuarios/nuevo"><Icon Name="plus" /><span>Nuevo perfil</span></a>
+            <a class="btn btn-primary" href="registros/usuarios/nuevo"><Icon Name="plus" /><span>@L["Nuevo perfil"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
 
-<div class="tabs" role="tablist" aria-label="Categoría">
-    <a class="tab @(Category is null ? "active" : "")" href="registros/usuarios">Todos <span class="tab-count">@(users?.Count ?? 0)</span></a>
+<div class="tabs" role="tablist" aria-label="@L["Categoría"]">
+    <a class="tab @(Category is null ? "active" : "")" href="registros/usuarios">@L["Todos"] <span class="tab-count">@(users?.Count ?? 0)</span></a>
     @foreach (var category in Categories)
     {
         <a class="tab @(Category == category ? "active" : "")" href="registros/usuarios?categoria=@category">
@@ -40,7 +40,7 @@ else
             <h2 class="group-title">@Labels.Plural(group) <span class="muted">(@members.Count)</span></h2>
             @if (members.Count == 0)
             {
-                <EmptyState IconName="users" Text="No hay perfiles en esta categoría." />
+                <EmptyState IconName="users" Text="@L["No hay perfiles en esta categoría."]" />
             }
             else
             {
@@ -48,11 +48,11 @@ else
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Nombre</th>
+                                <th>@L["Nombre"]</th>
                                 <th>Email</th>
-                                <th>Plantilla</th>
-                                <th class="num">Permisos</th>
-                                <th>Estado</th>
+                                <th>@L["Plantilla"]</th>
+                                <th class="num">@L["Permisos"]</th>
+                                <th>@L["Estado"]</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -60,18 +60,18 @@ else
                             @foreach (var user in members)
                             {
                                 <tr class="@(user.Active ? "" : "row-inactive")">
-                                    <td data-label="Nombre"><strong>@user.Name</strong></td>
+                                    <td data-label="@L["Nombre"]"><strong>@user.Name</strong></td>
                                     <td data-label="Email">@user.Email</td>
-                                    <td data-label="Plantilla">@(user.TemplateName ?? "—")</td>
-                                    <td data-label="Permisos" class="num">
-                                        @(user.Category == UserCategory.Admin ? "Todos" : user.Permissions.Count.ToString(Labels.Culture))
+                                    <td data-label="@L["Plantilla"]">@(user.TemplateName ?? "—")</td>
+                                    <td data-label="@L["Permisos"]" class="num">
+                                        @(user.Category == UserCategory.Admin ? L["Todos"] : user.Permissions.Count.ToString(Labels.Culture))
                                     </td>
-                                    <td data-label="Estado">
-                                        <span class="badge @(user.Active ? "badge-receipt" : "")">@(user.Active ? "Activo" : "Desactivado")</span>
+                                    <td data-label="@L["Estado"]">
+                                        <span class="badge @(user.Active ? "badge-receipt" : "")">@(user.Active ? L["Activo"] : L["Desactivado"])</span>
                                     </td>
                                     <td class="row-actions">
                                         <AuthorizeView Policy="@Policies.Admin">
-                                            <a class="btn btn-ghost btn-icon" href="registros/usuarios/@user.Id" title="Editar permisos" aria-label="Editar @user.Name">
+                                            <a class="btn btn-ghost btn-icon" href="registros/usuarios/@user.Id" title="@L["Editar permisos"]" aria-label="@L["Editar {0}", user.Name]">
                                                 <Icon Name="edit" />
                                             </a>
                                         </AuthorizeView>

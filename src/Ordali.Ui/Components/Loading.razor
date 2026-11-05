@@ -1,8 +1,8 @@
 <div class="loading" role="status">
     <span class="spinner"></span>
-    <span>@Text</span>
+    <span>@(Text ?? L["Cargando…"])</span>
 </div>
 
 @code {
-    [Parameter] public string Text { get; set; } = "Cargando…";
+    [Parameter] public string? Text { get; set; }
 }

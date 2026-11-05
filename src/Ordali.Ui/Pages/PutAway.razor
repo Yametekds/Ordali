@@ -3,11 +3,11 @@
 @inject IOrdaliApi Api
 @inject NavigationManager Navigation
 
-<PageTitle>Traslados · Ordali</PageTitle>
+<PageTitle>@L["Traslados"] · Ordali</PageTitle>
 
-<PageHeader Title="Traslados" Subtitle="Escanea la entrada, el artículo, la ubicación y la cantidad.">
+<PageHeader Title="@L["Traslados"]" Subtitle="@L["Escanea la entrada, el artículo, la ubicación y la cantidad."]">
     <Actions>
-        <a class="btn" href="movimientos/nuevo?tipo=Transfer"><Icon Name="swap" /><span>Traslado sin entrada</span></a>
+        <a class="btn" href="movimientos/nuevo?tipo=Transfer"><Icon Name="swap" /><span>@L["Traslado sin entrada"]</span></a>
     </Actions>
 </PageHeader>
 
@@ -31,17 +31,17 @@
 else if (receipt is null)
 {
     <div class="card scan-card">
-        <ol class="steps" aria-label="Pasos">
-            <li class="active">Entrada</li><li>Artículo</li><li>Ubicación y cantidad</li>
+        <ol class="steps" aria-label="@L["Pasos"]">
+            <li class="active">@L["Entrada"]</li><li>@L["Artículo"]</li><li>@L["Ubicación y cantidad"]</li>
         </ol>
-        <ScanField Id="putaway-receipt" Label="Entrada" Placeholder="Escanea o escribe el código, por ejemplo ENTRADA2" AutoFocus="true"
+        <ScanField Id="putaway-receipt" Label="@L["Entrada"]" Placeholder="@L["Escanea o escribe el código, por ejemplo ENTRADA2"]" AutoFocus="true"
                    OnScan="OnReceiptScanned" />
     </div>
 
-    <h2 class="section-title">Pendientes de ubicar</h2>
+    <h2 class="section-title">@L["Pendientes de ubicar"]</h2>
     @if (pending.Count == 0)
     {
-        <EmptyState IconName="inbox" Text="No hay entradas pendientes. Las nuevas entradas aparecerán aquí." />
+        <EmptyState IconName="inbox" Text="@L["No hay entradas pendientes. Las nuevas entradas aparecerán aquí."]" />
     }
     else
     {
@@ -67,72 +67,72 @@ else
     <div class="card scan-card">
         <div class="receipt-head">
             <div>
-                <span class="muted small">Entrada</span>
+                <span class="muted small">@L["Entrada"]</span>
                 <div class="receipt-code">@receipt.Code</div>
                 @if (receipt.Reference is not null)
                 {
                     <span class="muted small">@receipt.Reference</span>
                 }
             </div>
-            <button type="button" class="btn btn-sm" @onclick="ClearReceipt">Cambiar de entrada</button>
+            <button type="button" class="btn btn-sm" @onclick="ClearReceipt">@L["Cambiar de entrada"]</button>
         </div>
         <Progress Done="@(receipt.Quantity - receipt.Pending)" Total="@receipt.Quantity" />
 
         @if (line is null)
         {
-            <ol class="steps" aria-label="Pasos">
-                <li class="done">Entrada</li><li class="active">Artículo</li><li>Ubicación y cantidad</li>
+            <ol class="steps" aria-label="@L["Pasos"]">
+                <li class="done">@L["Entrada"]</li><li class="active">@L["Artículo"]</li><li>@L["Ubicación y cantidad"]</li>
             </ol>
-            <ScanField @key="receipt.Id" Id="putaway-product" Label="Artículo" Placeholder="Escanea el EAN o escribe el SKU" AutoFocus="true"
+            <ScanField @key="receipt.Id" Id="putaway-product" Label="@L["Artículo"]" Placeholder="@L["Escanea el EAN o escribe el SKU"]" AutoFocus="true"
                        OnScan="OnProductScanned" />
 
             @if (lotChoices is not null)
             {
                 <div class="choices">
-                    <span class="muted small">Ese artículo llegó en varios lotes. ¿Cuál mueves?</span>
+                    <span class="muted small">@L["Ese artículo llegó en varios lotes. ¿Cuál mueves?"]</span>
                     @foreach (var choice in lotChoices)
                     {
-                        <button type="button" class="btn" @onclick="() => SelectLine(choice)">@choice.Lot · quedan @Labels.Quantity(choice.Pending)</button>
+                        <button type="button" class="btn" @onclick="() => SelectLine(choice)">@choice.Lot · @L["quedan {0}", Labels.Quantity(choice.Pending)]</button>
                     }
                 </div>
             }
         }
         else
         {
-            <ol class="steps" aria-label="Pasos">
-                <li class="done">Entrada</li><li class="done">Artículo</li><li class="active">Ubicación y cantidad</li>
+            <ol class="steps" aria-label="@L["Pasos"]">
+                <li class="done">@L["Entrada"]</li><li class="done">@L["Artículo"]</li><li class="active">@L["Ubicación y cantidad"]</li>
             </ol>
             <div class="putaway-item">
                 <div>
                     <strong class="mono">@line.Sku</strong> @line.ProductName
                     @if (line.Lot is not null)
                     {
-                        <span class="badge">Lote @line.Lot</span>
+                        <span class="badge">@L["Lote {0}", line.Lot]</span>
                     }
                 </div>
-                <span class="muted">Quedan <strong>@Labels.Quantity(line.Pending) @line.Unit</strong> en @receipt.DockLocationCode</span>
+                <span class="muted">@L["Quedan"] <strong>@Labels.Quantity(line.Pending) @Labels.Unit(line.Unit)</strong> @L["en {0}", receipt.DockLocationCode]</span>
             </div>
 
             <div class="destination @(destination is null ? "destination-empty" : "")">
-                <span class="muted small">Destino</span>
+                <span class="muted small">@L["Destino"]</span>
                 @if (destination is null)
                 {
-                    <strong>Sin ubicación predeterminada</strong>
+                    <strong>@L["Sin ubicación predeterminada"]</strong>
                 }
                 else
                 {
                     <strong class="mono">@destination.Code</strong>
-                    <span class="muted small">@destination.Zone · @(destination.Id == line.DefaultLocationId ? "predeterminada" : "elegida")</span>
+                    <span class="muted small">@destination.Zone · @(destination.Id == line.DefaultLocationId ? L["predeterminada"] : L["elegida"])</span>
                 }
             </div>
 
             <div class="form-grid">
-                <ScanField @key="line" Id="putaway-location" Label="@(destination is null ? "Ubicación de destino" : "Otra ubicación")"
-                           Placeholder="Escanea la etiqueta del hueco" AutoFocus="@(destination is null)" OnScan="OnLocationScanned" />
+                <ScanField @key="line" Id="putaway-location" Label="@(destination is null ? L["Ubicación de destino"] : L["Otra ubicación"])"
+                           Placeholder="@L["Escanea la etiqueta del hueco"]" AutoFocus="@(destination is null)" OnScan="OnLocationScanned" />
                 <label class="field">
-                    <span>O elige de la lista</span>
+                    <span>@L["O elige de la lista"]</span>
                     <select value="@(destination?.Id.ToString() ?? "")" @onchange="OnLocationPicked">
-                        <option value="">Elige una ubicación</option>
+                        <option value="">@L["Elige una ubicación"]</option>
                         @foreach (var location in Targets)
                         {
                             <option value="@location.Id">@location.Code · @location.Zone</option>
@@ -144,7 +144,7 @@ else
             @if (locationChoices is not null)
             {
                 <div class="choices">
-                    <span class="muted small">Hay varias ubicaciones con ese código. Elige la tuya:</span>
+                    <span class="muted small">@L["Hay varias ubicaciones con ese código. Elige la tuya:"]</span>
                     @foreach (var choice in locationChoices)
                     {
                         <button type="button" class="btn" @onclick="() => SelectDestination(choice)">@choice.Code · @choice.Zone · @Labels.Of(choice.Type)</button>
@@ -154,15 +154,15 @@ else
 
             <form class="line-entry" @onsubmit="PutAwayAsync">
                 <label class="field">
-                    <span>Cantidad que mueves (@line.Unit)</span>
+                    <span>@L["Cantidad que mueves"] (@Labels.Unit(line.Unit))</span>
                     <input @ref="quantityInput" type="number" min="0" step="any" inputmode="decimal" @bind="quantity" @bind:event="oninput"
-                           placeholder="Quedan @Labels.Quantity(line.Pending)" enterkeyhint="done" />
+                           placeholder="@L["Quedan {0}", Labels.Quantity(line.Pending)]" enterkeyhint="done" />
                 </label>
-                <button type="button" class="btn" @onclick="FillAll">Todo (@Labels.Quantity(line.Pending))</button>
-                <button class="btn btn-primary" type="submit" disabled="@busy"><Icon Name="dolly" /><span>@(busy ? "Trasladando…" : "Trasladar")</span></button>
+                <button type="button" class="btn" @onclick="FillAll">@L["Todo ({0})", Labels.Quantity(line.Pending)]</button>
+                <button class="btn btn-primary" type="submit" disabled="@busy"><Icon Name="dolly" /><span>@(busy ? L["Trasladando…"] : L["Trasladar"])</span></button>
             </form>
             <div class="form-actions">
-                <button type="button" class="btn btn-ghost" @onclick="ClearLine">Elegir otro artículo</button>
+                <button type="button" class="btn btn-ghost" @onclick="ClearLine">@L["Elegir otro artículo"]</button>
             </div>
         }
     </div>
@@ -172,25 +172,25 @@ else
         <div class="card card-flush">
             <table class="table">
                 <thead>
-                    <tr><th>SKU</th><th>Artículo</th><th>Lote</th><th class="num">Quedan</th><th>Predeterminada</th><th></th></tr>
+                    <tr><th>SKU</th><th>@L["Artículo"]</th><th>@L["Lote"]</th><th class="num">@L["Quedan"]</th><th>@L["Predeterminada"]</th><th></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var item in receipt.Lines)
                     {
                         <tr class="@(item.Pending <= 0 ? "row-inactive" : "")">
                             <td data-label="SKU"><strong class="mono">@item.Sku</strong></td>
-                            <td data-label="Artículo">@item.ProductName</td>
-                            <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
-                            <td data-label="Quedan" class="num">@Labels.Quantity(item.Pending) / @Labels.Quantity(item.Quantity) @item.Unit</td>
-                            <td data-label="Predeterminada" class="mono">@(item.DefaultLocationCode ?? "—")</td>
+                            <td data-label="@L["Artículo"]">@item.ProductName</td>
+                            <td data-label="@L["Lote"]" class="mono">@(item.Lot ?? "—")</td>
+                            <td data-label="@L["Quedan"]" class="num">@Labels.Quantity(item.Pending) / @Labels.Quantity(item.Quantity) @Labels.Unit(item.Unit)</td>
+                            <td data-label="@L["Predeterminada"]" class="mono">@(item.DefaultLocationCode ?? "—")</td>
                             <td class="row-actions">
                                 @if (item.Pending > 0)
                                 {
-                                    <button type="button" class="btn btn-sm" @onclick="() => SelectLine(item)">Ubicar</button>
+                                    <button type="button" class="btn btn-sm" @onclick="() => SelectLine(item)">@L["Ubicar"]</button>
                                 }
                                 else
                                 {
-                                    <span class="badge badge-receipt">Ubicado</span>
+                                    <span class="badge badge-receipt">@L["Ubicado"]</span>
                                 }
                             </td>
                         </tr>
@@ -265,7 +265,7 @@ else
         var match = pending?.FirstOrDefault(r => Scanning.IsCode(scan.Code, r.Code));
         if (match is null)
         {
-            problem = $"No hay ninguna entrada pendiente con el código {Scanning.Clean(scan.Code)}.";
+            problem = L["No hay ninguna entrada pendiente con el código {0}.", Scanning.Clean(scan.Code)];
             scan.Reject();
             return;
         }
@@ -294,7 +294,7 @@ else
         var lines = receipt!.Lines.Where(l => Scanning.IsProduct(scan.Code, l.Sku, l.Gtin)).ToList();
         if (lines.Count == 0)
         {
-            problem = $"El código {Scanning.Clean(scan.Code)} no corresponde a ningún artículo de la entrada {receipt.Code}.";
+            problem = L["El código {0} no corresponde a ningún artículo de la entrada {1}.", Scanning.Clean(scan.Code), receipt.Code];
             scan.Reject();
             return;
         }
@@ -302,7 +302,7 @@ else
         var open = lines.Where(l => l.Pending > 0).ToList();
         if (open.Count == 0)
         {
-            problem = $"{lines[0].Sku} ya está ubicado del todo.";
+            problem = L["{0} ya está ubicado del todo.", lines[0].Sku];
             scan.Reject();
             return;
         }
@@ -346,8 +346,8 @@ else
         if (matches.Count == 0)
         {
             problem = receipt is not null && locations.Any(l => l.Id == receipt.DockLocationId && Scanning.IsCode(scan.Code, l.Code))
-                ? "Esa es la ubicación de recepción: escanea dónde vas a dejar la mercancía."
-                : $"No hay ninguna ubicación con el código {Scanning.Clean(scan.Code)}.";
+                ? L["Esa es la ubicación de recepción: escanea dónde vas a dejar la mercancía."]
+                : L["No hay ninguna ubicación con el código {0}.", Scanning.Clean(scan.Code)];
             scan.Reject();
             return;
         }
@@ -391,13 +391,13 @@ else
         problem = null;
         if (destination is null)
         {
-            problem = "Escanea o elige la ubicación de destino.";
+            problem = L["Escanea o elige la ubicación de destino."];
             return;
         }
 
         if (!decimal.TryParse(quantity, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
         {
-            problem = "Escribe la cantidad que mueves.";
+            problem = L["Escribe la cantidad que mueves."];
             focusQuantity = true;
             return;
         }
@@ -413,11 +413,11 @@ else
                 ToLocationId = destination.Id,
                 Quantity = amount,
             });
-            message = $"Trasladado: {Labels.Quantity(amount)} {moved.Unit} de {moved.Sku} a {destination.Code}.";
+            message = L["Trasladado: {0} {1} de {2} a {3}.", Labels.Quantity(amount), Labels.Unit(moved.Unit), moved.Sku, destination.Code];
             ClearLine();
             if (updated.Status == ReceiptStatus.Completed)
             {
-                message += $" La entrada {updated.Code} está ubicada del todo.";
+                message += " " + L["La entrada {0} está ubicada del todo.", updated.Code];
                 receipt = null;
                 await LoadPendingAsync();
             }

@@ -11,7 +11,7 @@
                placeholder="@Placeholder" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" />
         @if (cameraSupported)
         {
-            <button type="button" class="btn btn-icon scan-camera" title="Escanear con la cámara" aria-label="Escanear con la cámara"
+            <button type="button" class="btn btn-icon scan-camera" title="@L["Escanear con la cámara"]" aria-label="@L["Escanear con la cámara"]"
                     @onclick="ScanWithCameraAsync">
                 <Icon Name="camera" />
             </button>
@@ -102,7 +102,7 @@
         cameraError = null;
         try
         {
-            var code = await module!.InvokeAsync<string?>("scanWithCamera", Label);
+            var code = await module!.InvokeAsync<string?>("scanWithCamera", Label, L["Cancelar"].Value);
             if (code is not null)
             {
                 text = code;
@@ -111,7 +111,7 @@
         }
         catch (JSException)
         {
-            cameraError = "No se puede usar la cámara. Revisa el permiso del navegador o escribe el código.";
+            cameraError = L["No se puede usar la cámara. Revisa el permiso del navegador o escribe el código."];
         }
     }
 

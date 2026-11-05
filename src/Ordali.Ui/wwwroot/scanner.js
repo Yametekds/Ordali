@@ -58,8 +58,8 @@ export function signal(ok) {
 }
 
 // Opens the rear camera over the page and resolves with the first code read, or null if the
-// user cancels.
-export async function scanWithCamera(title) {
+// user cancels. The texts come from the app so they follow the chosen language.
+export async function scanWithCamera(title, cancelText) {
     const supported = await BarcodeDetector.getSupportedFormats();
     const detector = new BarcodeDetector({ formats: wanted.filter(f => supported.includes(f)) });
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
@@ -72,9 +72,10 @@ export async function scanWithCamera(title) {
         <div class="scan-dialog">
             <p class="scan-title"></p>
             <div class="scan-viewport"><video playsinline muted></video><span class="scan-aim"></span></div>
-            <button type="button" class="btn btn-block">Cancelar</button>
+            <button type="button" class="btn btn-block"></button>
         </div>`;
-    overlay.querySelector(".scan-title").textContent = title || "Apunta al código de barras";
+    overlay.querySelector(".scan-title").textContent = title;
+    overlay.querySelector("button").textContent = cancelText;
     document.body.appendChild(overlay);
 
     const video = overlay.querySelector("video");

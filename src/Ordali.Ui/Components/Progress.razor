@@ -1,8 +1,8 @@
 <div class="progress-row">
-    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="@Total" aria-valuenow="@Done" aria-label="Ubicado">
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="@Total" aria-valuenow="@Done" aria-label="@L["Ubicado"]">
         <span style="width: @Percent.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)%"></span>
     </div>
-    <span class="small muted">@Labels.Quantity(Done) de @Labels.Quantity(Total) ubicado</span>
+    <span class="small muted">@L["{0} de {1} ubicado", Labels.Quantity(Done), Labels.Quantity(Total)]</span>
 </div>
 
 @code {

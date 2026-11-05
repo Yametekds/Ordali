@@ -4,13 +4,13 @@
 @inject TimeProvider Time
 @inject SessionState Session
 
-<PageTitle>Inicio · Ordali</PageTitle>
+<PageTitle>@L["Inicio"] · Ordali</PageTitle>
 
 <PageHeader Title="@Today">
     <Actions>
         <AuthorizeView Policy="@Permissions.MovementsCreate">
-            <a class="btn" href="entradas/nueva"><Icon Name="inbox" /><span>Nueva entrada</span></a>
-            <a class="btn btn-primary" href="traslados"><Icon Name="dolly" /><span>Traslados</span></a>
+            <a class="btn" href="entradas/nueva"><Icon Name="inbox" /><span>@L["Nueva entrada"]</span></a>
+            <a class="btn btn-primary" href="traslados"><Icon Name="dolly" /><span>@L["Traslados"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
@@ -29,15 +29,15 @@ else
     <dl class="summary">
         @if (Can(Permissions.ProductsView))
         {
-            <div><dt>Productos</dt><dd>@products.Count.ToString(Labels.Culture)</dd></div>
+            <div><dt>@L["Productos"]</dt><dd>@products.Count.ToString(Labels.Culture)</dd></div>
         }
         @if (Can(Permissions.StockView))
         {
-            <div><dt>Unidades en stock</dt><dd>@Labels.Quantity(stock.Sum(s => s.Quantity))<small>en @stock.Count líneas</small></dd></div>
+            <div><dt>@L["Unidades en stock"]</dt><dd>@Labels.Quantity(stock.Sum(s => s.Quantity))<small>@L["en {0} líneas", stock.Count]</small></dd></div>
         }
         @if (Can(Permissions.MovementsView))
         {
-            <div><dt>Movimientos hoy</dt><dd>@movementsToday.ToString(Labels.Culture)</dd></div>
+            <div><dt>@L["Movimientos hoy"]</dt><dd>@movementsToday.ToString(Labels.Culture)</dd></div>
         }
     </dl>
 
@@ -47,11 +47,11 @@ else
             @* What someone has to act on goes first: receipts still at the dock and products below their minimum. *@
             <section class="card pending">
                 <header class="panel-head">
-                    <h2>Pendiente @if (PendingCount > 0) { <span class="count">@PendingCount</span> }</h2>
+                    <h2>@L["Pendiente"] @if (PendingCount > 0) { <span class="count">@PendingCount</span> }</h2>
                 </header>
                 @if (PendingCount == 0)
                 {
-                    <EmptyState IconName="check" Text="Nada pendiente: todas las entradas están ubicadas y el stock está por encima del mínimo." />
+                    <EmptyState IconName="check" Text="@L["Nada pendiente: todas las entradas están ubicadas y el stock está por encima del mínimo."]" />
                 }
                 else
                 {
@@ -60,9 +60,9 @@ else
                         {
                             <li>
                                 <a class="task" href="@(Can(Permissions.MovementsCreate) ? $"traslados?entrada={receipt.Code}" : "entradas")">
-                                    <span class="badge badge-receipt">Por ubicar</span>
-                                    <span class="task-what"><strong>@receipt.Code</strong><span>en @receipt.DockLocationCode</span></span>
-                                    <span class="task-meta">@Labels.Quantity(receipt.Pending) de @Labels.Quantity(receipt.Quantity) uds.</span>
+                                    <span class="badge badge-receipt">@L["Por ubicar"]</span>
+                                    <span class="task-what"><strong>@receipt.Code</strong><span>@L["en {0}", receipt.DockLocationCode]</span></span>
+                                    <span class="task-meta">@L["{0} de {1} uds.", Labels.Quantity(receipt.Pending), Labels.Quantity(receipt.Quantity)]</span>
                                 </a>
                             </li>
                         }
@@ -70,9 +70,9 @@ else
                         {
                             <li>
                                 <a class="task" href="stock?articulo=@item.Product.Id">
-                                    <span class="badge badge-warning">Bajo mínimo</span>
+                                    <span class="badge badge-warning">@L["Bajo mínimo"]</span>
                                     <span class="task-what"><strong>@item.Product.Sku</strong><span>@item.Product.Name</span></span>
-                                    <span class="task-meta">@Labels.Quantity(item.Total) de @Labels.Quantity(item.Product.MinStock)</span>
+                                    <span class="task-meta">@L["{0} de {1}", Labels.Quantity(item.Total), Labels.Quantity(item.Product.MinStock)]</span>
                                     <span class="meter" aria-hidden="true"><span style="width: @Fill(item)%"></span></span>
                                 </a>
                             </li>
@@ -86,15 +86,15 @@ else
         {
             <section class="card">
                 <header class="panel-head">
-                    <h2>Últimos movimientos</h2>
+                    <h2>@L["Últimos movimientos"]</h2>
                     @if (movements.Count > 0)
                     {
-                        <a class="link" href="movimientos">Ver todos <Icon Name="arrow-right" /></a>
+                        <a class="link" href="movimientos">@L["Ver todos"] <Icon Name="arrow-right" /></a>
                     }
                 </header>
                 @if (movements.Count == 0)
                 {
-                    <EmptyState Text="Todavía no hay movimientos." />
+                    <EmptyState Text="@L["Todavía no hay movimientos."]" />
                 }
                 else
                 {
@@ -131,12 +131,12 @@ else
 
     private int PendingCount => pendingReceipts.Count + lowStock.Count;
 
-    // "Lunes, 3 de noviembre": the date is what the home page is about, so it is the title.
+    // "Lunes, 3 de noviembre" ("Monday 3 November"): the date is what the home page is about, so it is the title.
     private string Today
     {
         get
         {
-            var text = Time.GetLocalNow().ToString("dddd, d 'de' MMMM", Labels.Culture);
+            var text = Time.GetLocalNow().ToString(L["dddd, d 'de' MMMM"], Labels.Culture);
             return char.ToUpper(text[0], Labels.Culture) + text[1..];
         }
     }

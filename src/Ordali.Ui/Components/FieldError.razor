@@ -1,0 +1,46 @@
+@typeparam TValue
+@implements IDisposable
+@using System.Linq.Expressions
+@* Like ValidationMessage, but shows each message in the current language. The form rules are
+   written in Spanish, which is the key for their translation. *@
+@foreach (var message in context?.GetValidationMessages(field) ?? [])
+{
+    <div class="validation-message">@L[message]</div>
+}
+
+@code {
+    [CascadingParameter] private EditContext? CurrentEditContext { get; set; }
+
+    [Parameter, EditorRequired] public Expression<Func<TValue>> For { get; set; } = default!;
+
+    private EditContext? context;
+    private FieldIdentifier field;
+
+    protected override void OnParametersSet()
+    {
+        field = FieldIdentifier.Create(For);
+        if (context != CurrentEditContext)
+        {
+            if (context is not null)
+            {
+                context.OnValidationStateChanged -= OnValidationStateChanged;
+            }
+
+            context = CurrentEditContext;
+            if (context is not null)
+            {
+                context.OnValidationStateChanged += OnValidationStateChanged;
+            }
+        }
+    }
+
+    private void OnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e) => StateHasChanged();
+
+    public void Dispose()
+    {
+        if (context is not null)
+        {
+            context.OnValidationStateChanged -= OnValidationStateChanged;
+        }
+    }
+}
