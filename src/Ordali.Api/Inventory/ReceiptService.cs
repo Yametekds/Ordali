@@ -10,7 +10,9 @@ namespace Ordali.Api.Inventory;
 /// </summary>
 public sealed class ReceiptService(OrdaliDbContext db, MovementService movements, TimeProvider time)
 {
-    public async Task<Receipt> CreateAsync(ReceiptInput input, Guid userId, string userName, CancellationToken cancellationToken, DateTimeOffset? at = null)
+    /// <param name="beforeSave">Lets a caller change its own tracked data in the same save, such as the calendar slot the goods came on.</param>
+    public async Task<Receipt> CreateAsync(
+        ReceiptInput input, Guid userId, string userName, CancellationToken cancellationToken, DateTimeOffset? at = null, Action<Receipt>? beforeSave = null)
     {
         var lines = await ValidateLinesAsync(input.Lines, cancellationToken);
 
@@ -55,6 +57,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
         }
 
         db.Receipts.Add(receipt);
+        beforeSave?.Invoke(receipt);
         await movements.SaveAsync(cancellationToken);
         return receipt;
     }

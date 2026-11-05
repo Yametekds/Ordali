@@ -12,7 +12,7 @@ internal static class DemoData
         "Mozo de almacén",
         "Consulta el almacén y registra entradas, salidas y traslados.",
         UserCategory.Operator,
-        [Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.MovementsCreate]);
+        [Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.MovementsCreate, Permissions.CalendarView]);
 
     public static readonly ProfileTemplate SupervisorTemplate = new(
         Guid.Parse("6c2d9e40-0000-4000-8000-000000000002"),
@@ -26,7 +26,7 @@ internal static class DemoData
         "Solo consulta",
         "Ve el catálogo, el stock y los movimientos sin poder cambiar nada.",
         UserCategory.Operator,
-        [Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView]);
+        [Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.CalendarView]);
 
     public static readonly Guid AdminId = Guid.Parse("8a1f0c55-3c1e-4c39-9d43-0f6f5a0b1a01");
 
