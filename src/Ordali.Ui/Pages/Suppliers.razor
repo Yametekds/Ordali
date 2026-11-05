@@ -1,0 +1,194 @@
+@page "/distribuidores"
+@attribute [Authorize(Policy = Permissions.OrdersView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>Distribuidores · Ordali</PageTitle>
+
+<PageHeader Title="Distribuidores" Subtitle="A quién se piden los artículos. Cada artículo se asigna a uno desde su ficha.">
+    <Actions>
+        @if (CanEdit && editing is null)
+        {
+            <button class="btn btn-primary" type="button" @onclick="StartNew"><Icon Name="plus" /><span>Nuevo distribuidor</span></button>
+        }
+    </Actions>
+</PageHeader>
+
+@if (editing is not null)
+{
+    <div class="card form-card">
+        <h2 class="card-title">@(editingId is null ? "Nuevo distribuidor" : "Editar distribuidor")</h2>
+        <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" FormName="supplier">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label class="field field-wide">
+                    <span>Nombre</span>
+                    <InputText @bind-Value="editing.Name" />
+                    <ValidationMessage For="() => editing.Name" />
+                </label>
+                <label class="field">
+                    <span>Persona de contacto</span>
+                    <InputText @bind-Value="editing.ContactName" placeholder="Opcional" />
+                    <ValidationMessage For="() => editing.ContactName" />
+                </label>
+                <label class="field">
+                    <span>Teléfono</span>
+                    <InputText @bind-Value="editing.Phone" inputmode="tel" placeholder="Opcional" />
+                    <ValidationMessage For="() => editing.Phone" />
+                </label>
+                <label class="field field-wide">
+                    <span>Email para pedidos</span>
+                    <InputText @bind-Value="editing.Email" type="email" placeholder="Opcional" />
+                    <ValidationMessage For="() => editing.Email" />
+                </label>
+                @if (editingId is not null)
+                {
+                    <label class="check field-wide">
+                        <InputCheckbox @bind-Value="editing.Active" />
+                        <span>Activo (los dados de baja conservan sus pedidos, pero no reciben nuevos)</span>
+                    </label>
+                }
+            </div>
+
+            <ErrorAlert Error="saveError" />
+
+            <div class="form-actions">
+                <button class="btn" type="button" @onclick="Cancel">Cancelar</button>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Guardando…" : "Guardar")</button>
+            </div>
+        </EditForm>
+    </div>
+}
+
+<ErrorAlert Error="error" />
+
+@if (suppliers is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (suppliers.Count == 0)
+{
+    <EmptyState IconName="truck" Text="Todavía no hay distribuidores." />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Contacto</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var supplier in suppliers)
+                {
+                    <tr>
+                        <td data-label="Nombre"><strong>@supplier.Name</strong></td>
+                        <td data-label="Contacto">@(supplier.ContactName ?? "—")</td>
+                        <td data-label="Email">
+                            @if (supplier.Email is { } email)
+                            {
+                                <a href="mailto:@email">@email</a>
+                            }
+                            else
+                            {
+                                <span class="muted">—</span>
+                            }
+                        </td>
+                        <td data-label="Teléfono">@(supplier.Phone ?? "—")</td>
+                        <td data-label="Estado">
+                            <span class="badge @(supplier.Active ? "badge-receipt" : "badge-draft")">@(supplier.Active ? "Activo" : "De baja")</span>
+                        </td>
+                        <td class="row-actions">
+                            @if (CanEdit)
+                            {
+                                @if (supplier.Active)
+                                {
+                                    <a class="btn btn-sm" href="pedidos/nuevo?distribuidor=@supplier.Id">Preparar pedido</a>
+                                }
+                                <button class="btn btn-ghost btn-icon" type="button" title="Editar" aria-label="Editar @supplier.Name" @onclick="() => StartEdit(supplier)">
+                                    <Icon Name="edit" />
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<Supplier>? suppliers;
+    private SupplierInput? editing;
+    private Guid? editingId;
+    private EditContext? editContext;
+    private ValidationMessageStore? serverErrors;
+    private Exception? error;
+    private Exception? saveError;
+    private bool busy;
+
+    private bool CanEdit => Session.Current?.User.Can(Permissions.OrdersEdit) == true;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            suppliers = await Api.GetSuppliersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private void StartNew() => Edit(null, new SupplierInput());
+
+    private void StartEdit(Supplier supplier) => Edit(supplier.Id, SupplierInput.From(supplier));
+
+    private void Edit(Guid? id, SupplierInput input)
+    {
+        editingId = id;
+        editing = input;
+        saveError = null;
+        editContext = new EditContext(input);
+        serverErrors = new ValidationMessageStore(editContext);
+        editContext.OnFieldChanged += (_, e) => serverErrors.Clear(e.FieldIdentifier);
+    }
+
+    private void Cancel() => editing = null;
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        saveError = null;
+        serverErrors!.Clear();
+        try
+        {
+            _ = editingId is { } id ? await Api.UpdateSupplierAsync(id, editing!) : await Api.CreateSupplierAsync(editing!);
+            editing = null;
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            if (!FormErrors.Show(ex, editContext!, serverErrors))
+            {
+                saveError = ex;
+            }
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

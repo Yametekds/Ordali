@@ -60,6 +60,13 @@
                 }
             }
 
+            @if (Can(Permissions.OrdersView))
+            {
+                <div class="nav-section">Compras</div>
+                <NavLink class="nav-link" href="pedidos"><Icon Name="cart" /><span>Pedidos</span></NavLink>
+                <NavLink class="nav-link" href="distribuidores"><Icon Name="truck" /><span>Distribuidores</span></NavLink>
+            }
+
             @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))
             {
                 <div class="nav-section">Registros</div>

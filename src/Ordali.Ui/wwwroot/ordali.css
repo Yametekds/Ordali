@@ -348,6 +348,37 @@ button.tab { background: none; border: 0; border-bottom: 3px solid transparent; 
 .auth-links { display: flex; justify-content: center; gap: 16px; margin-top: 16px; }
 .auth-links .nav-link { color: var(--frame-muted); padding: 6px 10px; border: 0; }
 
+/* Distributor orders: editable quantities inside the table and a sheet that prints cleanly. */
+.qty-input { width: 110px; text-align: right; }
+.qty-cell { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.qty-changed { color: var(--warning); font-size: .78rem; }
+.range { white-space: nowrap; }
+.badge-draft { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.badge-sent { background: var(--info-bg); color: var(--info); }
+.badge-cancelled { background: var(--error-bg); color: var(--error); }
+.reorder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.reorder-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); border-top: 3px solid var(--warning); }
+.reorder-card h3 { font-size: 1rem; }
+.reorder-card ul { margin: 0; padding-left: 18px; font-size: .9rem; }
+.reorder-card .btn { align-self: flex-start; margin-top: auto; }
+h3.card-title { margin-top: 24px; }
+.add-line { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 14px 0; }
+.add-line .field { flex: 1 1 260px; }
+.add-line .field-qty { flex: 0 0 130px; }
+.order-sheet-head { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+.order-sheet-head dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; }
+.order-sheet-head dt { color: var(--muted); font: 700 .75rem var(--display); letter-spacing: .08em; text-transform: uppercase; padding-top: 2px; }
+.order-sheet-head dd { margin: 0; }
+.print-only { display: none; }
+
+@media print {
+    .topbar, .sidebar, .scrim, .page-actions, .form-actions, .no-print { display: none !important; }
+    .print-only { display: block; }
+    body, .content { background: #fff; }
+    .content { margin: 0; padding: 0; }
+    .card { box-shadow: none; border: 0; }
+}
+
 /* Tablets and phones: the sidebar becomes a drawer behind the menu button, tables become cards. */
 @media (max-width: 900px) {
     .topbar { padding: 0 14px; gap: 10px; }

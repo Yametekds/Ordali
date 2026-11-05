@@ -50,8 +50,29 @@ else
                 <label class="field">
                     <span>Stock mínimo</span>
                     <InputNumber @bind-Value="model.MinStock" min="0" />
+                    <small class="muted">Por debajo, el artículo entra en el próximo pedido a su distribuidor.</small>
                     <ValidationMessage For="() => model.MinStock" />
                 </label>
+                <label class="field">
+                    <span>Stock máximo</span>
+                    <InputNumber @bind-Value="model.MaxStock" min="0" />
+                    <small class="muted">El pedido propone lo que falta hasta aquí. 0 = solo hasta el mínimo.</small>
+                    <ValidationMessage For="() => model.MaxStock" />
+                </label>
+                @if (suppliers is not null)
+                {
+                    <label class="field field-wide">
+                        <span>Distribuidor</span>
+                        <InputSelect @bind-Value="model.SupplierId">
+                            <option value="">Sin distribuidor</option>
+                            @foreach (var supplier in suppliers.Where(s => s.Active || s.Id == model.SupplierId))
+                            {
+                                <option value="@supplier.Id">@supplier.Name</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => model.SupplierId" />
+                    </label>
+                }
                 @if (locations is not null)
                 {
                     <label class="field field-wide">
@@ -90,6 +111,7 @@ else
 
     private ProductInput? model;
     private IReadOnlyList<Location>? locations;
+    private IReadOnlyList<Supplier>? suppliers;
     private EditContext? editContext;
     private ValidationMessageStore? serverErrors;
     private Exception? error;
@@ -104,6 +126,7 @@ else
             model = Id is { } id ? ProductInput.From(await Api.GetProductAsync(id)) : new ProductInput();
             // Without permission to see locations the field is hidden and the current value is kept.
             locations = Session.Current?.User.Can(Permissions.LocationsView) == true ? await Api.GetLocationsAsync() : null;
+            suppliers = await Api.GetSuppliersAsync();
         }
         catch (ApiException ex)
         {

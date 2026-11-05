@@ -44,7 +44,7 @@ else
                     <th>GTIN</th>
                     <th>Lotes</th>
                     <th class="num">Stock</th>
-                    <th class="num">Mínimo</th>
+                    <th class="num">Rango seguro</th>
                     <th></th>
                 </tr>
             </thead>
@@ -62,7 +62,7 @@ else
                                 @Labels.Quantity(total) @product.Unit
                             </a>
                         </td>
-                        <td data-label="Mínimo" class="num">@Labels.Quantity(product.MinStock)</td>
+                        <td data-label="Rango seguro" class="num range">@Labels.SafeRange(product.MinStock, product.MaxStock)</td>
                         <td class="row-actions">
                             <AuthorizeView Policy="@Permissions.ProductsEdit">
                                 <a class="btn btn-ghost btn-icon" href="registros/productos/@product.Id" title="Editar" aria-label="Editar @product.Sku">

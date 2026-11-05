@@ -163,6 +163,44 @@ public class PageTests : BunitContext
         Assert.Equal(15, pending.Single(r => r.Code == "ENTRADA9").Pending);
     }
 
+    [Fact]
+    public async Task Order_starts_with_the_items_below_their_range_and_takes_others_by_hand()
+    {
+        await SignInAsync("encargado@demo.local");
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"pedidos/nuevo?distribuidor={HardwareSupplierId}");
+        var page = Render<PurchaseOrderEdit>();
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("tbody tr")));
+        Assert.Contains("CIN-050", page.Find("tbody tr").TextContent, StringComparison.Ordinal);
+        Assert.Equal("122", page.Find("tbody .qty-input").GetAttribute("value"));
+
+        page.Find("tbody .qty-input").Input("100");
+        page.Find("form.add-line select").Change(GlovesId.ToString());
+        page.Find("form.add-line input[type=number]").Change("6");
+        page.Find("form.add-line").Submit();
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("tbody tr").Count));
+        page.FindAll(".form-actions .btn-primary")[0].Click();
+
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var sent = (await api.GetPurchaseOrdersAsync(PurchaseOrderStatus.Sent)).Single(o => o.Code == "PED-0003");
+        Assert.Equal([("CIN-050", 100m, (decimal?)122m), ("GUA-NIT", 6m, null)], sent.Lines.Select(l => (l.Sku, l.Quantity, l.SuggestedQuantity)));
+    }
+
+    [Fact]
+    public async Task Orders_page_lists_what_to_order_per_distributor()
+    {
+        await SignInAsync("encargado@demo.local");
+
+        var page = Render<PurchaseOrders>();
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".reorder-card").Count));
+        Assert.Contains("ARR-002", page.FindAll(".reorder-card")[0].TextContent, StringComparison.Ordinal);
+        Assert.Contains("PED-0002", page.Find("tbody").TextContent, StringComparison.Ordinal);
+    }
+
+    private static readonly Guid HardwareSupplierId = Guid.Parse("4b8e7a10-0000-4000-8000-300000000002");
+    private static readonly Guid GlovesId = Guid.Parse("4b8e7a10-0000-4000-8000-200000000006");
+
     private static readonly Guid ScrewsId = Guid.Parse("4b8e7a10-0000-4000-8000-200000000003");
 
     private static void Scan<T>(IRenderedComponent<T> page, string selector, string code)
