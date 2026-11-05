@@ -77,6 +77,9 @@ public static class AccessPolicies
     /// <summary>Listing templates: needed to create profiles and to browse users by category.</summary>
     public const string ProfilesRead = "profiles.read";
 
+    /// <summary>Listing distributors: needed for orders and to pick an item's distributor.</summary>
+    public const string SuppliersRead = "suppliers.read";
+
     public static AuthorizationBuilder AddAccessPolicies(this AuthorizationBuilder builder)
     {
         foreach (var permission in Permissions.Keys)
@@ -87,6 +90,8 @@ public static class AccessPolicies
         return builder
             .AddPolicy(AccessPolicies.Admin, policy => policy.RequireAuthenticatedUser().AddRequirements(new PermissionRequirement(true)))
             .AddPolicy(ProfilesRead, policy => policy.RequireAuthenticatedUser()
-                .AddRequirements(new PermissionRequirement(false, Permissions.UsersView, Permissions.UsersCreate)));
+                .AddRequirements(new PermissionRequirement(false, Permissions.UsersView, Permissions.UsersCreate)))
+            .AddPolicy(SuppliersRead, policy => policy.RequireAuthenticatedUser()
+                .AddRequirements(new PermissionRequirement(false, Permissions.OrdersView, Permissions.OrdersEdit, Permissions.ProductsEdit)));
     }
 }

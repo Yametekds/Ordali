@@ -27,6 +27,8 @@ public static class Permissions
     public const string MovementsAdjust = "movements.adjust";
     public const string UsersView = "users.view";
     public const string UsersCreate = "users.create";
+    public const string OrdersView = "orders.view";
+    public const string OrdersEdit = "orders.edit";
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
@@ -40,6 +42,8 @@ public static class Permissions
         new(MovementsAdjust, "Registrar ajustes", "Corregir el stock con ajustes de inventario."),
         new(UsersView, "Ver usuarios", "Consultar los perfiles por categoría."),
         new(UsersCreate, "Crear perfiles", "Crear perfiles nuevos a partir de las plantillas."),
+        new(OrdersView, "Ver pedidos", "Consultar los pedidos a distribuidores y los distribuidores."),
+        new(OrdersEdit, "Preparar pedidos", "Preparar, enviar y cerrar pedidos a distribuidores y mantener la lista de distribuidores."),
     ];
 
     public static IReadOnlySet<string> Keys { get; } = All.Select(p => p.Key).ToHashSet(StringComparer.Ordinal);

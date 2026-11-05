@@ -6,6 +6,7 @@ using Ordali.Api.Data;
 using Ordali.Api.Identity;
 using Ordali.Api.Inventory;
 using Ordali.Api.Locations;
+using Ordali.Api.Purchasing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,7 @@ v1.MapCatalogEndpoints();
 v1.MapLocationsEndpoints();
 v1.MapInventoryEndpoints();
 v1.MapReceiptEndpoints();
+v1.MapPurchasingEndpoints();
 
 await app.InitializeDatabaseAsync();
 await app.RunAsync();

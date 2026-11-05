@@ -43,6 +43,11 @@ public static class CatalogModule
 
     private static async Task<IResult> CreateAsync(ProductInput input, OrdaliDbContext db, CancellationToken cancellationToken)
     {
+        if (CheckRange(input) is { } rangeError)
+        {
+            return rangeError;
+        }
+
         var product = new Product { Id = Guid.NewGuid(), Sku = "", Name = "", Unit = "" };
         Apply(product, input);
         if (await SkuTakenAsync(db, product.Sku, null, cancellationToken))
@@ -55,6 +60,11 @@ public static class CatalogModule
             return UnknownLocation();
         }
 
+        if (await CheckSupplierAsync(db, product.SupplierId, cancellationToken) is { } supplierError)
+        {
+            return supplierError;
+        }
+
         db.Products.Add(product);
         await db.SaveChangesAsync(cancellationToken);
         return Results.CreatedAtRoute("GetProduct", new { id = product.Id }, ProductDto.From(product));
@@ -62,6 +72,11 @@ public static class CatalogModule
 
     private static async Task<IResult> UpdateAsync(Guid id, ProductInput input, OrdaliDbContext db, CancellationToken cancellationToken)
     {
+        if (CheckRange(input) is { } rangeError)
+        {
+            return rangeError;
+        }
+
         var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         if (product is null)
         {
@@ -79,8 +94,31 @@ public static class CatalogModule
             return UnknownLocation();
         }
 
+        if (await CheckSupplierAsync(db, product.SupplierId, cancellationToken) is { } supplierError)
+        {
+            return supplierError;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(ProductDto.From(product));
+    }
+
+    private static IResult? CheckRange(ProductInput input) =>
+        input.MaxStock > 0 && input.MaxStock < input.MinStock
+            ? Validation.Invalid(nameof(ProductInput.MaxStock), "El stock máximo no puede ser menor que el mínimo.")
+            : null;
+
+    private static async Task<IResult?> CheckSupplierAsync(OrdaliDbContext db, Guid? supplierId, CancellationToken cancellationToken)
+    {
+        if (supplierId is not { } id)
+        {
+            return null;
+        }
+
+        var supplier = await db.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+        return supplier is null
+            ? Validation.Invalid(nameof(ProductInput.SupplierId), "El distribuidor no existe.")
+            : null;
     }
 
     private static void Apply(Product product, ProductInput input)
@@ -91,7 +129,9 @@ public static class CatalogModule
         product.Unit = input.Unit.Trim();
         product.TracksLots = input.TracksLots;
         product.MinStock = input.MinStock;
+        product.MaxStock = input.MaxStock;
         product.DefaultLocationId = input.DefaultLocationId;
+        product.SupplierId = input.SupplierId;
     }
 
     private static async Task<bool> UnknownLocationAsync(OrdaliDbContext db, Guid? locationId, CancellationToken cancellationToken) =>
