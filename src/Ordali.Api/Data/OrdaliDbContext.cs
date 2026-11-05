@@ -61,6 +61,9 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             user.Property(u => u.Category).HasConversion<string>().HasMaxLength(16);
             user.HasOne<ProfileTemplate>().WithMany().HasForeignKey(u => u.TemplateId).OnDelete(DeleteBehavior.SetNull);
             user.HasIndex(u => u.Category);
+
+            // Removed profiles are left out of every query unless one asks for them on purpose.
+            user.HasQueryFilter(u => u.DeletedAt == null);
         });
 
         modelBuilder.Entity<ProfileTemplate>(template =>

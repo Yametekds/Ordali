@@ -153,6 +153,86 @@ public class UserAdministrationTests(OrdaliApiFactory factory) : IClassFixture<O
     }
 
     [Fact]
+    public async Task Admin_deletes_a_profile_and_it_loses_access_at_once()
+    {
+        var admin = await factory.SignInRawAsync(OrdaliApiFactory.AdminEmail);
+        await admin.PostAsJsonAsync("/api/v1/users", new { name = "Sara León", email = "sara@demo.local", password = "Secreta123", templateId = DemoSeed.OperatorTemplateId });
+        var sara = await factory.SignInRawAsync("sara@demo.local", "Secreta123");
+        var saraId = (await sara.GetFromJsonAsync<JsonElement>("/api/v1/auth/me")).GetProperty("id").GetGuid();
+
+        var delete = await admin.DeleteAsync($"/api/v1/users/{saraId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await sara.GetAsync("/api/v1/stock")).StatusCode);
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login", new { email = "sara@demo.local", password = "Secreta123" });
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/users/{saraId}")).StatusCode);
+        var users = await admin.GetFromJsonAsync<JsonElement>("/api/v1/users");
+        Assert.DoesNotContain(users.EnumerateArray(), u => u.GetProperty("id").GetGuid() == saraId);
+        var deleted = Assert.Single(
+            (await admin.GetFromJsonAsync<JsonElement>("/api/v1/users/deleted")).EnumerateArray(),
+            u => u.GetProperty("id").GetGuid() == saraId);
+        Assert.Equal("Lucía Martín", deleted.GetProperty("deletedByName").GetString());
+    }
+
+    [Fact]
+    public async Task Restored_profile_comes_back_as_it_was_and_can_sign_in()
+    {
+        var admin = await factory.SignInRawAsync(OrdaliApiFactory.AdminEmail);
+        var created = await (await admin.PostAsJsonAsync("/api/v1/users", new { name = "Raúl Pino", email = "raul@demo.local", password = "Secreta123", templateId = DemoSeed.ReadOnlyTemplateId }))
+            .Content.ReadFromJsonAsync<JsonElement>(OrdaliApiFactory.Json);
+        var raulId = created.GetProperty("id").GetGuid();
+        await admin.DeleteAsync($"/api/v1/users/{raulId}");
+
+        var restore = await admin.PostAsync($"/api/v1/users/{raulId}/restore", null);
+        var again = await admin.PostAsync($"/api/v1/users/{raulId}/restore", null);
+
+        Assert.Equal(HttpStatusCode.OK, restore.StatusCode);
+        var restored = await restore.Content.ReadFromJsonAsync<JsonElement>(OrdaliApiFactory.Json);
+        Assert.Equal(created.GetProperty("permissions").ToString(), restored.GetProperty("permissions").ToString());
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+        var deleted = await admin.GetFromJsonAsync<JsonElement>("/api/v1/users/deleted");
+        Assert.DoesNotContain(deleted.EnumerateArray(), u => u.GetProperty("id").GetGuid() == raulId);
+        await factory.SignInRawAsync("raul@demo.local", "Secreta123");
+    }
+
+    [Fact]
+    public async Task Only_the_admin_deletes_and_restores_profiles()
+    {
+        var supervisor = await factory.SignInRawAsync(OrdaliApiFactory.SupervisorEmail);
+        var picker = (await supervisor.GetFromJsonAsync<JsonElement>("/api/v1/users?category=Operator")).EnumerateArray().First().GetProperty("id").GetGuid();
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.DeleteAsync($"/api/v1/users/{picker}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.GetAsync("/api/v1/users/deleted")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.PostAsync($"/api/v1/users/{picker}/restore", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_cannot_delete_themself()
+    {
+        var admin = await factory.SignInRawAsync(OrdaliApiFactory.AdminEmail);
+        var me = (await admin.GetFromJsonAsync<JsonElement>("/api/v1/auth/me")).GetProperty("id").GetGuid();
+
+        var response = await admin.DeleteAsync($"/api/v1/users/{me}");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Email_of_a_deleted_profile_points_to_restoring_it()
+    {
+        var admin = await factory.SignInRawAsync(OrdaliApiFactory.AdminEmail);
+        var body = new { name = "Nuria Gil", email = "nuria@demo.local", password = "Secreta123", templateId = DemoSeed.OperatorTemplateId };
+        var nuria = await (await admin.PostAsJsonAsync("/api/v1/users", body)).Content.ReadFromJsonAsync<JsonElement>();
+        await admin.DeleteAsync($"/api/v1/users/{nuria.GetProperty("id").GetGuid()}");
+
+        var response = await admin.PostAsJsonAsync("/api/v1/users", body);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("eliminado", (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("detail").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Operator_without_adjust_permission_cannot_adjust_stock()
     {
         var picker = await factory.SignInRawAsync(OrdaliApiFactory.OperatorEmail);

@@ -97,6 +97,15 @@ public sealed class HttpOrdaliApi : IOrdaliApi
     public Task<UserProfile> UpdateUserAccessAsync(Guid id, UserAccessInput input, CancellationToken cancellationToken = default) =>
         SendAsync<UserProfile>(HttpMethod.Put, $"api/v1/users/{id}/access", input, cancellationToken);
 
+    public Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<object?>(HttpMethod.Delete, $"api/v1/users/{id}", null, cancellationToken, expectBody: false);
+
+    public Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<DeletedUser>>(HttpMethod.Get, "api/v1/users/deleted", null, cancellationToken);
+
+    public Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<UserProfile>(HttpMethod.Post, $"api/v1/users/{id}/restore", null, cancellationToken);
+
     private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken, bool expectBody = true)
     {
         using var request = new HttpRequestMessage(method, path);

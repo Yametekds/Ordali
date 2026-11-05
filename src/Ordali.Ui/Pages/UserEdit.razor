@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = Policies.Admin)]
 @inject IOrdaliApi Api
 @inject SessionState Session
+@inject NavigationManager Navigation
 
 <PageTitle>Editar perfil · Ordali</PageTitle>
 
@@ -78,6 +79,31 @@ else
             <button class="btn btn-primary" type="button" disabled="@busy" @onclick="SaveAsync">@(busy ? "Guardando…" : "Guardar cambios")</button>
         </div>
     </div>
+
+    @if (!IsSelf)
+    {
+        <div class="card form-card form-card-wide">
+            <section class="form-section">
+                <h2 class="card-title">Eliminar perfil</h2>
+                @if (confirmingDelete)
+                {
+                    <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-delete">
+                        <Icon Name="alert" />
+                        <span class="alert-text" id="confirm-delete">¿Seguro? @user.Name dejará de poder entrar.</span>
+                        <span class="alert-actions">
+                            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => confirmingDelete = false">Cancelar</button>
+                            <button class="btn btn-sm btn-primary" type="button" disabled="@busy" @onclick="DeleteAsync">@(busy ? "Eliminando…" : "Eliminar")</button>
+                        </span>
+                    </div>
+                }
+                else
+                {
+                    <p class="muted">Deja de poder entrar y desaparece de la lista. Su historial se conserva y puedes recuperarlo desde Usuarios eliminados.</p>
+                    <button class="btn btn-danger-ghost" type="button" @onclick="() => confirmingDelete = true"><Icon Name="trash" /><span>Eliminar perfil</span></button>
+                }
+            </section>
+        </div>
+    }
 }
 
 @code {
@@ -91,6 +117,7 @@ else
     private Exception? error;
     private bool busy;
     private bool saved;
+    private bool confirmingDelete;
 
     // An admin cannot demote or deactivate themself, so those controls are locked on their own profile.
     private bool IsSelf => Session.Current?.User.Id == Id;
@@ -126,6 +153,26 @@ else
         catch (ApiException ex)
         {
             error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.DeleteUserAsync(Id);
+            Navigation.NavigateTo("registros/usuarios/eliminados");
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            confirmingDelete = false;
         }
         finally
         {

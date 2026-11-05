@@ -1,11 +1,15 @@
 @page "/registros/usuarios"
 @attribute [Authorize(Policy = Permissions.UsersView)]
 @inject IOrdaliApi Api
+@inject SessionState Session
 
 <PageTitle>Usuarios · Ordali</PageTitle>
 
 <PageHeader Title="Usuarios" Subtitle="Perfiles del personal, agrupados por categoría">
     <Actions>
+        <AuthorizeView Policy="@Policies.Admin">
+            <a class="btn" href="registros/usuarios/eliminados"><Icon Name="trash" /><span>Eliminados</span></a>
+        </AuthorizeView>
         <AuthorizeView Policy="@Permissions.UsersCreate">
             <a class="btn btn-primary" href="registros/usuarios/nuevo"><Icon Name="plus" /><span>Nuevo perfil</span></a>
         </AuthorizeView>
@@ -23,6 +27,30 @@
 </div>
 
 <ErrorAlert Error="error" />
+
+@if (confirming is not null)
+{
+    <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-delete">
+        <Icon Name="alert" />
+        <span class="alert-text" id="confirm-delete">
+            ¿Eliminar el perfil de <strong>@confirming.Name</strong>? Dejará de poder entrar. Podrás recuperarlo desde Eliminados.
+        </span>
+        <span class="alert-actions">
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => confirming = null">Cancelar</button>
+            <button class="btn btn-sm btn-primary" type="button" disabled="@busy" @onclick="DeleteAsync">@(busy ? "Eliminando…" : "Eliminar")</button>
+        </span>
+    </div>
+}
+else if (removed is not null)
+{
+    <div class="alert alert-ok" role="status">
+        <Icon Name="check" />
+        <span class="alert-text">Has eliminado el perfil de <strong>@removed.Name</strong>.</span>
+        <span class="alert-actions">
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="UndoAsync"><Icon Name="restore" /><span>Deshacer</span></button>
+        </span>
+    </div>
+}
 
 @if (users is null)
 {
@@ -74,6 +102,13 @@ else
                                             <a class="btn btn-ghost btn-icon" href="registros/usuarios/@user.Id" title="Editar permisos" aria-label="Editar @user.Name">
                                                 <Icon Name="edit" />
                                             </a>
+                                            @if (user.Id != Session.Current?.User.Id)
+                                            {
+                                                <button class="btn btn-danger-ghost btn-icon" type="button" title="Eliminar perfil" aria-label="Eliminar @user.Name"
+                                                        @onclick="() => Confirm(user)">
+                                                    <Icon Name="trash" />
+                                                </button>
+                                            }
                                         </AuthorizeView>
                                     </td>
                                 </tr>
@@ -93,6 +128,9 @@ else
 
     private IReadOnlyList<UserProfile>? users;
     private Exception? error;
+    private UserProfile? confirming;
+    private UserProfile? removed;
+    private bool busy;
 
     private UserCategory? Category => Enum.TryParse<UserCategory>(CategoryName, ignoreCase: true, out var c) ? c : null;
 
@@ -105,6 +143,56 @@ else
         catch (ApiException ex)
         {
             error = ex;
+        }
+    }
+
+    private void Confirm(UserProfile user)
+    {
+        confirming = user;
+        removed = null;
+        error = null;
+    }
+
+    private async Task DeleteAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.DeleteUserAsync(confirming!.Id);
+            removed = confirming;
+            confirming = null;
+            users = await Api.GetUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            confirming = null;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // Lets the admin take a removal back straight away, without going to the list of removed profiles.
+    private async Task UndoAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.RestoreUserAsync(removed!.Id);
+            removed = null;
+            users = await Api.GetUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
         }
     }
 }

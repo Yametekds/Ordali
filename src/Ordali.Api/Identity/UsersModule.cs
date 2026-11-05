@@ -30,6 +30,12 @@ public static class UsersModule
             .WithSummary("Crea un perfil a partir de una plantilla: copia su categoría y sus permisos.");
         users.MapPut("/{id:guid}/access", UpdateAccessAsync).RequireAuthorization(AccessPolicies.Admin).Validate<UserAccessInput>()
             .WithSummary("Solo administrador: cambia la categoría, los permisos especiales o activa y desactiva el perfil.");
+        users.MapDelete("/{id:guid}", DeleteUserAsync).RequireAuthorization(AccessPolicies.Admin)
+            .WithSummary("Solo administrador: elimina el perfil. Deja de poder entrar, pero se puede recuperar.");
+        users.MapGet("/deleted", ListDeletedUsersAsync).RequireAuthorization(AccessPolicies.Admin)
+            .WithSummary("Solo administrador: perfiles eliminados que se pueden recuperar, los más recientes primero.");
+        users.MapPost("/{id:guid}/restore", RestoreUserAsync).RequireAuthorization(AccessPolicies.Admin)
+            .WithSummary("Solo administrador: recupera un perfil eliminado con la categoría y los permisos que tenía.");
     }
 
     private static async Task<IResult> ListTemplatesAsync(OrdaliDbContext db, CancellationToken cancellationToken)
@@ -95,7 +101,7 @@ public static class UsersModule
         }
 
         // Profiles keep the permissions they were given; they only lose the link to the template.
-        foreach (var user in await db.Users.Where(u => u.TemplateId == id).ToListAsync(cancellationToken))
+        foreach (var user in await db.Users.IgnoreQueryFilters().Where(u => u.TemplateId == id).ToListAsync(cancellationToken))
         {
             user.TemplateId = null;
         }
@@ -159,9 +165,15 @@ public static class UsersModule
         }
 
         var email = input.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(u => u.Email == email, cancellationToken))
+        var existing = await db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.Email == email).Select(u => new { u.DeletedAt }).FirstOrDefaultAsync(cancellationToken);
+        if (existing is not null)
         {
-            return Results.Problem(statusCode: StatusCodes.Status409Conflict, detail: "Ya existe un perfil con ese email.");
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                detail: existing.DeletedAt is null
+                    ? "Ya existe un perfil con ese email."
+                    : "Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados.");
         }
 
         var user = new User
@@ -206,6 +218,70 @@ public static class UsersModule
         user.Category = input.Category;
         user.Permissions = Permissions.Normalize(input.Permissions);
         user.Active = input.Active;
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(ToDto(user, await TemplateNamesAsync(db, cancellationToken)));
+    }
+
+    private static async Task<IResult> DeleteUserAsync(
+        Guid id, ClaimsPrincipal principal, AccessService access, OrdaliDbContext db, TimeProvider time, CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (user is null)
+        {
+            return UserNotFound();
+        }
+
+        // Since only an administrator can do this and never to themself, at least one administrator always remains.
+        var me = (await access.GetAsync(principal, cancellationToken))!;
+        if (user.Id == me.User.Id)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, detail: "No puedes eliminar tu propio perfil.");
+        }
+
+        // Movements and receipts keep the person's name as text, so the history reads the same afterwards.
+        user.DeletedAt = time.GetUtcNow();
+        user.DeletedById = me.User.Id;
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ListDeletedUsersAsync(OrdaliDbContext db, CancellationToken cancellationToken)
+    {
+        var deleted = await db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => u.DeletedAt != null)
+            .ToListAsync(cancellationToken);
+        var byIds = deleted.Where(u => u.DeletedById != null).Select(u => u.DeletedById!.Value).Distinct().ToList();
+        var deleters = await db.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(u => byIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.Name, cancellationToken);
+        var templates = await TemplateNamesAsync(db, cancellationToken);
+        return Results.Ok(deleted
+            .OrderByDescending(u => u.DeletedAt)
+            .Select(u => new DeletedUserDto(
+                u.Id,
+                u.Name,
+                u.Email,
+                u.Category,
+                u.TemplateId is { } templateId && templates.TryGetValue(templateId, out var template) ? template : null,
+                u.DeletedAt!.Value,
+                u.DeletedById is { } by && deleters.TryGetValue(by, out var name) ? name : null)));
+    }
+
+    private static async Task<IResult> RestoreUserAsync(Guid id, OrdaliDbContext db, CancellationToken cancellationToken)
+    {
+        var user = await db.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (user is null)
+        {
+            return UserNotFound();
+        }
+
+        if (user.DeletedAt is null)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status409Conflict, detail: "Ese perfil no está eliminado.");
+        }
+
+        user.DeletedAt = null;
+        user.DeletedById = null;
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(ToDto(user, await TemplateNamesAsync(db, cancellationToken)));
     }

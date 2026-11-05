@@ -63,6 +63,7 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 | `/api/v1/profile-templates` | Plantillas de perfil: las crea el administrador y las usan quienes pueden crear perfiles |
 | `GET`/`POST /api/v1/users` | Perfiles por categoría y alta a partir de una plantilla |
 | `PUT /api/v1/users/{id}/access` | Cambiar categoría, permisos especiales o desactivar un perfil (solo administrador) |
+| `DELETE /api/v1/users/{id}`, `GET /api/v1/users/deleted`, `POST /api/v1/users/{id}/restore` | Eliminar un perfil y recuperarlo después (solo administrador) |
 | `/health/live` | El proceso está en marcha |
 | `/health/ready` | La API puede atender peticiones (incluye la base de datos) |
 
@@ -79,6 +80,7 @@ Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lis
 
 - El **administrador** tiene todos los permisos. Además, es el único que crea **plantillas de perfil** y que puede cambiar un perfil ya creado: darle permisos especiales, subirlo de categoría o desactivarlo.
 - Las plantillas se comparten con todos los que tienen el permiso *crear perfiles*, que las usan para dar de alta perfiles nuevos. Nadie salvo el administrador puede usar una plantilla con permisos que él mismo no tiene.
+- El administrador también puede **eliminar perfiles**. Un perfil eliminado deja de poder entrar y desaparece de las listas, pero no se borra: su historial de movimientos se conserva y el administrador lo puede **recuperar** con la misma categoría y los mismos permisos.
 - Los permisos se comprueban en la API en cada petición, así que un cambio se aplica al momento.
 
 Perfiles de ejemplo (contraseña `Demo1234!`):

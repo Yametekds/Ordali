@@ -28,6 +28,14 @@ public sealed class User
     public DateTimeOffset CreatedAt { get; set; }
 
     public Guid? CreatedById { get; set; }
+
+    /// <summary>
+    /// When an administrator removed the profile. Removed profiles are hidden everywhere and can't
+    /// sign in, but the row stays so the profile can be restored with its permissions.
+    /// </summary>
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    public Guid? DeletedById { get; set; }
 }
 
 /// <summary>

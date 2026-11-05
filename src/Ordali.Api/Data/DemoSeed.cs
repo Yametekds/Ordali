@@ -26,7 +26,7 @@ public static class DemoSeed
     public static async Task SeedAsync(IServiceProvider services, CancellationToken cancellationToken = default)
     {
         var db = services.GetRequiredService<OrdaliDbContext>();
-        if (await db.Users.AnyAsync(cancellationToken))
+        if (await db.Users.IgnoreQueryFilters().AnyAsync(cancellationToken))
         {
             return;
         }

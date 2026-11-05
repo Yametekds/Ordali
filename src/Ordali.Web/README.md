@@ -34,6 +34,7 @@ Usuarios del modo demo (contraseña `Demo1234!`):
 - Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lista de **permisos**.
 - Las **plantillas de perfil** son conjuntos de permisos que se marcan con casillas. Solo el administrador las crea y edita, pero cualquiera con permiso para crear perfiles puede usarlas, siempre que no den permisos que él no tenga.
 - Solo el administrador cambia los permisos de un perfil ya creado (puede dar permisos especiales fuera de su plantilla), lo sube de categoría o lo desactiva.
+- El administrador puede eliminar un perfil desde la lista de usuarios (con confirmación y opción de deshacer) o desde su ficha. Los perfiles eliminados se ven en **Usuarios › Eliminados**, desde donde se recuperan tal como estaban.
 - En el menú lateral, **Registros** agrupa Productos y Usuarios, con un acceso directo por categoría.
 
 ## Ejecutar en local
@@ -78,6 +79,9 @@ Todas las rutas bajo `/api/v1`, JSON en camelCase y enums como texto (`"Transfer
 | GET | `/users`, `/users/{id}` | `users.view` |
 | POST | `/users` (`{ name, email, password, templateId }`) | `users.create` |
 | PUT | `/users/{id}/access` (`{ category, permissions, active }`) | Administrador |
+| DELETE | `/users/{id}` | Administrador |
+| GET | `/users/deleted` | Administrador |
+| POST | `/users/{id}/restore` | Administrador |
 
 Los modelos exactos están en `src/Ordali.Client/Models`.
 

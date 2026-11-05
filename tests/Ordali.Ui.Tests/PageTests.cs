@@ -94,6 +94,42 @@ public class PageTests : BunitContext
     }
 
     [Fact]
+    public async Task Admin_deletes_a_profile_after_confirming_and_can_undo_it()
+    {
+        await SignInAsync("admin@demo.local");
+
+        var page = Render<Users>();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("button[aria-label='Eliminar Javier Ruiz']")));
+        page.Find("button[aria-label='Eliminar Javier Ruiz']").Click();
+        page.Find(".alert-warning .btn-primary").Click();
+
+        page.WaitForAssertion(() => Assert.Contains("Has eliminado el perfil de Javier Ruiz", page.Find(".alert-ok").TextContent, StringComparison.Ordinal));
+        Assert.Equal("Mozos (3)", page.FindAll(".group-title")[2].TextContent.Trim());
+        // The admin's own row has no delete button.
+        Assert.Empty(page.FindAll("button[aria-label='Eliminar Lucía Martín']"));
+
+        page.Find(".alert-ok button").Click();
+
+        page.WaitForAssertion(() => Assert.Equal("Mozos (4)", page.FindAll(".group-title")[2].TextContent.Trim()));
+    }
+
+    [Fact]
+    public async Task Deleted_profiles_can_be_restored_from_their_own_page()
+    {
+        await SignInAsync("admin@demo.local");
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var mozo = (await api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+        await api.DeleteUserAsync(mozo.Id);
+
+        var page = Render<DeletedUsers>();
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("tbody tr")));
+        page.Find("tbody button").Click();
+
+        page.WaitForAssertion(() => Assert.Contains("Has recuperado el perfil de Javier Ruiz", page.Find(".alert-ok").TextContent, StringComparison.Ordinal));
+        Assert.Contains("No hay perfiles eliminados.", page.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Supervisors_can_use_templates_but_not_edit_them()
     {
         await SignInAsync("encargado@demo.local");
