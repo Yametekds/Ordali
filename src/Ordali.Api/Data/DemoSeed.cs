@@ -87,13 +87,16 @@ public static class DemoSeed
             Loc(6, "A-01-02", "Pasillo A", LocationType.Storage),
             Loc(7, "A-02-01", "Pasillo A", LocationType.Storage),
             Loc(8, "B-01-01", "Pasillo B", LocationType.Storage));
+        db.Suppliers.AddRange(
+            new Supplier { Id = SupplierId(1), Name = "Distribuciones Alimentarias del Centro", ContactName = "Rosa Vidal", Email = "pedidos@alimentarias-centro.example", Phone = "916 000 111" },
+            new Supplier { Id = SupplierId(2), Name = "Suministros Norte", ContactName = "Iker Lasa", Email = "comercial@suministros-norte.example", Phone = "944 000 222" });
         db.Products.AddRange(
-            Prod(1, "ACE-001", "Aceite de oliva virgen extra 1 L", "8410000000017", "ud", true, 120, 5),
-            Prod(2, "ARR-002", "Arroz bomba 1 kg", "8410000000024", "ud", true, 80, 6),
-            Prod(3, "TOR-M8", "Tornillo hexagonal M8 (caja 100)", "8430000000013", "caja", false, 20, 7),
-            Prod(4, "CIN-050", "Cinta de embalar 50 mm", "8430000000020", "rollo", false, 50, 8),
-            Prod(5, "PAL-EUR", "Palé europeo 1200x800", null, "ud", false, 10, null),
-            Prod(6, "GUA-NIT", "Guantes de nitrilo talla L (100 ud)", "8440000000019", "caja", true, 15, 4));
+            Prod(1, "ACE-001", "Aceite de oliva virgen extra 1 L", "8410000000017", "ud", true, 120, 5, 360, 1),
+            Prod(2, "ARR-002", "Arroz bomba 1 kg", "8410000000024", "ud", true, 80, 6, 200, 1),
+            Prod(3, "TOR-M8", "Tornillo hexagonal M8 (caja 100)", "8430000000013", "caja", false, 20, 7, 60, 2),
+            Prod(4, "CIN-050", "Cinta de embalar 50 mm", "8430000000020", "rollo", false, 50, 8, 150, 2),
+            Prod(5, "PAL-EUR", "Palé europeo 1200x800", null, "ud", false, 10, null, 0, null),
+            Prod(6, "GUA-NIT", "Guantes de nitrilo talla L (100 ud)", "8440000000019", "caja", true, 15, 4, 40, 2));
         db.StockLines.AddRange(
             Line(1, 5, "L2026-09A", 240),
             Line(1, 3, "L2026-09A", 36),
@@ -126,6 +129,38 @@ public static class DemoSeed
             },
             supervisor.Id, supervisor.Name, cancellationToken, now.AddHours(-3));
         await movements.RecordAsync(Move(MovementType.Adjustment, 4, null, 8, null, -2, "Recuento: rollos dañados"), admin.Id, admin.Name, cancellationToken, now.AddHours(-2));
+
+        // One order already received and one on its way; rice and tape are left below their range to order.
+        db.PurchaseOrders.AddRange(
+            Order(1, 1, PurchaseOrderStatus.Received, supervisor, now.AddDays(-4), null, (1, 48, 48)),
+            Order(2, 2, PurchaseOrderStatus.Sent, supervisor, now.AddDays(-1), DateOnly.FromDateTime(now.AddDays(2).Date), (6, 20, null)));
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public static Guid SupplierId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-3000000000{n:D2}");
+
+    private static PurchaseOrder Order(
+        int n, int supplier, PurchaseOrderStatus status, User user, DateTimeOffset at, DateOnly? delivery,
+        params (int Product, decimal Quantity, decimal? Suggested)[] lines)
+    {
+        var id = Guid.Parse($"4b8e7a10-0000-4000-8000-4000000000{n:D2}");
+        return new PurchaseOrder
+        {
+            Id = id,
+            Code = $"PED-{n:D4}",
+            SupplierId = SupplierId(supplier),
+            Status = status,
+            DeliveryDate = delivery,
+            UserId = user.Id,
+            UserName = user.Name,
+            CreatedAt = at,
+            UpdatedAt = at,
+            SentAt = status == PurchaseOrderStatus.Draft ? null : at,
+            Lines = [.. lines.Select((l, i) => new PurchaseOrderLine
+            {
+                Id = Guid.NewGuid(), PurchaseOrderId = id, ProductId = ProductId(l.Product), Quantity = l.Quantity, SuggestedQuantity = l.Suggested, Position = i,
+            })],
+        };
     }
 
     public static Guid LocationId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-1000000000{n:D2}");
@@ -135,11 +170,12 @@ public static class DemoSeed
     private static Location Loc(int n, string code, string zone, LocationType type) =>
         new() { Id = LocationId(n), SiteId = SiteId, Code = code, Zone = zone, Type = type };
 
-    private static Product Prod(int n, string sku, string name, string? gtin, string unit, bool lots, decimal min, int? defaultLocation) =>
+    private static Product Prod(int n, string sku, string name, string? gtin, string unit, bool lots, decimal min, int? defaultLocation, decimal max, int? supplier) =>
         new()
         {
-            Id = ProductId(n), Sku = sku, Name = name, Gtin = gtin, Unit = unit, TracksLots = lots, MinStock = min,
+            Id = ProductId(n), Sku = sku, Name = name, Gtin = gtin, Unit = unit, TracksLots = lots, MinStock = min, MaxStock = max,
             DefaultLocationId = defaultLocation is { } l ? LocationId(l) : null,
+            SupplierId = supplier is { } s ? SupplierId(s) : null,
         };
 
     private static ReceiptLineInput Received(int product, string? lot, decimal quantity) =>

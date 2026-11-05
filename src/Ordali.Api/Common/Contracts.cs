@@ -74,9 +74,11 @@ public sealed class UserAccessInput
 
 public sealed record LoginResponse(string AccessToken, DateTimeOffset ExpiresAt, UserInfo User);
 
-public sealed record ProductDto(Guid Id, string Sku, string Name, string? Gtin, string Unit, bool TracksLots, decimal MinStock, Guid? DefaultLocationId)
+public sealed record ProductDto(
+    Guid Id, string Sku, string Name, string? Gtin, string Unit, bool TracksLots, decimal MinStock, Guid? DefaultLocationId, decimal MaxStock, Guid? SupplierId)
 {
-    public static ProductDto From(Product p) => new(p.Id, p.Sku, p.Name, p.Gtin, p.Unit, p.TracksLots, p.MinStock, p.DefaultLocationId);
+    public static ProductDto From(Product p) =>
+        new(p.Id, p.Sku, p.Name, p.Gtin, p.Unit, p.TracksLots, p.MinStock, p.DefaultLocationId, p.MaxStock, p.SupplierId);
 }
 
 public sealed record SiteDto(Guid Id, string Code, string Name);
@@ -121,7 +123,13 @@ public sealed class ProductInput
     [Range(0, 1_000_000, ErrorMessage = "El stock mínimo no puede ser negativo.")]
     public decimal MinStock { get; set; }
 
+    /// <summary>Level an order refills the item up to; zero leaves it unset.</summary>
+    [Range(0, 1_000_000, ErrorMessage = "El stock máximo no puede ser negativo.")]
+    public decimal MaxStock { get; set; }
+
     public Guid? DefaultLocationId { get; set; }
+
+    public Guid? SupplierId { get; set; }
 }
 
 public sealed class LocationInput
