@@ -8,7 +8,7 @@ namespace Ordali.Client.Demo;
 /// In-memory backend that follows the same rules as the API, so the web app can be tried
 /// on GitHub Pages without a server. Data lives until the page is reloaded.
 /// </summary>
-public sealed class DemoOrdaliApi : IOrdaliApi
+public sealed partial class DemoOrdaliApi : IOrdaliApi
 {
     private readonly Lock _lock = new();
     private readonly SessionState _session;
@@ -32,6 +32,7 @@ public sealed class DemoOrdaliApi : IOrdaliApi
         _templates = [.. DemoData.Templates()];
         _stock = [.. DemoData.Stock().Select(s => new StockLine(DemoData.ProductId(s.Product), DemoData.LocationId(s.Location), s.Lot, s.Quantity))];
         SeedMovements();
+        SeedOrders();
     }
 
     public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -732,6 +733,16 @@ public sealed class DemoOrdaliApi : IOrdaliApi
 
     private Product ToProduct(Guid id, ProductInput input)
     {
+        if (input.MaxStock > 0 && input.MaxStock < input.MinStock)
+        {
+            throw Invalid(nameof(ProductInput.MaxStock), "El stock máximo no puede ser menor que el mínimo.");
+        }
+
+        if (input.SupplierId is { } supplierId && _suppliers.All(s => s.Id != supplierId))
+        {
+            throw Invalid(nameof(ProductInput.SupplierId), "El distribuidor no existe.");
+        }
+
         if (input.DefaultLocationId is { } locationId && _locations.All(l => l.Id != locationId))
         {
             throw Invalid(nameof(ProductInput.DefaultLocationId), "La ubicación no existe.");
@@ -745,7 +756,9 @@ public sealed class DemoOrdaliApi : IOrdaliApi
             input.Unit.Trim(),
             input.TracksLots,
             input.MinStock,
-            input.DefaultLocationId);
+            input.DefaultLocationId,
+            input.MaxStock,
+            input.SupplierId);
     }
 
     // Like the API, permissions are read from the stored profile on every call, so an admin's

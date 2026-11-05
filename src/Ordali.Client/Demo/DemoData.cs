@@ -62,12 +62,18 @@ internal static class DemoData
 
     public static IEnumerable<Product> Products()
     {
-        yield return Prod(1, "ACE-001", "Aceite de oliva virgen extra 1 L", "8410000000017", "ud", true, 120, 5);
-        yield return Prod(2, "ARR-002", "Arroz bomba 1 kg", "8410000000024", "ud", true, 80, 6);
-        yield return Prod(3, "TOR-M8", "Tornillo hexagonal M8 (caja 100)", "8430000000013", "caja", false, 20, 7);
-        yield return Prod(4, "CIN-050", "Cinta de embalar 50 mm", "8430000000020", "rollo", false, 50, 8);
-        yield return Prod(5, "PAL-EUR", "Palé europeo 1200x800", null, "ud", false, 10, null);
-        yield return Prod(6, "GUA-NIT", "Guantes de nitrilo talla L (100 ud)", "8440000000019", "caja", true, 15, 4);
+        yield return Prod(1, "ACE-001", "Aceite de oliva virgen extra 1 L", "8410000000017", "ud", true, 120, 5, 360, 1);
+        yield return Prod(2, "ARR-002", "Arroz bomba 1 kg", "8410000000024", "ud", true, 80, 6, 200, 1);
+        yield return Prod(3, "TOR-M8", "Tornillo hexagonal M8 (caja 100)", "8430000000013", "caja", false, 20, 7, 60, 2);
+        yield return Prod(4, "CIN-050", "Cinta de embalar 50 mm", "8430000000020", "rollo", false, 50, 8, 150, 2);
+        yield return Prod(5, "PAL-EUR", "Palé europeo 1200x800", null, "ud", false, 10, null, 0, null);
+        yield return Prod(6, "GUA-NIT", "Guantes de nitrilo talla L (100 ud)", "8440000000019", "caja", true, 15, 4, 40, 2);
+    }
+
+    public static IEnumerable<Supplier> Suppliers()
+    {
+        yield return new(SupplierId(1), "Distribuciones Alimentarias del Centro", "Rosa Vidal", "pedidos@alimentarias-centro.example", "916 000 111", true);
+        yield return new(SupplierId(2), "Suministros Norte", "Iker Lasa", "comercial@suministros-norte.example", "944 000 222", true);
     }
 
     // (product, location, lot, quantity)
@@ -87,9 +93,13 @@ internal static class DemoData
 
     public static Guid ProductId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-2000000000{n:D2}");
 
+    public static Guid SupplierId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-3000000000{n:D2}");
+
+    public static Guid PurchaseOrderId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-4000000000{n:D2}");
+
     private static Location Loc(int n, string code, string zone, LocationType type) =>
         new(LocationId(n), Getafe.Id, code, zone, type);
 
-    private static Product Prod(int n, string sku, string name, string? gtin, string unit, bool lots, decimal min, int? defaultLocation) =>
-        new(ProductId(n), sku, name, gtin, unit, lots, min, defaultLocation is { } l ? LocationId(l) : null);
+    private static Product Prod(int n, string sku, string name, string? gtin, string unit, bool lots, decimal min, int? defaultLocation, decimal max, int? supplier) =>
+        new(ProductId(n), sku, name, gtin, unit, lots, min, defaultLocation is { } l ? LocationId(l) : null, max, supplier is { } s ? SupplierId(s) : null);
 }

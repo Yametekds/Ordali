@@ -327,6 +327,47 @@ public class DemoOrdaliApiTests
         return (products.Single(p => p.Sku == sku).Id, locations.Single(l => l.Code == from).Id, locations.Single(l => l.Code == to).Id);
     }
 
+    [Fact]
+    public async Task Demo_proposes_the_same_orders_as_the_api()
+    {
+        await SignInAsync("encargado@demo.local");
+
+        var suggestions = await _api.GetReorderSuggestionsAsync();
+
+        Assert.Equal(
+            [("Distribuciones Alimentarias del Centro", "ARR-002", 140m), ("Suministros Norte", "CIN-050", 122m)],
+            suggestions.Select(s => (s.SupplierName!, s.Lines.Single().Sku, s.Lines.Single().SuggestedQuantity)));
+    }
+
+    [Fact]
+    public async Task Demo_orders_follow_the_status_rules()
+    {
+        await SignInAsync("encargado@demo.local");
+        var supplier = (await _api.GetSuppliersAsync()).Single(s => s.Name == "Suministros Norte");
+
+        var order = await _api.CreatePurchaseOrderAsync(new PurchaseOrderInput
+        {
+            SupplierId = supplier.Id,
+            Lines = [new() { ProductId = (await _api.GetProductsAsync("CIN-050")).Single().Id, Quantity = 120, SuggestedQuantity = 122 }],
+        });
+        await _api.ChangePurchaseOrderStatusAsync(order.Id, PurchaseOrderStatus.Sent);
+        var locked = await Assert.ThrowsAsync<ApiException>(() => _api.UpdatePurchaseOrderAsync(order.Id, new PurchaseOrderInput { SupplierId = supplier.Id }));
+
+        Assert.Equal("PED-0003", order.Code);
+        Assert.Equal(HttpStatusCode.Conflict, locked.Status);
+        Assert.DoesNotContain(await _api.GetReorderSuggestionsAsync(supplier.Id), s => s.Lines.Any(l => l.Sku == "CIN-050"));
+    }
+
+    [Fact]
+    public async Task Pickers_cannot_see_demo_orders()
+    {
+        await SignInAsync("mozo@demo.local");
+
+        var ex = await Assert.ThrowsAsync<ApiException>(() => _api.GetPurchaseOrdersAsync());
+
+        Assert.Equal(HttpStatusCode.Forbidden, ex.Status);
+    }
+
     private async Task<decimal> QuantityAsync(Guid product, Guid location) =>
         (await _api.GetStockAsync(product, location)).Sum(s => s.Quantity);
 }

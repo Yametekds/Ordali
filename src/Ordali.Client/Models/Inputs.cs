@@ -24,7 +24,13 @@ public sealed class ProductInput
     [Range(0, 1_000_000, ErrorMessage = "El stock mínimo no puede ser negativo.")]
     public decimal MinStock { get; set; }
 
+    /// <summary>Level an order refills the item up to; zero leaves it unset.</summary>
+    [Range(0, 1_000_000, ErrorMessage = "El stock máximo no puede ser negativo.")]
+    public decimal MaxStock { get; set; }
+
     public Guid? DefaultLocationId { get; set; }
+
+    public Guid? SupplierId { get; set; }
 
     public static ProductInput From(Product product) => new()
     {
@@ -34,7 +40,9 @@ public sealed class ProductInput
         Unit = product.Unit,
         TracksLots = product.TracksLots,
         MinStock = product.MinStock,
+        MaxStock = product.MaxStock,
         DefaultLocationId = product.DefaultLocationId,
+        SupplierId = product.SupplierId,
     };
 }
 
