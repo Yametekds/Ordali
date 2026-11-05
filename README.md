@@ -91,6 +91,31 @@ Perfiles de ejemplo (contraseña `Demo1234!`):
 
 Cada movimiento guarda el usuario y la hora, y no se puede modificar ni borrar: los errores se corrigen con un ajuste.
 
+## Copias de seguridad
+
+Con `docker compose up`, el servicio `backup` hace una copia completa de la base de datos (artículos, stock, entradas, movimientos, usuarios y plantillas) en cuanto arranca y después **cada día a las 03:00** (hora de Madrid). Cada copia se comprueba con `RESTORE VERIFYONLY` y las de más de 14 días se borran solas. Los datos y las copias viven en los volúmenes `sqldata` y `backups`, así que sobreviven a `docker compose down` (solo `docker compose down -v` los borra).
+
+```bash
+docker compose logs backup                          # cuándo se hizo la última y cuándo toca la siguiente
+docker compose exec backup backup.sh                # copia en este momento
+docker compose exec backup ls -l /var/opt/mssql/backup
+docker compose exec backup restore.sh               # restaura la más reciente
+docker compose exec backup restore.sh Ordali_20261105_030000.bak
+docker compose cp backup:/var/opt/mssql/backup ./copias   # llevarlas a tu equipo
+docker compose cp ./copia.bak backup:/var/opt/mssql/backup/   # traer una de fuera
+```
+
+La restauración cierra las conexiones abiertas y la API vuelve a conectarse sola. Se configura con variables de entorno (o un archivo `.env`):
+
+| Variable | Por defecto | Para qué sirve |
+| --- | --- | --- |
+| `BACKUP_TIME` | `03:00` | Hora de la copia diaria |
+| `BACKUP_EVERY_MINUTES` | (vacía) | Si tiene valor, una copia cada N minutos en lugar de la diaria |
+| `BACKUP_KEEP_DAYS` | `14` | Días que se guardan las copias |
+| `TZ` | `Europe/Madrid` | Zona horaria de `BACKUP_TIME` |
+
+Para verlo funcionar sin esperar: `BACKUP_EVERY_MINUTES=1 docker compose up`. El CI hace una copia, cambia datos, restaura y comprueba que la API sigue respondiendo.
+
 ## Estructura
 
 ```
@@ -104,6 +129,7 @@ tests/Ordali.Ui.Tests             Tests de los componentes de la interfaz
 .github/workflows/ci.yml          Build, tests y prueba del stack con Docker Compose
 .github/workflows/pages.yml       Publica la demo web en GitHub Pages
 .github/workflows/apps.yml        Compila la app y, con una etiqueta v*, la publica en Releases
+ops/backup/                       Scripts de las copias de seguridad programadas y la restauración
 .devcontainer/                    Configuración de GitHub Codespaces
 ```
 

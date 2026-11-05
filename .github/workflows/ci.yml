@@ -33,6 +33,21 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"email":"admin@demo.local","password":"Demo1234!"}' | jq -r .accessToken)
           curl --fail -s http://localhost:8080/api/v1/products -H "Authorization: Bearer $token" | jq -e 'length > 0'
+      - name: Back up, change data and restore
+        run: |
+          docker compose exec -T backup backup.sh
+          q() { docker compose exec -T sqlserver bash -c "/opt/mssql-tools18/bin/sqlcmd -C -b -S localhost -U sa -P \"\$MSSQL_SA_PASSWORD\" -d Ordali -h -1 -W -Q \"SET NOCOUNT ON; $1\""; }
+          before=$(q "SELECT COUNT(*) FROM catalog.Products")
+          q "UPDATE catalog.Products SET Name = 'changed'"
+          docker compose exec -T backup restore.sh
+          test "$(q "SELECT COUNT(*) FROM catalog.Products WHERE Name = 'changed'")" = "0"
+          test "$(q "SELECT COUNT(*) FROM catalog.Products")" = "$before"
+      - name: Check the API still works after the restore
+        run: |
+          token=$(curl --fail -s --retry 5 --retry-all-errors http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@demo.local","password":"Demo1234!"}' | jq -r .accessToken)
+          curl --fail -s --retry 5 --retry-all-errors http://localhost:8080/api/v1/products -H "Authorization: Bearer $token" | jq -e 'length > 0'
       - name: Show logs on failure
         if: failure()
         run: docker compose logs
