@@ -6,7 +6,7 @@
 
 <PageTitle>Inicio · Ordali</PageTitle>
 
-<PageHeader Title="@($"Hola, {FirstName}")" Subtitle="Resumen del almacén">
+<PageHeader Title="@($"Hola, {FirstName}")" Subtitle="@Today">
     <Actions>
         <AuthorizeView Policy="@Permissions.MovementsCreate">
             <a class="btn" href="entradas/nueva"><Icon Name="inbox" /><span>Nueva entrada</span></a>
@@ -26,46 +26,55 @@
 }
 else
 {
-    <section class="stats">
+    <dl class="summary">
         @if (Can(Permissions.ProductsView))
         {
-            <StatCard Label="Productos" Value="@products.Count.ToString(Labels.Culture)" />
+            <div><dt>Productos</dt><dd>@products.Count.ToString(Labels.Culture)</dd></div>
         }
         @if (Can(Permissions.StockView))
         {
-            <StatCard Label="Unidades en stock" Value="@Labels.Quantity(stock.Sum(s => s.Quantity))" Hint="@($"{stock.Count} líneas de stock")" />
-        }
-        @if (Can(Permissions.ProductsView) && Can(Permissions.StockView))
-        {
-            <StatCard Label="Bajo mínimo" Value="@lowStock.Count.ToString(Labels.Culture)" Tone="@(lowStock.Count > 0 ? "warning" : "ok")" />
+            <div><dt>Unidades en stock</dt><dd>@Labels.Quantity(stock.Sum(s => s.Quantity))<small>en @stock.Count líneas</small></dd></div>
         }
         @if (Can(Permissions.MovementsView))
         {
-            <StatCard Label="Entradas por ubicar" Value="@pendingReceipts.Count.ToString(Labels.Culture)" Tone="@(pendingReceipts.Count > 0 ? "warning" : "ok")"
-                      Hint="@(pendingReceipts.Count > 0 ? string.Join(", ", pendingReceipts.Select(r => r.Code)) : null)" />
-            <StatCard Label="Movimientos hoy" Value="@movementsToday.ToString(Labels.Culture)" />
+            <div><dt>Movimientos hoy</dt><dd>@movementsToday.ToString(Labels.Culture)</dd></div>
         }
-    </section>
+    </dl>
 
-    <div class="grid-2">
-        @if (Can(Permissions.ProductsView) && Can(Permissions.StockView))
+    <div class="home">
+        @if (ShowsPending)
         {
-            <section class="card">
-                <h2 class="card-title">Productos bajo mínimo</h2>
-                @if (lowStock.Count == 0)
+            @* What someone has to act on goes first: receipts still at the dock and products below their minimum. *@
+            <section class="card pending">
+                <header class="panel-head">
+                    <h2>Pendiente @if (PendingCount > 0) { <span class="count">@PendingCount</span> }</h2>
+                </header>
+                @if (PendingCount == 0)
                 {
-                    <EmptyState Text="Todo el stock está por encima del mínimo." />
+                    <EmptyState IconName="check" Text="Nada pendiente: todas las entradas están ubicadas y el stock está por encima del mínimo." />
                 }
                 else
                 {
-                    <ul class="list">
+                    <ul class="tasks">
+                        @foreach (var receipt in pendingReceipts)
+                        {
+                            <li>
+                                <a class="task" href="@(Can(Permissions.MovementsCreate) ? $"traslados?entrada={receipt.Code}" : "entradas")">
+                                    <span class="badge badge-receipt">Por ubicar</span>
+                                    <span class="task-what"><strong>@receipt.Code</strong><span>en @receipt.DockLocationCode</span></span>
+                                    <span class="task-meta">@Labels.Quantity(receipt.Pending) de @Labels.Quantity(receipt.Quantity) uds.</span>
+                                </a>
+                            </li>
+                        }
                         @foreach (var item in lowStock)
                         {
                             <li>
-                                <a href="stock?articulo=@item.Product.Id">
-                                    <strong>@item.Product.Sku</strong> @item.Product.Name
+                                <a class="task" href="stock?articulo=@item.Product.Id">
+                                    <span class="badge badge-warning">Bajo mínimo</span>
+                                    <span class="task-what"><strong>@item.Product.Sku</strong><span>@item.Product.Name</span></span>
+                                    <span class="task-meta">@Labels.Quantity(item.Total) de @Labels.Quantity(item.Product.MinStock)</span>
+                                    <span class="meter" aria-hidden="true"><span style="width: @Fill(item)%"></span></span>
                                 </a>
-                                <span class="badge badge-warning">@Labels.Quantity(item.Total) / @Labels.Quantity(item.Product.MinStock)</span>
                             </li>
                         }
                     </ul>
@@ -76,23 +85,29 @@ else
         @if (Can(Permissions.MovementsView))
         {
             <section class="card">
-                <h2 class="card-title">Últimos movimientos</h2>
+                <header class="panel-head">
+                    <h2>Últimos movimientos</h2>
+                    @if (movements.Count > 0)
+                    {
+                        <a class="link" href="movimientos">Ver todos <Icon Name="arrow-right" /></a>
+                    }
+                </header>
                 @if (movements.Count == 0)
                 {
                     <EmptyState Text="Todavía no hay movimientos." />
                 }
                 else
                 {
-                    <ul class="list">
+                    <ul class="activity">
                         @foreach (var movement in movements.Take(6))
                         {
                             <li>
-                                <span><MovementTypeBadge Type="movement.Type" /> <strong>@movement.Sku</strong> @Labels.SignedQuantity(Signed(movement))</span>
-                                <small class="muted">@movement.UserName · @Labels.Relative(movement.CreatedAt, now)</small>
+                                <MovementTypeBadge Type="movement.Type" />
+                                <span><strong>@movement.Sku</strong> @Labels.SignedQuantity(Signed(movement))</span>
+                                <small>@movement.UserName · @Labels.Relative(movement.CreatedAt, now)</small>
                             </li>
                         }
                     </ul>
-                    <a class="link" href="movimientos">Ver todos <Icon Name="arrow-right" /></a>
                 }
             </section>
         }
@@ -113,6 +128,24 @@ else
     private string FirstName => Session.Current?.User.Name.Split(' ')[0] ?? "";
 
     private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;
+
+    private bool ShowsPending => Can(Permissions.MovementsView) || (Can(Permissions.ProductsView) && Can(Permissions.StockView));
+
+    private int PendingCount => pendingReceipts.Count + lowStock.Count;
+
+    // "Lunes, 3 de noviembre": the date says more than a generic subtitle.
+    private string Today
+    {
+        get
+        {
+            var text = Time.GetLocalNow().ToString("dddd, d 'de' MMMM", Labels.Culture);
+            return char.ToUpper(text[0], Labels.Culture) + text[1..];
+        }
+    }
+
+    private static string Fill((Product Product, decimal Total) item) =>
+        (item.Product.MinStock <= 0 ? 0 : Math.Clamp(item.Total / item.Product.MinStock * 100, 0, 100))
+            .ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
 
     protected override async Task OnInitializedAsync()
     {

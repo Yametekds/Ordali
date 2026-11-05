@@ -61,7 +61,7 @@ public class PageTests : BunitContext
 
         var page = Render<Dashboard>();
 
-        page.WaitForAssertion(() => Assert.Contains("CIN-050", page.Find(".grid-2 .card").TextContent, StringComparison.Ordinal));
+        page.WaitForAssertion(() => Assert.Contains("CIN-050", page.Find(".pending").TextContent, StringComparison.Ordinal));
     }
 
     private async Task<UserInfo> SignInAsync(string email)
