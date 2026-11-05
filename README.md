@@ -58,6 +58,8 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 | `GET /api/v1/stock` | Stock por artículo, ubicación y lote |
 | `GET`/`POST /api/v1/receipts` | Entradas: la mercancía queda en recepción hasta que se ubica; `?pending=true` lista las pendientes |
 | `POST /api/v1/receipts/{id}/putaway` | Traslada parte de una entrada desde recepción a su ubicación |
+| `GET`/`POST /api/v1/calendar` | Calendario: cargas, descargas y otras citas; `repeatWeeks` las repite cada semana y un muelle ocupado pide confirmación (409 y `allowOverlap`) |
+| `POST /api/v1/calendar/{id}/receive`, `/ship` | Cierra una descarga registrando su entrada, o una carga registrando la salida de cada línea |
 | `GET`/`POST /api/v1/movements` | Movimientos (salidas, traslados y ajustes) con quién los hizo y la entrada a la que pertenecen |
 | `GET /api/v1/permissions` | Los permisos que se pueden marcar en una plantilla |
 | `/api/v1/profile-templates` | Plantillas de perfil: las crea el administrador y las usan quienes pueden crear perfiles |
@@ -71,11 +73,19 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 1. **Entrada:** el mozo registra lo que llega con un código (por ejemplo `ENTRADA2`, o `ENT-0003` si lo deja vacío). La mercancía queda en la ubicación de recepción.
 2. **Traslado:** otro mozo escanea `ENTRADA2`, escanea el artículo y le aparece su ubicación predeterminada; si no tiene, escanea o elige otra. Escribe la cantidad y la entrada se cierra cuando no queda nada en recepción.
 
+## Calendario de cargas y descargas
+
+El encargado programa en el **calendario** los camiones que vienen a descargar o a cargar: día, hora, muelle, proveedor o cliente y la mercancía prevista. Puede repetir una cita cada semana (el proveedor que viene todos los lunes) y, si el muelle ya está reservado a esa hora, la app lo avisa antes de reservarlo dos veces. También caben otras citas, como un recuento.
+
+- **Descarga:** cuando llega el camión, *Registrar la descarga* abre la entrada con lo previsto a mano; al guardarla, la cita queda hecha con el código de la entrada.
+- **Carga:** *Registrar la carga* propone de qué ubicación sale cada artículo (primero picking) y registra todas las salidas de una vez, o ninguna si falta stock.
+- Lo que toca hoy, y lo que se quedó sin hacer, aparece en *Pendiente* en la pantalla de inicio.
+
 Las pantallas funcionan con lectores USB, Bluetooth y terminales Android (Zebra, Honeywell…) que escriben el código y pulsan Intro: cada paso deja el cursor en el campo siguiente y avisa con un pitido si el código no encaja. En móviles con Chrome o Edge también se puede escanear con la cámara.
 
 ## Perfiles y permisos
 
-Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lista de **permisos** que se marcan uno a uno: ver artículos, editarlos, ver stock, registrar movimientos, registrar ajustes, ver usuarios, crear perfiles...
+Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lista de **permisos** que se marcan uno a uno: ver artículos, editarlos, ver stock, registrar movimientos, registrar ajustes, ver el calendario, programar en él, ver usuarios, crear perfiles...
 
 - El **administrador** tiene todos los permisos. Además, es el único que crea **plantillas de perfil** y que puede cambiar un perfil ya creado: darle permisos especiales, subirlo de categoría o desactivarlo.
 - Las plantillas se comparten con todos los que tienen el permiso *crear perfiles*, que las usan para dar de alta perfiles nuevos. Nadie salvo el administrador puede usar una plantilla con permisos que él mismo no tiene.

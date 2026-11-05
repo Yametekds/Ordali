@@ -1,0 +1,22 @@
+@if (Event.IsLate(Now))
+{
+    <span class="badge badge-warning">Con retraso</span>
+}
+else if (Event.Status == ScheduledEventStatus.Completed)
+{
+    <span class="badge badge-receipt">@Labels.Of(Event.Status)@(Event.Outcome is null ? "" : $" · {Event.Outcome}")</span>
+}
+else if (Event.Status == ScheduledEventStatus.Cancelled)
+{
+    <span class="badge">@Labels.Of(Event.Status)</span>
+}
+else
+{
+    <span class="badge badge-scheduled">@Labels.Of(Event.Status)</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public ScheduledEvent Event { get; set; } = default!;
+
+    [Parameter, EditorRequired] public DateTimeOffset Now { get; set; }
+}
