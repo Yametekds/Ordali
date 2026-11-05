@@ -8,7 +8,7 @@ namespace Ordali.Client.Demo;
 /// In-memory backend that follows the same rules as the API, so the web app can be tried
 /// on GitHub Pages without a server. Data lives until the page is reloaded.
 /// </summary>
-public sealed class DemoOrdaliApi : IOrdaliApi
+public sealed partial class DemoOrdaliApi : IOrdaliApi
 {
     private readonly Lock _lock = new();
     private readonly SessionState _session;
@@ -32,6 +32,7 @@ public sealed class DemoOrdaliApi : IOrdaliApi
         _templates = [.. DemoData.Templates()];
         _stock = [.. DemoData.Stock().Select(s => new StockLine(DemoData.ProductId(s.Product), DemoData.LocationId(s.Location), s.Lot, s.Quantity))];
         SeedMovements();
+        SeedCalendar();
     }
 
     public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
