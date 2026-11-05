@@ -64,6 +64,22 @@ public class PageTests : BunitContext
         page.WaitForAssertion(() => Assert.Contains("CIN-050", page.Find(".pending").TextContent, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Tutorial_explains_every_part_and_marks_the_ones_the_profile_cannot_open()
+    {
+        await SignInAsync("mozo@demo.local");
+
+        var page = Render<Tutorial>();
+
+        var topics = page.FindAll(".guide-topic");
+        Assert.Equal(7, topics.Count);
+        var users = topics.Single(t => t.QuerySelector("summary strong")!.TextContent == "Usuarios y permisos");
+        Assert.Contains("Sin acceso con tu perfil", users.TextContent, StringComparison.Ordinal);
+        Assert.Null(users.QuerySelector("a.link"));
+        var transfers = topics.Single(t => t.QuerySelector("summary strong")!.TextContent == "Traslados");
+        Assert.Equal("traslados", transfers.QuerySelector("a.link")!.GetAttribute("href"));
+    }
+
     private async Task<UserInfo> SignInAsync(string email)
     {
         // Services must be registered before the first one is resolved.

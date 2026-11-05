@@ -1,0 +1,164 @@
+@page "/tutorial"
+@attribute [Authorize]
+@inject SessionState Session
+
+<PageTitle>@L["Tutorial"] · Ordali</PageTitle>
+
+<PageHeader Title="@L["Tutorial"]" />
+
+<p class="guide-lead">@L["Lo básico para trabajar con Ordali. Abre la parte que necesites; cada una cabe en un minuto de lectura."]</p>
+
+@* The whole app follows the goods: they arrive, get a place and leave or move. Seeing that first makes the menu make sense. *@
+<section class="card guide-flow" aria-labelledby="guide-flow-title">
+    <h2 id="guide-flow-title" class="card-title">@L["Cómo se mueve la mercancía"]</h2>
+    <ol>
+        <li>
+            <Icon Name="inbox" />
+            <div>
+                <strong>@L["Llega"]</strong>
+                <span>@L["Registras una entrada con lo que ha traído el camión. Queda en el muelle."]</span>
+            </div>
+        </li>
+        <li>
+            <Icon Name="dolly" />
+            <div>
+                <strong>@L["Se ubica"]</strong>
+                <span>@L["Desde Traslados la llevas a su hueco. A partir de ahí cuenta en el stock."]</span>
+            </div>
+        </li>
+        <li>
+            <Icon Name="swap" />
+            <div>
+                <strong>@L["Sale o cambia de sitio"]</strong>
+                <span>@L["Cada salida, traslado o ajuste queda en Movimientos con quién lo hizo y cuándo."]</span>
+            </div>
+        </li>
+    </ol>
+</section>
+
+<div class="guide-topics">
+    @foreach (var (topic, index) in Topics.Select((t, i) => (t, i)))
+    {
+        var allowed = topic.Allowed;
+        <details class="guide-topic" open="@(index == 0)">
+            <summary>
+                <span class="guide-icon"><Icon Name="@topic.Icon" /></span>
+                <span class="guide-summary">
+                    <strong>@topic.Title</strong>
+                    <span>@topic.Summary</span>
+                    @if (!allowed)
+                    {
+                        <span class="pill guide-locked">@L["Sin acceso con tu perfil"]</span>
+                    }
+                </span>
+                <Icon Name="chevron" Class="guide-chevron" />
+            </summary>
+            <div class="guide-body">
+                <ol class="guide-steps">
+                    @foreach (var step in topic.Steps)
+                    {
+                        <li>@step</li>
+                    }
+                </ol>
+                @if (topic.Tip is not null)
+                {
+                    <p class="guide-tip"><Icon Name="info" /><span>@topic.Tip</span></p>
+                }
+                @if (allowed && topic.Href is not null)
+                {
+                    <a class="link" href="@topic.Href">@L["Ir a {0}", topic.Title]<Icon Name="arrow-right" /></a>
+                }
+            </div>
+        </details>
+    }
+</div>
+
+<section class="card guide-tips" aria-labelledby="guide-tips-title">
+    <h2 id="guide-tips-title" class="card-title">@L["Trucos que ahorran tiempo"]</h2>
+    <ul>
+        <li><Icon Name="scan" /><span>@L["Con un lector de códigos de barras no hace falta tocar la pantalla: escanea y Ordali lo lee al momento."]</span></li>
+        <li><Icon Name="camera" /><span>@L["En el móvil, el botón de la cámara junto a cada campo de código lee la etiqueta sin lector."]</span></li>
+        <li><Icon Name="menu" /><span>@L["En el móvil el menú está detrás del botón de arriba a la izquierda. El idioma se cambia al final del menú."]</span></li>
+        <li><Icon Name="shield" /><span>@L["Si no ves una opción del menú es porque tu perfil no tiene ese permiso. Pídeselo a un administrador."]</span></li>
+        @if (Options.IsDemo)
+        {
+            <li><Icon Name="info" /><span>@L["En la demo los datos son de ejemplo y se guardan solo en esta pestaña: puedes probar sin miedo a romper nada."]</span></li>
+        }
+    </ul>
+</section>
+
+@code {
+    [Inject] private OrdaliClientOptions Options { get; set; } = default!;
+
+    private sealed record Topic(string Icon, string Title, string Summary, string[] Steps, string? Tip, string? Href, bool Allowed);
+
+    private bool Can(string permission) => Session.Current?.User.Can(permission) == true;
+
+    private bool IsAdmin => Session.Current?.User.IsAdmin == true;
+
+    // Every profile sees every part, so the guide also explains what someone else in the warehouse does.
+    // Parts the profile can't open are marked instead of hidden, and only get a link when they can be opened.
+    private IEnumerable<Topic> Topics =>
+    [
+        new("home", L["Inicio"], L["Qué hay que hacer hoy."],
+        [
+            L["Arriba ves cuántos productos hay, las unidades en stock y los movimientos de hoy."],
+            L["El bloque Pendiente reúne lo que espera a alguien: entradas sin ubicar y productos por debajo de su mínimo."],
+            L["Toca cualquier línea pendiente para ir directamente a resolverla."],
+        ],
+        L["Si Pendiente está vacío, el almacén está al día."], null, true),
+
+        new("inbox", L["Entradas"], L["Registrar lo que llega."],
+        [
+            L["Pulsa Nueva entrada."],
+            L["Escanea o escribe el código de la entrada. Si lo dejas vacío, Ordali pone uno."],
+            L["Escanea cada artículo (o escribe su SKU), escribe la cantidad y pulsa Intro."],
+            L["Si el artículo va por lotes, te pedirá el lote."],
+            L["Pulsa Registrar entrada. La mercancía queda en el muelle, pendiente de ubicar."],
+        ],
+        L["En Referencia puedes apuntar el albarán o el proveedor para encontrarla después."], "entradas/nueva", Can(Permissions.MovementsCreate)),
+
+        new("dolly", L["Traslados"], L["Llevar la mercancía a su hueco."],
+        [
+            L["Escanea la entrada que vas a colocar o elígela de Pendientes de ubicar."],
+            L["Escanea el artículo que tienes en la mano."],
+            L["Acepta la ubicación predeterminada o escanea la etiqueta de otro hueco."],
+            L["Escribe la cantidad que mueves y pulsa Trasladar."],
+        ],
+        L["Para mover algo que ya está ubicado, usa Traslado sin entrada."], "traslados", Can(Permissions.MovementsCreate)),
+
+        new("layers", L["Stock y movimientos"], L["Qué hay, dónde y qué ha pasado."],
+        [
+            L["En Stock filtra por artículo o por ubicación para ver cuántas unidades hay en cada sitio."],
+            L["En Movimientos está el historial completo: nadie puede editarlo ni borrarlo."],
+            L["Con Registrar movimiento anotas una salida a cliente, un cambio de ubicación o un ajuste tras un recuento."],
+        ],
+        L["Los ajustes piden siempre un motivo y solo los hace quien tiene ese permiso."], "stock", Can(Permissions.StockView) || Can(Permissions.MovementsView)),
+
+        new("map", L["Ubicaciones"], L["El mapa de huecos del almacén."],
+        [
+            L["Las ubicaciones se agrupan por zona. Las vacías se ven más claras."],
+            L["Toca una ubicación para ver qué stock tiene."],
+            L["Con Nueva ubicación das de alta un hueco con su código, su zona y su tipo."],
+        ],
+        L["Si el código ya existe, Ordali te avisa antes de crear otro igual."], "ubicaciones", Can(Permissions.LocationsView)),
+
+        new("box", L["Productos"], L["El catálogo de artículos."],
+        [
+            L["Busca por SKU, nombre o código de barras."],
+            L["En cada producto defines su stock mínimo: por debajo, aparece en Pendiente."],
+            L["La ubicación predeterminada es el hueco que se propone al ubicar sus entradas."],
+            L["Marca Controlar por lotes si cada movimiento debe llevar el lote."],
+        ],
+        null, "registros/productos", Can(Permissions.ProductsView)),
+
+        new("users", L["Usuarios y permisos"], L["Quién entra y qué puede hacer."],
+        [
+            L["Cada perfil tiene una categoría (mozo, encargado o administrador) y una lista de permisos."],
+            L["Al crear un perfil eliges una plantilla y recibe sus permisos marcados."],
+            L["Solo un administrador crea plantillas y cambia los permisos o la categoría de un perfil ya creado."],
+            L["Desactivar un perfil le impide entrar sin perder su historial."],
+        ],
+        L["Los cambios de permisos se aplican la próxima vez que esa persona entra."], "registros/usuarios", Can(Permissions.UsersView) || IsAdmin),
+    ];
+}
