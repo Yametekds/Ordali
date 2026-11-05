@@ -18,34 +18,34 @@ public static class MovementRules
 
         if (input.ProductId is null)
         {
-            errors[nameof(MovementInput.ProductId)] = ["Elige un artículo."];
+            errors[nameof(MovementInput.ProductId)] = [Text.Get("Elige un artículo.")];
         }
 
         if (NeedsFrom(input.Type) && input.FromLocationId is null)
         {
-            errors[nameof(MovementInput.FromLocationId)] = ["Elige la ubicación de origen."];
+            errors[nameof(MovementInput.FromLocationId)] = [Text.Get("Elige la ubicación de origen.")];
         }
 
         if (NeedsTo(input.Type) && input.ToLocationId is null)
         {
-            errors[nameof(MovementInput.ToLocationId)] = [input.Type == MovementType.Adjustment ? "Elige la ubicación." : "Elige la ubicación de destino."];
+            errors[nameof(MovementInput.ToLocationId)] = [input.Type == MovementType.Adjustment ? Text.Get("Elige la ubicación.") : Text.Get("Elige la ubicación de destino.")];
         }
 
         if (input.Type == MovementType.Transfer && input.FromLocationId is not null && input.FromLocationId == input.ToLocationId)
         {
-            errors[nameof(MovementInput.ToLocationId)] = ["El destino tiene que ser distinto del origen."];
+            errors[nameof(MovementInput.ToLocationId)] = [Text.Get("El destino tiene que ser distinto del origen.")];
         }
 
         if (input.Type == MovementType.Adjustment ? input.Quantity == 0 : input.Quantity <= 0)
         {
             errors[nameof(MovementInput.Quantity)] = [input.Type == MovementType.Adjustment
-                ? "El ajuste no puede ser cero."
-                : "La cantidad tiene que ser mayor que cero."];
+                ? Text.Get("El ajuste no puede ser cero.")
+                : Text.Get("La cantidad tiene que ser mayor que cero.")];
         }
 
         if (input.Type == MovementType.Adjustment && string.IsNullOrWhiteSpace(input.Reason))
         {
-            errors[nameof(MovementInput.Reason)] = ["Indica el motivo del ajuste."];
+            errors[nameof(MovementInput.Reason)] = [Text.Get("Indica el motivo del ajuste.")];
         }
 
         return errors;
