@@ -104,7 +104,7 @@ else
             </ol>
             <div class="putaway-item">
                 <div>
-                    <strong>@line.Sku</strong> @line.ProductName
+                    <strong class="mono">@line.Sku</strong> @line.ProductName
                     @if (line.Lot is not null)
                     {
                         <span class="badge">Lote @line.Lot</span>
@@ -178,7 +178,7 @@ else
                     @foreach (var item in receipt.Lines)
                     {
                         <tr class="@(item.Pending <= 0 ? "row-inactive" : "")">
-                            <td data-label="SKU"><strong>@item.Sku</strong></td>
+                            <td data-label="SKU"><strong class="mono">@item.Sku</strong></td>
                             <td data-label="Artículo">@item.ProductName</td>
                             <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
                             <td data-label="Quedan" class="num">@Labels.Quantity(item.Pending) / @Labels.Quantity(item.Quantity) @item.Unit</td>

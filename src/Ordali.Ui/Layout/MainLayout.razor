@@ -6,20 +6,91 @@
 @inject OrdaliClientOptions Options
 
 <div class="shell @(menuOpen ? "menu-open" : "")">
+    @* Phones and tablets only: the sidebar is hidden behind the menu button. *@
     <header class="topbar">
         <button class="topbar-menu" type="button" aria-label="@(menuOpen ? "Cerrar menú" : "Abrir menú")" aria-expanded="@menuOpen" @onclick="ToggleMenu">
             <Icon Name="@(menuOpen ? "close" : "menu")" />
         </button>
-        <a class="topbar-brand" href=""><BrandLogo Size="34" /></a>
-        @if (Options.IsDemo)
-        {
-            <span class="pill pill-demo" title="Los datos son de ejemplo y se guardan solo en esta pestaña.">Demo</span>
-        }
+        <a class="topbar-brand" href=""><BrandLogo Size="30" /></a>
         <span class="topbar-spacer"></span>
+        @DemoPill
+    </header>
+
+    <aside class="sidebar" aria-label="Menú">
+        <div class="sidebar-brand">
+            <a href=""><BrandLogo Size="32" /></a>
+            @DemoPill
+        </div>
+        <div class="sidebar-scroll">
+            <nav class="nav">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>Inicio</span></NavLink>
+
+                @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
+                {
+                    <div class="nav-section">Operación</div>
+                    @if (Can(Permissions.MovementsView))
+                    {
+                        <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>Entradas</span></NavLink>
+                    }
+                    @if (Can(Permissions.MovementsCreate))
+                    {
+                        <NavLink class="nav-link" href="traslados"><Icon Name="dolly" /><span>Traslados</span></NavLink>
+                    }
+                    @if (Can(Permissions.StockView))
+                    {
+                        <NavLink class="nav-link" href="stock"><Icon Name="layers" /><span>Stock</span></NavLink>
+                    }
+                    @if (Can(Permissions.MovementsView))
+                    {
+                        <NavLink class="nav-link" href="movimientos"><Icon Name="swap" /><span>Movimientos</span></NavLink>
+                    }
+                    @if (Can(Permissions.LocationsView))
+                    {
+                        <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>Ubicaciones</span></NavLink>
+                    }
+                }
+
+                @if (Can(Permissions.OrdersView))
+                {
+                    <div class="nav-section">Compras</div>
+                    <NavLink class="nav-link" href="pedidos"><Icon Name="cart" /><span>Pedidos</span></NavLink>
+                    <NavLink class="nav-link" href="distribuidores"><Icon Name="truck" /><span>Distribuidores</span></NavLink>
+                }
+
+                @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))
+                {
+                    <div class="nav-section">Registros</div>
+                    @if (Can(Permissions.ProductsView))
+                    {
+                        <NavLink class="nav-link" href="registros/productos"><Icon Name="box" /><span>Productos</span></NavLink>
+                    }
+                    @if (Can(Permissions.UsersView))
+                    {
+                        <NavLink class="nav-link" href="registros/usuarios" Match="NavLinkMatch.All"><Icon Name="users" /><span>Usuarios</span></NavLink>
+                        <div class="nav-sub">
+                            @foreach (var category in Categories)
+                            {
+                                <a class="nav-link nav-link-sub @(IsCategoryActive(category) ? "active" : "")" href="registros/usuarios?categoria=@category">
+                                    <span>@Labels.Plural(category)</span>
+                                </a>
+                            }
+                        </div>
+                    }
+                }
+
+                @if (Can(Permissions.UsersCreate) || Can(Permissions.UsersView))
+                {
+                    <div class="nav-section">Administración</div>
+                    <NavLink class="nav-link" href="plantillas"><Icon Name="shield" /><span>Plantillas de perfil</span></NavLink>
+                }
+
+                @HostLinks
+            </nav>
+        </div>
         @if (User is { } user)
         {
-            <div class="user">
-                <span class="avatar">@Initials(user.Name)</span>
+            <div class="sidebar-user">
+                <span class="avatar" aria-hidden="true">@Initials(user.Name)</span>
                 <span class="user-text">
                     <strong>@user.Name</strong>
                     <small>@Labels.Of(user.Category)</small>
@@ -29,73 +100,6 @@
                 </button>
             </div>
         }
-    </header>
-
-    <aside class="sidebar" aria-label="Menú">
-        <nav class="nav">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>Inicio</span></NavLink>
-
-            @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
-            {
-                <div class="nav-section">Operación</div>
-                @if (Can(Permissions.MovementsView))
-                {
-                    <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>Entradas</span></NavLink>
-                }
-                @if (Can(Permissions.MovementsCreate))
-                {
-                    <NavLink class="nav-link" href="traslados"><Icon Name="dolly" /><span>Traslados</span></NavLink>
-                }
-                @if (Can(Permissions.StockView))
-                {
-                    <NavLink class="nav-link" href="stock"><Icon Name="layers" /><span>Stock</span></NavLink>
-                }
-                @if (Can(Permissions.MovementsView))
-                {
-                    <NavLink class="nav-link" href="movimientos"><Icon Name="swap" /><span>Movimientos</span></NavLink>
-                }
-                @if (Can(Permissions.LocationsView))
-                {
-                    <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>Ubicaciones</span></NavLink>
-                }
-            }
-
-            @if (Can(Permissions.OrdersView))
-            {
-                <div class="nav-section">Compras</div>
-                <NavLink class="nav-link" href="pedidos"><Icon Name="cart" /><span>Pedidos</span></NavLink>
-                <NavLink class="nav-link" href="distribuidores"><Icon Name="truck" /><span>Distribuidores</span></NavLink>
-            }
-
-            @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))
-            {
-                <div class="nav-section">Registros</div>
-                @if (Can(Permissions.ProductsView))
-                {
-                    <NavLink class="nav-link" href="registros/productos"><Icon Name="box" /><span>Productos</span></NavLink>
-                }
-                @if (Can(Permissions.UsersView))
-                {
-                    <NavLink class="nav-link" href="registros/usuarios" Match="NavLinkMatch.All"><Icon Name="users" /><span>Usuarios</span></NavLink>
-                    <div class="nav-sub">
-                        @foreach (var category in Categories)
-                        {
-                            <a class="nav-link nav-link-sub @(IsCategoryActive(category) ? "active" : "")" href="registros/usuarios?categoria=@category">
-                                <span>@Labels.Plural(category)</span>
-                            </a>
-                        }
-                    </div>
-                }
-            }
-
-            @if (Can(Permissions.UsersCreate) || Can(Permissions.UsersView))
-            {
-                <div class="nav-section">Administración</div>
-                <NavLink class="nav-link" href="plantillas"><Icon Name="shield" /><span>Plantillas de perfil</span></NavLink>
-            }
-
-            @HostLinks
-        </nav>
     </aside>
     <div class="scrim" @onclick="CloseMenu"></div>
 
@@ -110,6 +114,10 @@
     [CascadingParameter(Name = "HostLinks")] private RenderFragment? HostLinks { get; set; }
 
     private bool menuOpen;
+
+    private RenderFragment? DemoPill => Options.IsDemo
+        ? @<span class="pill pill-demo" title="Los datos son de ejemplo y se guardan solo en esta pestaña.">Demo</span>
+        : null;
 
     private UserInfo? User => Session.IsAuthenticated ? Session.Current!.User : null;
 

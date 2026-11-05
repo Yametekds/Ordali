@@ -61,7 +61,7 @@ else
                 @foreach (var item in stock)
                 {
                     <tr>
-                        <td data-label="SKU"><strong>@item.Sku</strong></td>
+                        <td data-label="SKU"><strong class="mono">@item.Sku</strong></td>
                         <td data-label="Artículo">@item.ProductName</td>
                         <td data-label="Ubicación" class="mono">@item.LocationCode</td>
                         <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
