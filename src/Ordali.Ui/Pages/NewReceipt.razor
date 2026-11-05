@@ -2,9 +2,9 @@
 @attribute [Authorize(Policy = Permissions.MovementsCreate)]
 @inject IOrdaliApi Api
 
-<PageTitle>Nueva entrada · Ordali</PageTitle>
+<PageTitle>@L["Nueva entrada"] · Ordali</PageTitle>
 
-<PageHeader Title="Nueva entrada" Subtitle="Registra lo que ha llegado. Queda en el muelle hasta que se ubica desde Traslados." />
+<PageHeader Title="@L["Nueva entrada"]" Subtitle="@L["Registra lo que ha llegado. Queda en el muelle hasta que se ubica desde Traslados."]" />
 
 @if (products is null)
 {
@@ -21,8 +21,8 @@ else
         <div class="alert alert-ok" role="status">
             <Icon Name="check" />
             <span>
-                Entrada <strong class="mono">@saved.Code</strong> registrada en @saved.DockLocationCode. Ya aparece en Traslados.
-                <a href="traslados?entrada=@Uri.EscapeDataString(saved.Code)">Ubicarla ahora</a>
+                @L["Entrada"] <strong class="mono">@saved.Code</strong> @L["registrada en {0}. Ya aparece en Traslados.", saved.DockLocationCode]
+                <a href="traslados?entrada=@Uri.EscapeDataString(saved.Code)">@L["Ubicarla ahora"]</a>
             </span>
         </div>
     }
@@ -30,25 +30,25 @@ else
     <div class="card form-card">
         <div class="form-grid">
             <label class="field">
-                <span>Código de la entrada</span>
+                <span>@L["Código de la entrada"]</span>
                 <input @ref="codeInput" type="text" @bind="code" @bind:event="oninput" @onkeydown="OnCodeKeyDownAsync"
-                       placeholder="Vacío = ENT-0000 automático" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" />
-                <small class="muted">Escanea o escribe el código que identificará la entrada, por ejemplo ENTRADA2.</small>
+                       placeholder="@L["Vacío = ENT-0000 automático"]" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="next" />
+                <small class="muted">@L["Escanea o escribe el código que identificará la entrada, por ejemplo ENTRADA2."]</small>
             </label>
             <label class="field">
-                <span>Referencia (opcional)</span>
-                <input type="text" @bind="reference" placeholder="Albarán, pedido, proveedor…" autocomplete="off" />
+                <span>@L["Referencia (opcional)"]</span>
+                <input type="text" @bind="reference" placeholder="@L["Albarán, pedido, proveedor…"]" autocomplete="off" />
             </label>
         </div>
 
-        <h2 class="card-title">Artículos recibidos</h2>
+        <h2 class="card-title">@L["Artículos recibidos"]</h2>
         <div class="form-grid">
-            <ScanField @ref="productScan" Id="receipt-product" Label="Artículo" Placeholder="Escanea el EAN o escribe el SKU"
+            <ScanField @ref="productScan" Id="receipt-product" Label="@L["Artículo"]" Placeholder="@L["Escanea el EAN o escribe el SKU"]"
                        OnScan="OnProductScanned" Class="field-wide" />
             <label class="field field-wide">
-                <span>O elige de la lista</span>
+                <span>@L["O elige de la lista"]</span>
                 <select value="@(current?.Id.ToString() ?? "")" @onchange="OnProductPickedAsync">
-                    <option value="">Elige un artículo</option>
+                    <option value="">@L["Elige un artículo"]</option>
                     @foreach (var product in products)
                     {
                         <option value="@product.Id">@product.Sku · @product.Name</option>
@@ -66,15 +66,15 @@ else
                 @if (current.TracksLots)
                 {
                     <label class="field">
-                        <span>Lote</span>
+                        <span>@L["Lote"]</span>
                         <input @ref="lotInput" type="text" @bind="lot" @bind:event="oninput" autocomplete="off" spellcheck="false" enterkeyhint="next" />
                     </label>
                 }
                 <label class="field">
-                    <span>Cantidad (@current.Unit)</span>
+                    <span>@L["Cantidad"] (@Labels.Unit(current.Unit))</span>
                     <input @ref="quantityInput" type="number" min="0" step="any" inputmode="decimal" @bind="quantity" @bind:event="oninput" enterkeyhint="done" />
                 </label>
-                <button class="btn btn-primary" type="submit"><Icon Name="plus" /><span>Añadir</span></button>
+                <button class="btn btn-primary" type="submit"><Icon Name="plus" /><span>@L["Añadir"]</span></button>
             </form>
         }
 
@@ -87,18 +87,18 @@ else
         {
             <table class="table table-compact">
                 <thead>
-                    <tr><th>SKU</th><th>Artículo</th><th>Lote</th><th class="num">Cantidad</th><th></th></tr>
+                    <tr><th>SKU</th><th>@L["Artículo"]</th><th>@L["Lote"]</th><th class="num">@L["Cantidad"]</th><th></th></tr>
                 </thead>
                 <tbody>
                     @foreach (var line in lines)
                     {
                         <tr>
                             <td data-label="SKU"><strong class="mono">@line.Product.Sku</strong></td>
-                            <td data-label="Artículo">@line.Product.Name</td>
-                            <td data-label="Lote" class="mono">@(line.Lot ?? "—")</td>
-                            <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Product.Unit</td>
+                            <td data-label="@L["Artículo"]">@line.Product.Name</td>
+                            <td data-label="@L["Lote"]" class="mono">@(line.Lot ?? "—")</td>
+                            <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @Labels.Unit(line.Product.Unit)</td>
                             <td class="row-actions">
-                                <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @line.Product.Sku"
+                                <button type="button" class="btn btn-icon btn-danger-ghost" title="@L["Quitar"]" aria-label="@L["Quitar {0}", line.Product.Sku]"
                                         @onclick="() => lines.Remove(line)">
                                     <Icon Name="trash" />
                                 </button>
@@ -110,15 +110,15 @@ else
         }
         else
         {
-            <p class="muted small">Escanea cada artículo, escribe la cantidad y pulsa Intro.</p>
+            <p class="muted small">@L["Escanea cada artículo, escribe la cantidad y pulsa Intro."]</p>
         }
 
         <ErrorAlert Error="error" />
 
         <div class="form-actions">
-            <a class="btn" href="entradas">Cancelar</a>
+            <a class="btn" href="entradas">@L["Cancelar"]</a>
             <button class="btn btn-primary" type="button" disabled="@(busy || lines.Count == 0)" @onclick="SaveAsync">
-                @(busy ? "Registrando…" : lines.Count == 0 ? "Registrar entrada" : $"Registrar entrada ({lines.Count})")
+                @(busy ? L["Registrando…"] : lines.Count == 0 ? L["Registrar entrada"] : L["Registrar entrada ({0})", lines.Count])
             </button>
         </div>
     </div>
@@ -184,7 +184,7 @@ else
         var product = products!.FirstOrDefault(p => Scanning.IsProduct(scan.Code, p.Sku, p.Gtin));
         if (product is null)
         {
-            lineError = $"No hay ningún artículo con el código {scan.Code}.";
+            lineError = L["No hay ningún artículo con el código {0}.", scan.Code];
             scan.Reject();
             return;
         }
@@ -221,7 +221,7 @@ else
 
         if (current.TracksLots && string.IsNullOrWhiteSpace(lot))
         {
-            lineError = $"{current.Sku} se controla por lotes: escribe o escanea el lote.";
+            lineError = L["{0} se controla por lotes: escribe o escanea el lote.", current.Sku];
             focusAfterRender = () => lotInput.FocusAsync().AsTask();
             return;
         }
@@ -235,7 +235,7 @@ else
 
         if (!decimal.TryParse(quantity, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var amount) || amount <= 0)
         {
-            lineError = "Escribe una cantidad mayor que cero.";
+            lineError = L["Escribe una cantidad mayor que cero."];
             focusAfterRender = () => quantityInput.FocusAsync().AsTask();
             return;
         }

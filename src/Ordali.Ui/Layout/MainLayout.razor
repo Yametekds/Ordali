@@ -8,7 +8,7 @@
 <div class="shell @(menuOpen ? "menu-open" : "")">
     @* Phones and tablets only: the sidebar is hidden behind the menu button. *@
     <header class="topbar">
-        <button class="topbar-menu" type="button" aria-label="@(menuOpen ? "Cerrar menú" : "Abrir menú")" aria-expanded="@menuOpen" @onclick="ToggleMenu">
+        <button class="topbar-menu" type="button" aria-label="@(menuOpen ? L["Cerrar menú"] : L["Abrir menú"])" aria-expanded="@menuOpen" @onclick="ToggleMenu">
             <Icon Name="@(menuOpen ? "close" : "menu")" />
         </button>
         <a class="topbar-brand" href=""><BrandLogo Size="30" /></a>
@@ -16,25 +16,25 @@
         @DemoPill
     </header>
 
-    <aside class="sidebar" aria-label="Menú">
+    <aside class="sidebar" aria-label="@L["Menú"]">
         <div class="sidebar-brand">
             <a href=""><BrandLogo Size="32" /></a>
             @DemoPill
         </div>
         <div class="sidebar-scroll">
             <nav class="nav">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>Inicio</span></NavLink>
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>@L["Inicio"]</span></NavLink>
 
                 @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
                 {
-                    <div class="nav-section">Operación</div>
+                    <div class="nav-section">@L["Operación"]</div>
                     @if (Can(Permissions.MovementsView))
                     {
-                        <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>Entradas</span></NavLink>
+                        <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>@L["Entradas"]</span></NavLink>
                     }
                     @if (Can(Permissions.MovementsCreate))
                     {
-                        <NavLink class="nav-link" href="traslados"><Icon Name="dolly" /><span>Traslados</span></NavLink>
+                        <NavLink class="nav-link" href="traslados"><Icon Name="dolly" /><span>@L["Traslados"]</span></NavLink>
                     }
                     @if (Can(Permissions.StockView))
                     {
@@ -42,24 +42,24 @@
                     }
                     @if (Can(Permissions.MovementsView))
                     {
-                        <NavLink class="nav-link" href="movimientos"><Icon Name="swap" /><span>Movimientos</span></NavLink>
+                        <NavLink class="nav-link" href="movimientos"><Icon Name="swap" /><span>@L["Movimientos"]</span></NavLink>
                     }
                     @if (Can(Permissions.LocationsView))
                     {
-                        <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>Ubicaciones</span></NavLink>
+                        <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>@L["Ubicaciones"]</span></NavLink>
                     }
                 }
 
                 @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))
                 {
-                    <div class="nav-section">Registros</div>
+                    <div class="nav-section">@L["Registros"]</div>
                     @if (Can(Permissions.ProductsView))
                     {
-                        <NavLink class="nav-link" href="registros/productos"><Icon Name="box" /><span>Productos</span></NavLink>
+                        <NavLink class="nav-link" href="registros/productos"><Icon Name="box" /><span>@L["Productos"]</span></NavLink>
                     }
                     @if (Can(Permissions.UsersView))
                     {
-                        <NavLink class="nav-link" href="registros/usuarios" Match="NavLinkMatch.All"><Icon Name="users" /><span>Usuarios</span></NavLink>
+                        <NavLink class="nav-link" href="registros/usuarios" Match="NavLinkMatch.All"><Icon Name="users" /><span>@L["Usuarios"]</span></NavLink>
                         <div class="nav-sub">
                             @foreach (var category in Categories)
                             {
@@ -73,12 +73,16 @@
 
                 @if (Can(Permissions.UsersCreate) || Can(Permissions.UsersView))
                 {
-                    <div class="nav-section">Administración</div>
-                    <NavLink class="nav-link" href="plantillas"><Icon Name="shield" /><span>Plantillas de perfil</span></NavLink>
+                    <div class="nav-section">@L["Administración"]</div>
+                    <NavLink class="nav-link" href="plantillas"><Icon Name="shield" /><span>@L["Plantillas de perfil"]</span></NavLink>
                 }
 
                 @HostLinks
             </nav>
+        </div>
+        <div class="sidebar-lang">
+            <span>@L["Idioma"]</span>
+            <LanguagePicker Class="lang-picker-dark" />
         </div>
         @if (User is { } user)
         {
@@ -88,7 +92,7 @@
                     <strong>@user.Name</strong>
                     <small>@Labels.Of(user.Category)</small>
                 </span>
-                <button class="btn btn-ghost btn-icon" title="Salir" aria-label="Salir" @onclick="LogoutAsync">
+                <button class="btn btn-ghost btn-icon" title="@L["Salir"]" aria-label="@L["Salir"]" @onclick="LogoutAsync">
                     <Icon Name="logout" />
                 </button>
             </div>
@@ -109,7 +113,7 @@
     private bool menuOpen;
 
     private RenderFragment? DemoPill => Options.IsDemo
-        ? @<span class="pill pill-demo" title="Los datos son de ejemplo y se guardan solo en esta pestaña.">Demo</span>
+        ? @<span class="pill pill-demo" title="@L["Los datos son de ejemplo y se guardan solo en esta pestaña."]">Demo</span>
         : null;
 
     private UserInfo? User => Session.IsAuthenticated ? Session.Current!.User : null;

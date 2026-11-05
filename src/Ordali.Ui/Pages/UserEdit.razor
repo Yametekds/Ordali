@@ -3,11 +3,11 @@
 @inject IOrdaliApi Api
 @inject SessionState Session
 
-<PageTitle>Editar perfil · Ordali</PageTitle>
+<PageTitle>@L["Editar perfil"] · Ordali</PageTitle>
 
 @if (user is null || model is null)
 {
-    <PageHeader Title="Editar perfil" />
+    <PageHeader Title="@L["Editar perfil"]" />
     <ErrorAlert Error="error" />
     @if (error is null)
     {
@@ -16,12 +16,12 @@
 }
 else
 {
-    <PageHeader Title="@user.Name" Subtitle="@($"{user.Email} · alta el {Labels.DateTime(user.CreatedAt)}")" />
+    <PageHeader Title="@user.Name" Subtitle="@L["{0} · alta el {1}", user.Email, Labels.DateTime(user.CreatedAt)]" />
 
     <div class="card form-card form-card-wide">
         <section class="form-section">
-            <h2 class="card-title">Categoría</h2>
-            <div class="segmented" role="radiogroup" aria-label="Categoría">
+            <h2 class="card-title">@L["Categoría"]</h2>
+            <div class="segmented" role="radiogroup" aria-label="@L["Categoría"]">
                 @foreach (var category in Categories)
                 {
                     <button type="button" role="radio" aria-checked="@(model.Category == category ? "true" : "false")"
@@ -33,49 +33,49 @@ else
             </div>
             @if (model.Category > user.Category)
             {
-                <p class="note note-up">Vas a subir este perfil de @Labels.Of(user.Category) a @Labels.Of(model.Category).</p>
+                <p class="note note-up">@L["Vas a subir este perfil de {0} a {1}.", Labels.Of(user.Category), Labels.Of(model.Category)]</p>
             }
             else if (model.Category < user.Category)
             {
-                <p class="note">Vas a bajar este perfil de @Labels.Of(user.Category) a @Labels.Of(model.Category).</p>
+                <p class="note">@L["Vas a bajar este perfil de {0} a {1}.", Labels.Of(user.Category), Labels.Of(model.Category)]</p>
             }
         </section>
 
         <section class="form-section">
             <div class="perm-header">
-                <h2 class="card-title">Permisos</h2>
+                <h2 class="card-title">@L["Permisos"]</h2>
                 @if (user.TemplateName is not null)
                 {
-                    <span class="muted small">Plantilla de origen: @user.TemplateName</span>
+                    <span class="muted small">@L["Plantilla de origen: {0}", user.TemplateName]</span>
                 }
             </div>
             @if (model.Category == UserCategory.Admin)
             {
-                <div class="alert alert-info"><Icon Name="info" /><span>Un administrador tiene todos los permisos.</span></div>
+                <div class="alert alert-info"><Icon Name="info" /><span>@L["Un administrador tiene todos los permisos."]</span></div>
             }
             else
             {
                 <PermissionChecklist Selected="model.Permissions" Highlight="templatePermissions" IdPrefix="edit" />
-                <p class="muted small">Los permisos marcados como <span class="badge badge-special">Especial</span> no vienen de su plantilla.</p>
+                <p class="muted small">@L["Los permisos marcados como"] <span class="badge badge-special">@L["Especial"]</span> @L["no vienen de su plantilla."]</p>
             }
         </section>
 
         <section class="form-section">
             <label class="check">
                 <input type="checkbox" checked="@model.Active" disabled="@IsSelf" @onchange="e => model.Active = e.Value is true" />
-                <span>Perfil activo (si lo desactivas no podrá entrar)</span>
+                <span>@L["Perfil activo (si lo desactivas no podrá entrar)"]</span>
             </label>
         </section>
 
         <ErrorAlert Error="error" />
         @if (saved)
         {
-            <div class="alert alert-ok" role="status">Cambios guardados. Se aplican la próxima vez que entre.</div>
+            <div class="alert alert-ok" role="status">@L["Cambios guardados. Se aplican la próxima vez que entre."]</div>
         }
 
         <div class="form-actions">
-            <a class="btn" href="registros/usuarios?categoria=@user.Category">Volver</a>
-            <button class="btn btn-primary" type="button" disabled="@busy" @onclick="SaveAsync">@(busy ? "Guardando…" : "Guardar cambios")</button>
+            <a class="btn" href="registros/usuarios?categoria=@user.Category">@L["Volver"]</a>
+            <button class="btn btn-primary" type="button" disabled="@busy" @onclick="SaveAsync">@(busy ? L["Guardando…"] : L["Guardar cambios"])</button>
         </div>
     </div>
 }

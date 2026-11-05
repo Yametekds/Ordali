@@ -1,0 +1,38 @@
+@implements IDisposable
+@inject IJSRuntime JS
+@* Renders everything again from scratch when the language changes, so each page picks up
+   the new texts without a reload. *@
+<CascadingValue Name="Language" Value="Language.Current" @key="Language.Current">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string? appliedLang;
+
+    protected override void OnInitialized() => Language.Changed += OnLanguageChanged;
+
+    public void Dispose() => Language.Changed -= OnLanguageChanged;
+
+    private void OnLanguageChanged() => InvokeAsync(StateHasChanged);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (appliedLang == Language.Current)
+        {
+            return;
+        }
+
+        appliedLang = Language.Current;
+        try
+        {
+            // Screen readers and the browser's spell checker use the page language.
+            await JS.InvokeVoidAsync("document.documentElement.setAttribute", "lang", Language.Current);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException)
+        {
+            // No document to update (prerendering or tests).
+        }
+    }
+}

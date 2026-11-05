@@ -5,39 +5,44 @@
 {
     <div class="install-backdrop" @onclick="DismissAsync"></div>
     <section class="install-sheet" role="dialog" aria-modal="true" aria-labelledby="install-title">
-        <button class="install-close" type="button" aria-label="Cerrar" @onclick="DismissAsync"><Icon Name="close" /></button>
+        <button class="install-close" type="button" aria-label="@L["Cerrar"]" @onclick="DismissAsync"><Icon Name="close" /></button>
         <img class="install-logo" src="icon-192.png" alt="" width="72" height="72" />
-        <h2 id="install-title">Instala Ordali en tu móvil</h2>
-        <p>Ábrela desde la pantalla de inicio, a pantalla completa y sin barra del navegador. Funciona aunque se caiga la cobertura en el almacén.</p>
+        <h2 id="install-title">@L["Instala Ordali en tu móvil"]</h2>
+        <p>@L["Ábrela desde la pantalla de inicio, a pantalla completa y sin barra del navegador. Funciona aunque se caiga la cobertura en el almacén."]</p>
 
         @if (State.Info.CanPrompt)
         {
             <button class="btn btn-primary btn-block btn-lg" type="button" @onclick="InstallAsync">
-                <Icon Name="download" /><span>Instalar la app</span>
+                <Icon Name="download" /><span>@L["Instalar la app"]</span>
             </button>
         }
         else if (State.Info.Ios)
         {
             <ol class="install-steps">
-                <li>Pulsa <strong>Compartir</strong> <Icon Name="share" Class="inline-icon" /> en la barra de Safari.</li>
-                <li>Elige <strong>Añadir a pantalla de inicio</strong>.</li>
-                <li>Pulsa <strong>Añadir</strong>. Ordali aparecerá junto a tus apps.</li>
+                <li>@L["Pulsa"] <strong>@L["Compartir"]</strong> <Icon Name="share" Class="inline-icon" /> @L["en la barra de Safari."]</li>
+                <li>@L["Elige"] <strong>@L["Añadir a pantalla de inicio"]</strong>.</li>
+                <li>@L["Pulsa"] <strong>@L["Añadir"]</strong>. @L["Ordali aparecerá junto a tus apps."]</li>
             </ol>
         }
         else
         {
             <ol class="install-steps">
-                <li>Abre el menú del navegador <strong>⋮</strong>.</li>
-                <li>Elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.</li>
+                <li>@L["Abre el menú del navegador"] <strong>⋮</strong>.</li>
+                <li>@L["Elige"] <strong>@L["Instalar aplicación"]</strong> @L["o"] <strong>@L["Añadir a pantalla de inicio"]</strong>.</li>
             </ol>
         }
 
-        <button class="btn btn-ghost btn-block" type="button" @onclick="DismissAsync">Ahora no</button>
+        <button class="btn btn-ghost btn-block" type="button" @onclick="DismissAsync">@L["Ahora no"]</button>
     </section>
 }
 
 @code {
-    protected override void OnInitialized() => State.Changed += OnChanged;
+    // The sheet sits outside the app's routes, so it follows language changes itself.
+    protected override void OnInitialized()
+    {
+        State.Changed += OnChanged;
+        Language.Changed += OnChanged;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -47,7 +52,11 @@
         }
     }
 
-    public void Dispose() => State.Changed -= OnChanged;
+    public void Dispose()
+    {
+        State.Changed -= OnChanged;
+        Language.Changed -= OnChanged;
+    }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
 

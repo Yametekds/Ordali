@@ -5,32 +5,32 @@
 @inject OrdaliClientOptions Options
 @inject IHttpClientFactory HttpClientFactory
 
-<PageTitle>Ajustes · Ordali</PageTitle>
+<PageTitle>@L["Ajustes"] · Ordali</PageTitle>
 
 <div class="auth-card">
-    <h1>Ajustes</h1>
-    <p class="muted">Elige de dónde saca los datos la app. El cambio se aplica al volver a abrirla.</p>
+    <h1>@L["Ajustes"]</h1>
+    <p class="muted">@L["Elige de dónde saca los datos la app. El cambio se aplica al volver a abrirla."]</p>
 
     <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="settings">
         <label class="check">
             <input type="radio" name="mode" checked="@(!useApi)" @onchange="() => useApi = false" />
-            <span>Datos de ejemplo, sin servidor</span>
+            <span>@L["Datos de ejemplo, sin servidor"]</span>
         </label>
         <label class="check">
             <input type="radio" name="mode" checked="@useApi" @onchange="() => useApi = true" />
-            <span>Mi API de Ordali</span>
+            <span>@L["Mi API de Ordali"]</span>
         </label>
 
         @if (useApi)
         {
             <label class="field">
-                <span>URL de la API</span>
+                <span>@L["URL de la API"]</span>
                 <InputText @bind-Value="baseUrl" inputmode="url" autocomplete="url" />
             </label>
             <p class="muted small">
-                Con Docker en tu ordenador: <code>http://localhost:8080/</code> en el mismo equipo,
-                <code>http://10.0.2.2:8080/</code> en el emulador de Android o la IP local del ordenador
-                (por ejemplo <code>http://192.168.1.20:8080/</code>) desde un móvil en la misma wifi.
+                @L["Con Docker en tu ordenador:"] <code>http://localhost:8080/</code> @L["en el mismo equipo,"]
+                <code>http://10.0.2.2:8080/</code> @L["en el emulador de Android o la IP local del ordenador"]
+                (@L["por ejemplo"] <code>http://192.168.1.20:8080/</code>) @L["desde un móvil en la misma wifi."]
             </p>
         }
 
@@ -43,14 +43,14 @@
         }
 
         <div class="form-actions">
-            <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Comprobando…" : "Guardar")</button>
+            <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? L["Comprobando…"] : L["Guardar"])</button>
             @if (saved)
             {
-                <button class="btn" type="button" @onclick="Quit">Cerrar la app</button>
+                <button class="btn" type="button" @onclick="Quit">@L["Cerrar la app"]</button>
             }
             else
             {
-                <a class="btn btn-ghost" href="">Volver</a>
+                <a class="btn btn-ghost" href="">@L["Volver"]</a>
             }
         </div>
     </EditForm>
@@ -76,13 +76,13 @@
         if (!useApi)
         {
             Backend.UseDemo();
-            Done(Options.IsDemo ? "Ya estás usando los datos de ejemplo." : "Guardado.");
+            Done(Options.IsDemo ? L["Ya estás usando los datos de ejemplo."] : L["Guardado."]);
             return;
         }
 
         if (!Uri.TryCreate(baseUrl.Trim(), UriKind.Absolute, out Uri? url) || url.Scheme is not ("http" or "https"))
         {
-            (ok, message) = (false, "La URL no es válida. Tiene que empezar por http:// o https://.");
+            (ok, message) = (false, L["La URL no es válida. Tiene que empezar por http:// o https://."].Value);
             return;
         }
 
@@ -99,7 +99,7 @@
             }
 
             Backend.UseApi(url);
-            Done(url == Options.ApiBaseUrl ? "La API responde. Ya estás conectado a ella." : "La API responde. Guardado.");
+            Done(url == Options.ApiBaseUrl ? L["La API responde. Ya estás conectado a ella."] : L["La API responde. Guardado."]);
         }
         finally
         {
@@ -111,7 +111,7 @@
     {
         bool changed = Backend.BaseUrl != Options.ApiBaseUrl;
         saved = changed;
-        (ok, message) = (true, changed ? text + " Cierra la app y vuelve a abrirla para usar el cambio." : text);
+        (ok, message) = (true, changed ? text + " " + L["Cierra la app y vuelve a abrirla para usar el cambio."] : text);
     }
 
     private async Task<string?> CheckAsync(Uri url)
@@ -121,11 +121,11 @@
         try
         {
             using HttpResponseMessage response = await client.GetAsync(new Uri(url, "health/live"));
-            return response.IsSuccessStatusCode ? null : $"La API respondió con el código {(int)response.StatusCode}.";
+            return response.IsSuccessStatusCode ? null : L["La API respondió con el código {0}.", (int)response.StatusCode].Value;
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
-            return "No se pudo conectar. Comprueba que la API está en marcha y que la URL es correcta.";
+            return L["No se pudo conectar. Comprueba que la API está en marcha y que la URL es correcta."];
         }
     }
 

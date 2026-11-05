@@ -26,58 +26,58 @@ else
                 <label class="field">
                     <span>SKU</span>
                     <InputText @bind-Value="model.Sku" />
-                    <ValidationMessage For="() => model.Sku" />
+                    <FieldError For="() => model.Sku" />
                 </label>
                 <label class="field">
                     <span>GTIN / EAN</span>
-                    <InputText @bind-Value="model.Gtin" inputmode="numeric" placeholder="Opcional" />
-                    <ValidationMessage For="() => model.Gtin" />
+                    <InputText @bind-Value="model.Gtin" inputmode="numeric" placeholder="@L["Opcional"]" />
+                    <FieldError For="() => model.Gtin" />
                 </label>
                 <label class="field field-wide">
-                    <span>Nombre</span>
+                    <span>@L["Nombre"]</span>
                     <InputText @bind-Value="model.Name" />
-                    <ValidationMessage For="() => model.Name" />
+                    <FieldError For="() => model.Name" />
                 </label>
                 <label class="field">
-                    <span>Unidad</span>
+                    <span>@L["Unidad"]</span>
                     <InputSelect @bind-Value="model.Unit">
                         @foreach (var unit in Units)
                         {
-                            <option value="@unit">@unit</option>
+                            <option value="@unit">@Labels.Unit(unit)</option>
                         }
                     </InputSelect>
                 </label>
                 <label class="field">
-                    <span>Stock mínimo</span>
+                    <span>@L["Stock mínimo"]</span>
                     <InputNumber @bind-Value="model.MinStock" min="0" />
-                    <ValidationMessage For="() => model.MinStock" />
+                    <FieldError For="() => model.MinStock" />
                 </label>
                 @if (locations is not null)
                 {
                     <label class="field field-wide">
-                        <span>Ubicación predeterminada</span>
+                        <span>@L["Ubicación predeterminada"]</span>
                         <InputSelect @bind-Value="model.DefaultLocationId">
-                            <option value="">Sin ubicación predeterminada</option>
+                            <option value="">@L["Sin ubicación predeterminada"]</option>
                             @foreach (var location in locations)
                             {
                                 <option value="@location.Id">@location.Code · @location.Zone</option>
                             }
                         </InputSelect>
-                        <small class="muted">Se propone al ubicar las entradas de este artículo.</small>
-                        <ValidationMessage For="() => model.DefaultLocationId" />
+                        <small class="muted">@L["Se propone al ubicar las entradas de este artículo."]</small>
+                        <FieldError For="() => model.DefaultLocationId" />
                     </label>
                 }
                 <label class="check field-wide">
                     <InputCheckbox @bind-Value="model.TracksLots" />
-                    <span>Controlar por lotes (obligatorio indicar el lote en cada movimiento)</span>
+                    <span>@L["Controlar por lotes (obligatorio indicar el lote en cada movimiento)"]</span>
                 </label>
             </div>
 
             <ErrorAlert Error="error" />
 
             <div class="form-actions">
-                <a class="btn" href="registros/productos">Cancelar</a>
-                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Guardando…" : "Guardar")</button>
+                <a class="btn" href="registros/productos">@L["Cancelar"]</a>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? L["Guardando…"] : L["Guardar"])</button>
             </div>
         </EditForm>
     </div>
@@ -95,7 +95,7 @@ else
     private Exception? error;
     private bool busy;
 
-    private string Title => Id is null ? "Nuevo producto" : "Editar producto";
+    private string Title => Id is null ? L["Nuevo producto"] : L["Editar producto"];
 
     protected override async Task OnParametersSetAsync()
     {

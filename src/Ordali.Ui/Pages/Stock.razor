@@ -9,21 +9,21 @@
 <PageHeader Title="Stock">
     <Actions>
         <AuthorizeView Policy="@Permissions.MovementsCreate">
-            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>Registrar movimiento</span></a>
+            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>@L["Registrar movimiento"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
 
 <div class="toolbar">
-    <select class="select" aria-label="Artículo" @onchange="e => Filter(e, isProduct: true)">
-        <option value="">Todos los artículos</option>
+    <select class="select" aria-label="@L["Artículo"]" @onchange="e => Filter(e, isProduct: true)">
+        <option value="">@L["Todos los artículos"]</option>
         @foreach (var product in products)
         {
             <option value="@product.Id" selected="@(product.Id == ProductId)">@product.Sku · @product.Name</option>
         }
     </select>
-    <select class="select" aria-label="Ubicación" @onchange="e => Filter(e, isProduct: false)">
-        <option value="">Todas las ubicaciones</option>
+    <select class="select" aria-label="@L["Ubicación"]" @onchange="e => Filter(e, isProduct: false)">
+        <option value="">@L["Todas las ubicaciones"]</option>
         @foreach (var location in locations)
         {
             <option value="@location.Id" selected="@(location.Id == LocationId)">@location.Code</option>
@@ -42,7 +42,7 @@
 }
 else if (stock.Count == 0)
 {
-    <EmptyState IconName="layers" Text="No hay stock con estos filtros." />
+    <EmptyState IconName="layers" Text="@L["No hay stock con estos filtros."]" />
 }
 else
 {
@@ -51,10 +51,10 @@ else
             <thead>
                 <tr>
                     <th>SKU</th>
-                    <th>Artículo</th>
-                    <th>Ubicación</th>
-                    <th>Lote</th>
-                    <th class="num">Cantidad</th>
+                    <th>@L["Artículo"]</th>
+                    <th>@L["Ubicación"]</th>
+                    <th>@L["Lote"]</th>
+                    <th class="num">@L["Cantidad"]</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,16 +62,16 @@ else
                 {
                     <tr>
                         <td data-label="SKU"><strong class="mono">@item.Sku</strong></td>
-                        <td data-label="Artículo">@item.ProductName</td>
-                        <td data-label="Ubicación" class="mono">@item.LocationCode</td>
-                        <td data-label="Lote" class="mono">@(item.Lot ?? "—")</td>
-                        <td data-label="Cantidad" class="num">@Labels.Quantity(item.Quantity)</td>
+                        <td data-label="@L["Artículo"]">@item.ProductName</td>
+                        <td data-label="@L["Ubicación"]" class="mono">@item.LocationCode</td>
+                        <td data-label="@L["Lote"]" class="mono">@(item.Lot ?? "—")</td>
+                        <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(item.Quantity)</td>
                     </tr>
                 }
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="4">Total</td>
+                    <td colspan="4">@L["Total"]</td>
                     <td class="num">@Labels.Quantity(stock.Sum(s => s.Quantity))</td>
                 </tr>
             </tfoot>

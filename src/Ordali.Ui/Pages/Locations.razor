@@ -3,13 +3,13 @@
 @inject IOrdaliApi Api
 @inject SessionState Session
 
-<PageTitle>Ubicaciones · Ordali</PageTitle>
+<PageTitle>@L["Ubicaciones"] · Ordali</PageTitle>
 
-<PageHeader Title="Ubicaciones">
+<PageHeader Title="@L["Ubicaciones"]">
     <Actions>
         @if (sites is { Count: > 1 })
         {
-            <select class="select" aria-label="Almacén" @onchange="OnSiteChangedAsync">
+            <select class="select" aria-label="@L["Almacén"]" @onchange="OnSiteChangedAsync">
                 @foreach (var site in sites)
                 {
                     <option value="@site.Id" selected="@(site.Id == siteId)">@site.Code · @site.Name</option>
@@ -22,7 +22,7 @@
         }
         @if (CanCreate && !adding)
         {
-            <button type="button" class="btn btn-primary" @onclick="StartAdding"><Icon Name="plus" /><span>Nueva ubicación</span></button>
+            <button type="button" class="btn btn-primary" @onclick="StartAdding"><Icon Name="plus" /><span>@L["Nueva ubicación"]</span></button>
         }
     </Actions>
 </PageHeader>
@@ -31,34 +31,34 @@
 
 @if (created is not null)
 {
-    <div class="alert alert-ok" role="status"><Icon Name="check" /><span>Ubicación <strong class="mono">@created.Code</strong> creada en @created.Zone.</span></div>
+    <div class="alert alert-ok" role="status"><Icon Name="check" /><span>@L["Ubicación"] <strong class="mono">@created.Code</strong> @L["creada en {0}.", created.Zone]</span></div>
 }
 
 @if (adding)
 {
     <div class="card form-card">
-        <h2 class="card-title">Nueva ubicación</h2>
+        <h2 class="card-title">@L["Nueva ubicación"]</h2>
         <EditForm Model="newLocation" OnValidSubmit="CreateAsync" FormName="location">
             <DataAnnotationsValidator />
             <div class="form-grid">
                 <label class="field">
-                    <span>Código</span>
+                    <span>@L["Código"]</span>
                     <InputText @bind-Value="newLocation.Code" placeholder="A-03-01" autocomplete="off" />
-                    <ValidationMessage For="() => newLocation.Code" />
+                    <FieldError For="() => newLocation.Code" />
                 </label>
                 <label class="field">
-                    <span>Zona</span>
-                    <InputText @bind-Value="newLocation.Zone" list="zones" placeholder="Pasillo A" autocomplete="off" />
+                    <span>@L["Zona"]</span>
+                    <InputText @bind-Value="newLocation.Zone" list="zones" placeholder="@L["Pasillo A"]" autocomplete="off" />
                     <datalist id="zones">
                         @foreach (var zone in (locations ?? []).Select(l => l.Zone).Distinct())
                         {
                             <option value="@zone"></option>
                         }
                     </datalist>
-                    <ValidationMessage For="() => newLocation.Zone" />
+                    <FieldError For="() => newLocation.Zone" />
                 </label>
                 <label class="field">
-                    <span>Tipo</span>
+                    <span>@L["Tipo"]</span>
                     <InputSelect @bind-Value="newLocation.Type">
                         @foreach (var type in Enum.GetValues<LocationType>())
                         {
@@ -72,20 +72,20 @@
             {
                 <div class="alert alert-warning" role="alert">
                     <Icon Name="alert" />
-                    <span>@duplicateWarning ¿Quieres crearla igualmente?</span>
+                    <span>@duplicateWarning @L["¿Quieres crearla igualmente?"]</span>
                 </div>
             }
 
             <div class="form-actions">
-                <button type="button" class="btn" @onclick="CancelAdding">Cancelar</button>
+                <button type="button" class="btn" @onclick="CancelAdding">@L["Cancelar"]</button>
                 @if (duplicateWarning is null)
                 {
-                    <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Creando…" : "Crear ubicación")</button>
+                    <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? L["Creando…"] : L["Crear ubicación"])</button>
                 }
                 else
                 {
-                    <button class="btn" type="submit" disabled="@busy">Comprobar otro código</button>
-                    <button class="btn btn-primary" type="button" disabled="@busy" @onclick="CreateDuplicateAsync">Crear igualmente</button>
+                    <button class="btn" type="submit" disabled="@busy">@L["Comprobar otro código"]</button>
+                    <button class="btn btn-primary" type="button" disabled="@busy" @onclick="CreateDuplicateAsync">@L["Crear igualmente"]</button>
                 }
             </div>
         </EditForm>
@@ -101,7 +101,7 @@
 }
 else if (locations.Count == 0)
 {
-    <EmptyState IconName="map" Text="Este almacén no tiene ubicaciones." />
+    <EmptyState IconName="map" Text="@L["Este almacén no tiene ubicaciones."]" />
 }
 else
 {
@@ -168,15 +168,16 @@ else
         }
     }
 
-    private static string Summary(List<StockItem> lines)
+    private string Summary(List<StockItem> lines)
     {
         if (lines.Count == 0)
         {
-            return "Vacía";
+            return L["Vacía"];
         }
 
         var products = lines.Select(l => l.ProductId).Distinct().Count();
-        return $"{products} {(products == 1 ? "artículo" : "artículos")} · {Labels.Quantity(lines.Sum(l => l.Quantity))} uds";
+        var units = Labels.Quantity(lines.Sum(l => l.Quantity));
+        return products == 1 ? L["{0} artículo · {1} uds", products, units] : L["{0} artículos · {1} uds", products, units];
     }
 
     private async Task LoadAsync() => locations = await Api.GetLocationsAsync(siteId);
