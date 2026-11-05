@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Ordali.Client.Auth;
+using Ordali.Client.Localization;
 using Ordali.Client.Models;
 
 namespace Ordali.Client.Http;
@@ -105,6 +106,9 @@ public sealed class HttpOrdaliApi : IOrdaliApi
             request.Content = JsonContent.Create(body, options: ApiJson.Options);
         }
 
+        // Lets the API answer in the language the app is shown in.
+        request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(Language.Current));
+
         if (_session.Current is { } current)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", current.AccessToken);
@@ -117,7 +121,7 @@ public sealed class HttpOrdaliApi : IOrdaliApi
         }
         catch (HttpRequestException ex)
         {
-            throw new ApiException(HttpStatusCode.ServiceUnavailable, "No se puede conectar con la API. Comprueba que está en marcha.", null, ex);
+            throw new ApiException(HttpStatusCode.ServiceUnavailable, Text.Get("No se puede conectar con la API. Comprueba que está en marcha."), null, ex);
         }
 
         using (response)
@@ -130,7 +134,7 @@ public sealed class HttpOrdaliApi : IOrdaliApi
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<T>(ApiJson.Options, cancellationToken);
-                return result ?? throw new ApiException(response.StatusCode, "La API devolvió una respuesta vacía.");
+                return result ?? throw new ApiException(response.StatusCode, Text.Get("La API devolvió una respuesta vacía."));
             }
 
             // An expired or revoked token signs the user out so the UI sends them back to the login page.
@@ -157,10 +161,10 @@ public sealed class HttpOrdaliApi : IOrdaliApi
 
         var message = problem?.Detail ?? problem?.Title ?? response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => "Tu sesión ha caducado. Vuelve a entrar.",
-            HttpStatusCode.Forbidden => "No tienes permiso para esta acción.",
-            HttpStatusCode.NotFound => "No existe.",
-            _ => $"La API respondió con el error {(int)response.StatusCode}.",
+            HttpStatusCode.Unauthorized => Text.Get("Tu sesión ha caducado. Vuelve a entrar."),
+            HttpStatusCode.Forbidden => Text.Get("No tienes permiso para esta acción."),
+            HttpStatusCode.NotFound => Text.Get("No existe."),
+            _ => Text.Format("La API respondió con el error {0}.", (int)response.StatusCode),
         };
 
         return new ApiException(response.StatusCode, message, problem?.Errors);
