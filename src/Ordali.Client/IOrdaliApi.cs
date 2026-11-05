@@ -62,4 +62,11 @@ public interface IOrdaliApi
     Task<UserProfile> CreateUserAsync(NewUserInput input, CancellationToken cancellationToken = default);
 
     Task<UserProfile> UpdateUserAccessAsync(Guid id, UserAccessInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a profile so it can no longer sign in. It stays recoverable with <see cref="RestoreUserAsync"/>.</summary>
+    Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default);
+
+    Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -25,6 +25,16 @@ public sealed record UserDto(
     bool Active,
     DateTimeOffset CreatedAt);
 
+/// <summary>A removed profile, as the administrator sees it in the list of profiles to restore.</summary>
+public sealed record DeletedUserDto(
+    Guid Id,
+    string Name,
+    string Email,
+    UserCategory Category,
+    string? TemplateName,
+    DateTimeOffset DeletedAt,
+    string? DeletedByName);
+
 public sealed record ProfileTemplateDto(Guid Id, string Name, string? Description, UserCategory Category, IReadOnlyList<string> Permissions)
 {
     public static ProfileTemplateDto From(ProfileTemplate t) => new(t.Id, t.Name, t.Description, t.Category, t.Permissions);

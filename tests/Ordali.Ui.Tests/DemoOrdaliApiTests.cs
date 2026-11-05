@@ -283,6 +283,42 @@ public class DemoOrdaliApiTests
     }
 
     [Fact]
+    public async Task Deleted_profile_cannot_sign_in_until_it_is_restored()
+    {
+        await SignInAsync("admin@demo.local");
+        var mozo = (await _api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+
+        await _api.DeleteUserAsync(mozo.Id);
+
+        Assert.DoesNotContain(await _api.GetUsersAsync(), u => u.Id == mozo.Id);
+        var deleted = Assert.Single(await _api.GetDeletedUsersAsync());
+        Assert.Equal("Lucía Martín", deleted.DeletedByName);
+        var login = await Assert.ThrowsAsync<ApiException>(() => _api.LoginAsync(new LoginRequest("mozo@demo.local", "Demo1234!")));
+        Assert.Equal(HttpStatusCode.Unauthorized, login.Status);
+
+        var restored = await _api.RestoreUserAsync(mozo.Id);
+
+        Assert.Equal(mozo, restored);
+        Assert.Empty(await _api.GetDeletedUsersAsync());
+        await SignInAsync("mozo@demo.local");
+    }
+
+    [Fact]
+    public async Task Only_admins_delete_profiles_and_never_their_own()
+    {
+        await SignInAsync("admin@demo.local");
+        var me = _session.Current!.User;
+        var self = await Assert.ThrowsAsync<ApiException>(() => _api.DeleteUserAsync(me.Id));
+
+        await SignInAsync("encargado@demo.local");
+        var mozo = (await _api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+        var bySupervisor = await Assert.ThrowsAsync<ApiException>(() => _api.DeleteUserAsync(mozo.Id));
+
+        Assert.Equal(HttpStatusCode.Conflict, self.Status);
+        Assert.Equal(HttpStatusCode.Forbidden, bySupervisor.Status);
+    }
+
+    [Fact]
     public async Task Admin_cannot_demote_themself()
     {
         await SignInAsync("admin@demo.local");

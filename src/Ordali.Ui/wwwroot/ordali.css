@@ -277,6 +277,9 @@ button.tab { background: none; border: 0; border-bottom: 3px solid transparent; 
 .alert-ok { background: var(--ok-bg); color: var(--ok); }
 .alert-info { background: var(--info-bg); color: var(--info); }
 .alert-warning { background: var(--warning-bg); color: var(--warning); }
+.alert-text { flex: 1; }
+.alert-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.row-actions { white-space: nowrap; }
 .note { margin: 10px 0 0; color: var(--muted); }
 .note-up { color: var(--ok); font-weight: 500; }
 

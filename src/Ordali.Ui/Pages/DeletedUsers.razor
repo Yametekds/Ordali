@@ -1,0 +1,112 @@
+@page "/registros/usuarios/eliminados"
+@attribute [Authorize(Policy = Policies.Admin)]
+@inject IOrdaliApi Api
+
+<PageTitle>Usuarios eliminados · Ordali</PageTitle>
+
+<PageHeader Title="Usuarios eliminados" Subtitle="Perfiles que ya no pueden entrar. Al recuperarlos vuelven con su categoría y sus permisos.">
+    <Actions>
+        <a class="btn" href="registros/usuarios">Volver a usuarios</a>
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+@if (restored is not null)
+{
+    <div class="alert alert-ok" role="status">
+        <Icon Name="check" />
+        <span class="alert-text">
+            Has recuperado el perfil de <strong>@restored.Name</strong>.
+            <a href="registros/usuarios/@restored.Id">Revisar sus permisos</a>
+        </span>
+    </div>
+}
+
+@if (users is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (users.Count == 0)
+{
+    <EmptyState IconName="users" Text="No hay perfiles eliminados." />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Categoría</th>
+                    <th>Eliminado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    <tr>
+                        <td data-label="Nombre"><strong>@user.Name</strong></td>
+                        <td data-label="Email">@user.Email</td>
+                        <td data-label="Categoría">@Labels.Of(user.Category)</td>
+                        <td data-label="Eliminado">
+                            @Labels.DateTime(user.DeletedAt)
+                            @if (user.DeletedByName is not null)
+                            {
+                                <span class="muted small"> por @user.DeletedByName</span>
+                            }
+                        </td>
+                        <td class="row-actions">
+                            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => RestoreAsync(user)">
+                                <Icon Name="restore" /><span>Recuperar</span>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<DeletedUser>? users;
+    private UserProfile? restored;
+    private Exception? error;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await Api.GetDeletedUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task RestoreAsync(DeletedUser user)
+    {
+        busy = true;
+        error = null;
+        restored = null;
+        try
+        {
+            restored = await Api.RestoreUserAsync(user.Id);
+            users = await Api.GetDeletedUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}
