@@ -129,9 +129,11 @@ public static class DemoSeed
 
         // A week of dock appointments around today, including the unloading ENTRADA2 came from.
         var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
+        // On the hour, so the slot ENTRADA2 came from reads like a real booking.
+        var hour = today.AddHours(now.UtcDateTime.Hour);
         var weekly = Guid.Parse("6d3e0f50-0000-4000-8000-000000000001");
         db.ScheduledEvents.AddRange(
-            Slot(1, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte", now.AddHours(-3.5), now.AddHours(-2.5), 1, supervisor.Name, [(3, 20), (6, 10), (5, 10)],
+            Slot(1, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte", hour.AddHours(-3), hour.AddHours(-2), 1, supervisor.Name, [(3, 20), (6, 10), (5, 10)],
                 completed: (supervisor.Name, now.AddHours(-3), "ENTRADA2"), series: weekly),
             Slot(2, ScheduledEventType.Outbound, "Pedido cliente 10240", "Hostelería Centro", today.AddHours(15), today.AddHours(16), 2, supervisor.Name, [(2, 20), (4, 6)]),
             Slot(3, ScheduledEventType.Inbound, "Aceite campaña nueva", "Almazara del Sur", today.AddDays(1).AddHours(7), today.AddDays(1).AddHours(8), 1, supervisor.Name, [(1, 96)]),
@@ -140,7 +142,7 @@ public static class DemoSeed
         for (var week = 1; week <= 3; week++)
         {
             db.ScheduledEvents.Add(Slot(10 + week, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte",
-                now.AddHours(-3.5).AddDays(7 * week), now.AddHours(-2.5).AddDays(7 * week), 1, supervisor.Name, [(3, 20), (6, 10)], series: weekly));
+                hour.AddHours(-3).AddDays(7 * week), hour.AddHours(-2).AddDays(7 * week), 1, supervisor.Name, [(3, 20), (6, 10)], series: weekly));
         }
 
         await db.SaveChangesAsync(cancellationToken);

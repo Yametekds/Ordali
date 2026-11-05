@@ -382,8 +382,10 @@ public sealed partial class DemoOrdaliApi
     {
         var now = _time.GetUtcNow();
         var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
+        // On the hour, so the slot ENTRADA2 came from reads like a real booking.
+        var hour = today.AddHours(now.UtcDateTime.Hour);
         var weekly = Guid.Parse("6d3e0f50-0000-4000-8000-000000000001");
-        _events.Add(Slot(1, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte", now.AddHours(-3.5), now.AddHours(-2.5), 1, "Marta Gil",
+        _events.Add(Slot(1, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte", hour.AddHours(-3), hour.AddHours(-2), 1, "Marta Gil",
             [(3, 20), (6, 10), (5, 10)], weekly) with
         {
             Status = ScheduledEventStatus.Completed,
@@ -398,7 +400,7 @@ public sealed partial class DemoOrdaliApi
         for (var week = 1; week <= 3; week++)
         {
             _events.Add(Slot(10 + week, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte",
-                now.AddHours(-3.5).AddDays(7 * week), now.AddHours(-2.5).AddDays(7 * week), 1, "Marta Gil", [(3, 20), (6, 10)], weekly));
+                hour.AddHours(-3).AddDays(7 * week), hour.AddHours(-2).AddDays(7 * week), 1, "Marta Gil", [(3, 20), (6, 10)], weekly));
         }
     }
 

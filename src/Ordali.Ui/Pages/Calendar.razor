@@ -1,0 +1,194 @@
+@page "/calendario"
+@using System.Globalization
+@attribute [Authorize(Policy = Permissions.CalendarView)]
+@inject IOrdaliApi Api
+@inject TimeProvider Time
+@inject SessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>Calendario · Ordali</PageTitle>
+
+<PageHeader Title="Calendario">
+    <Actions>
+        @if (Can(Permissions.CalendarEdit))
+        {
+            <a class="btn btn-primary" href="calendario/nueva?fecha=@selected.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">
+                <Icon Name="plus" /><span>Programar</span>
+            </a>
+        }
+    </Actions>
+</PageHeader>
+
+<div class="cal-toolbar">
+    <div class="cal-nav">
+        <button type="button" class="btn btn-icon btn-sm" aria-label="Mes anterior" @onclick="() => GoToMonth(-1)"><Icon Name="chevron-left" /></button>
+        <h2 class="cal-month">@MonthTitle</h2>
+        <button type="button" class="btn btn-icon btn-sm" aria-label="Mes siguiente" @onclick="() => GoToMonth(1)"><Icon Name="chevron" /></button>
+    </div>
+    <button type="button" class="btn btn-sm" disabled="@(selected == Today)" @onclick="() => Select(Today)">Hoy</button>
+    <ul class="cal-legend" aria-label="Leyenda">
+        <li><span class="type-dot type-in"></span>Descarga</li>
+        <li><span class="type-dot type-out"></span>Carga</li>
+        <li><span class="type-dot type-other"></span>Otra cita</li>
+    </ul>
+</div>
+
+<ErrorAlert Error="error" />
+
+<div class="cal-layout">
+    <div class="cal" role="grid" aria-label="@MonthTitle">
+        <div class="cal-head" role="row">
+            @foreach (var name in WeekDays)
+            {
+                <span role="columnheader">@name</span>
+            }
+        </div>
+        @for (var week = 0; week < Weeks; week++)
+        {
+            <div class="cal-week" role="row">
+                @for (var day = 0; day < 7; day++)
+                {
+                    var date = GridStart.AddDays(week * 7 + day);
+                    var dayEvents = On(date);
+                    <button type="button" role="gridcell" aria-selected="@(date == selected)"
+                            aria-label="@DayLabel(date, dayEvents.Count)"
+                            class="cal-day @(date.Month != month.Month ? "is-other" : "") @(date == Today ? "is-today" : "") @(date == selected ? "is-selected" : "")"
+                            @onclick="() => Select(date)">
+                        <span class="cal-date">@date.Day</span>
+                        @foreach (var item in dayEvents.Take(3))
+                        {
+                            <span class="cal-chip type-@Labels.Css(item.Type) @ChipState(item)">
+                                <span class="cal-chip-time">@Labels.Time(item.StartsAt)</span> @item.Title
+                            </span>
+                        }
+                        @if (dayEvents.Count > 3)
+                        {
+                            <span class="cal-more">+@(dayEvents.Count - 3) más</span>
+                        }
+                        @* Phones only show a dot per entry. *@
+                        <span class="cal-dots" aria-hidden="true">
+                            @foreach (var item in dayEvents.Take(4))
+                            {
+                                <span class="type-dot type-@Labels.Css(item.Type) @ChipState(item)"></span>
+                            }
+                        </span>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <section class="card cal-agenda" aria-live="polite">
+        <header class="panel-head">
+            <h2>@Labels.LongDate(selected)</h2>
+        </header>
+        @if (events is null)
+        {
+            @if (error is null)
+            {
+                <Loading />
+            }
+        }
+        else if (On(selected) is { Count: > 0 } selectedEvents)
+        {
+            <ul class="tasks">
+                @foreach (var item in selectedEvents)
+                {
+                    <li><ScheduledEventRow Event="item" Now="now" /></li>
+                }
+            </ul>
+        }
+        else
+        {
+            <EmptyState IconName="calendar" Text="No hay nada programado este día.">
+                @if (Can(Permissions.CalendarEdit) && selected >= Today)
+                {
+                    <a class="link" href="calendario/nueva?fecha=@selected.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">Programar una cita <Icon Name="arrow-right" /></a>
+                }
+            </EmptyState>
+        }
+    </section>
+</div>
+
+@code {
+    private static readonly string[] WeekDays = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+
+    [SupplyParameterFromQuery(Name = "dia")] private string? Day { get; set; }
+
+    private IReadOnlyList<ScheduledEvent>? events;
+    private DateTime month;
+    private DateTime selected;
+    private DateTimeOffset now;
+    private Exception? error;
+
+    private DateTime Today => Time.GetLocalNow().Date;
+
+    private string MonthTitle
+    {
+        get
+        {
+            var text = month.ToString("MMMM yyyy", Labels.Culture);
+            return char.ToUpper(text[0], Labels.Culture) + text[1..];
+        }
+    }
+
+    // The grid starts on the Monday on or before the 1st and shows whole weeks.
+    private DateTime GridStart => month.AddDays(-(((int)month.DayOfWeek + 6) % 7));
+
+    private int Weeks => (int)Math.Ceiling(((month.AddMonths(1) - GridStart).TotalDays) / 7);
+
+    private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        selected = DateTime.TryParseExact(Day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day.Date : Today;
+        var first = new DateTime(selected.Year, selected.Month, 1);
+        if (events is null || first != month)
+        {
+            month = first;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        now = Time.GetUtcNow();
+        try
+        {
+            var start = GridStart;
+            events = await Api.GetCalendarAsync(Local(start), Local(start.AddDays(Weeks * 7)));
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            events = [];
+        }
+    }
+
+    private List<ScheduledEvent> On(DateTime date) =>
+        events is null
+            ? []
+            : [.. events.Where(e => e.StartsAt.ToLocalTime().Date <= date && e.EndsAt.AddTicks(-1).ToLocalTime().Date >= date).OrderBy(e => e.StartsAt)];
+
+    private static string DayLabel(DateTime date, int count) =>
+        count == 0 ? Labels.LongDate(date) : $"{Labels.LongDate(date)}, {count} {(count == 1 ? "cita" : "citas")}";
+
+    private string ChipState(ScheduledEvent item) =>
+        item.Status == ScheduledEventStatus.Cancelled ? "is-cancelled"
+        : item.Status == ScheduledEventStatus.Completed ? "is-done"
+        : item.IsLate(now) ? "is-late"
+        : "";
+
+    // Selecting a day keeps it in the address so going back to the calendar returns to it.
+    private void Select(DateTime date) =>
+        Navigation.NavigateTo($"calendario?dia={date:yyyy-MM-dd}", replace: true);
+
+    private void GoToMonth(int delta)
+    {
+        var target = month.AddMonths(delta);
+        Select(target.Year == Today.Year && target.Month == Today.Month ? Today : target);
+    }
+
+    private DateTimeOffset Local(DateTime date) => new(date, Time.LocalTimeZone.GetUtcOffset(date));
+}

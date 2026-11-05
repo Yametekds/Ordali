@@ -1,0 +1,16 @@
+@* The API's messages for one field of a form that isn't an EditForm. Keys are camelCase. *@
+@if (Errors.TryGetValue(Name, out var messages))
+{
+    @foreach (var message in messages)
+    {
+        <p class="validation-message @Class">@message</p>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, string[]> Errors { get; set; } = default!;
+
+    [Parameter, EditorRequired] public string Name { get; set; } = "";
+
+    [Parameter] public string? Class { get; set; }
+}
