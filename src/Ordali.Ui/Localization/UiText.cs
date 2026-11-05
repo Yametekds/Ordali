@@ -16,7 +16,8 @@ public static class UiText
         English.Inventory,
         English.Receipts,
         English.Users,
-        English.Forms);
+        English.Forms,
+        English.Help);
 
     public static string Get(string spanish) => Translations.Get(spanish);
 

@@ -451,6 +451,43 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 .auth-links .nav-link:hover { background: none; color: var(--text); }
 .auth-links .nav-link .icon { color: inherit; }
 
+/* Tutorial: the path of the goods, then one collapsible part per area, then tips */
+.guide-lead { max-width: 62ch; margin: -8px 0 20px; color: var(--muted); }
+.guide-flow { margin-bottom: 16px; }
+.guide-flow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; counter-reset: flow; }
+.guide-flow li { counter-increment: flow; display: flex; gap: 12px; align-items: flex-start; }
+.guide-flow li > .icon { flex: none; width: 36px; height: 36px; padding: 8px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }
+.guide-flow strong { display: block; margin-bottom: 2px; }
+.guide-flow strong::before { content: counter(flow) ". "; color: var(--accent-text); }
+.guide-flow span { color: var(--muted); font-size: .94rem; }
+
+.guide-topics { display: flex; flex-direction: column; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.guide-topic + .guide-topic { border-top: 1px solid var(--border); }
+.guide-topic summary {
+    display: flex; align-items: center; gap: 14px; padding: 14px 20px; cursor: pointer; list-style: none;
+    transition: background-color .12s var(--ease);
+}
+.guide-topic summary::-webkit-details-marker { display: none; }
+.guide-topic summary:hover { background: #faf6ef; }
+.guide-topic:first-child summary { border-radius: var(--radius) var(--radius) 0 0; }
+.guide-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); }
+.guide-summary { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.guide-summary span { color: var(--muted); font-size: .92rem; }
+.guide-summary .guide-locked { align-self: flex-start; margin-top: 6px; color: var(--muted); font-size: .8rem; }
+.guide-chevron { flex: none; color: var(--muted); transition: transform .15s var(--ease); }
+.guide-topic[open] .guide-chevron { transform: rotate(90deg); }
+.guide-topic[open] .guide-icon { background: var(--accent-soft); color: var(--accent-text); }
+.guide-body { padding: 0 20px 18px 70px; }
+.guide-steps { margin: 0 0 12px; padding-left: 20px; }
+.guide-steps li { padding: 3px 0; }
+.guide-steps li::marker { color: var(--muted); font-weight: 600; }
+.guide-tip { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--info-bg); color: var(--info); font-size: .94rem; }
+.guide-tip .icon { flex: none; margin-top: 2px; }
+
+.guide-tips ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 24px; }
+.guide-tips li { display: flex; gap: 10px; align-items: flex-start; }
+.guide-tips li .icon { flex: none; margin-top: 2px; color: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
@@ -507,6 +544,10 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
     .auth-hero { flex-direction: row; align-items: center; gap: 12px; }
     .auth-name { margin-top: 0; font-size: 1.8rem; }
     .auth-tagline { display: none; }
+    .guide-lead { margin-top: -6px; }
+    .guide-flow ol { grid-template-columns: 1fr; }
+    .guide-topic summary { padding: 12px 14px; gap: 12px; }
+    .guide-body { padding: 0 14px 16px 14px; }
 
     .table thead { display: none; }
     .table, .table tbody, .table tr, .table td, .table tfoot { display: block; width: 100%; }
