@@ -91,6 +91,14 @@ Perfiles de ejemplo (contraseña `Demo1234!`):
 
 Cada movimiento guarda el usuario y la hora, y no se puede modificar ni borrar: los errores se corrigen con un ajuste.
 
+## Idiomas
+
+La web y la app están en **español e inglés**. El selector está en el menú lateral y en la pantalla de entrada; el cambio se aplica al momento, sin recargar, y se recuerda para la próxima vez. La primera vez se usa el idioma del navegador o del móvil.
+
+- Los textos se escriben en español en la propia página (`@L["Nuevo producto"]`) y ese texto es la clave de su traducción. La traducción inglesa va en `src/Ordali.Ui/Localization/English.*.cs`, un archivo por área de la app.
+- Una prueba recorre el código y falla si algún texto no tiene su traducción o si cambian los huecos `{0}`.
+- Los mensajes del modo demo también se traducen. La API recibe el idioma en la cabecera `Accept-Language`, aunque de momento sus mensajes siguen en español.
+
 ## Estructura
 
 ```
