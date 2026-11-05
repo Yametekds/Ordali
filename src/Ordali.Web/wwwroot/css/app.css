@@ -67,7 +67,7 @@
 
 body { background: var(--frame); }
 .shell, .auth { background-color: var(--bg); }
-.auth { background-color: var(--frame); }
+.auth { background-color: var(--bg); }
 .loading-progress-text { color: var(--frame-muted); }
 
 /* Install sheet, web only: the native apps are already installed. */
@@ -77,20 +77,20 @@ body { background: var(--frame); }
     display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
     padding: 28px 22px calc(18px + env(safe-area-inset-bottom));
     background: var(--frame); color: var(--frame-text);
-    border-top: 4px solid var(--red); border-radius: 14px 14px 0 0;
+    border-radius: 16px 16px 0 0;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, .5);
-    animation: sheet-in .25s ease-out;
+    animation: sheet-in .28s var(--ease);
 }
-.install-sheet h2 { color: #fff; font-size: 1.5rem; text-transform: uppercase; letter-spacing: .04em; }
+.install-sheet h2 { color: var(--cream); font-size: 1.5rem; }
 .install-sheet p { margin: 0 0 6px; max-width: 420px; color: var(--frame-text); }
 .install-logo { border-radius: 18px; }
 .install-close { position: absolute; top: 10px; right: 10px; background: none; border: 0; color: var(--frame-muted); padding: 8px; cursor: pointer; }
-.install-steps { text-align: left; margin: 4px 0 10px; padding: 14px 18px 14px 36px; background: var(--frame-2); border-radius: 4px; width: 100%; max-width: 420px; }
+.install-steps { text-align: left; margin: 4px 0 10px; padding: 14px 18px 14px 36px; background: var(--frame-2); border-radius: 10px; width: 100%; max-width: 420px; }
 .install-steps li { margin: 6px 0; }
 .install-steps strong { color: #fff; }
 .inline-icon { vertical-align: -3px; color: #4ea3ff; }
 .install-sheet .btn-ghost { color: var(--frame-muted); }
 .install-sheet .btn-ghost:hover { background: var(--frame-2); color: #fff; }
 .btn-lg { min-height: 52px; font-size: 1rem; }
-.nav-link-install { width: 100%; background: none; border-top: 0; border-right: 0; border-bottom: 0; font: inherit; font-weight: 500; text-align: left; cursor: pointer; color: var(--gold); }
+.nav-link-install { width: 100%; background: none; border-top: 0; border-right: 0; border-bottom: 0; font: inherit; font-weight: 500; text-align: left; cursor: pointer; color: var(--cream); }
 @keyframes sheet-in { from { transform: translateY(100%); } }
