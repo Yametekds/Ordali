@@ -163,6 +163,67 @@ public class PageTests : BunitContext
         Assert.Equal(15, pending.Single(r => r.Code == "ENTRADA9").Pending);
     }
 
+    [Fact]
+    public async Task Calendar_lists_the_selected_day_and_pickers_cannot_schedule()
+    {
+        await SignInAsync("mozo@demo.local");
+
+        var page = Render<Calendar>();
+
+        page.WaitForAssertion(() => Assert.Contains("Pedido cliente 10240", page.Find(".cal-agenda").TextContent, StringComparison.Ordinal));
+        Assert.NotEmpty(page.FindAll(".cal-day.is-today .cal-chip.type-out"));
+        Assert.DoesNotContain("Programar", page.Find(".page-header").TextContent, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Dashboard_lists_todays_loading_as_pending()
+    {
+        await SignInAsync("encargado@demo.local");
+
+        var page = Render<Dashboard>();
+
+        page.WaitForAssertion(() => Assert.Contains("Pedido cliente 10240", page.Find(".pending").TextContent, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Picker_receives_a_planned_unloading_from_the_calendar()
+    {
+        await SignInAsync("mozo@demo.local");
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"entradas/nueva?cita={EventId(3)}");
+        var page = Render<NewReceipt>();
+
+        page.WaitForAssertion(() => Assert.Contains("ACE-001", page.Find(".planned").TextContent, StringComparison.Ordinal));
+        page.Find(".planned-list .btn").Click();
+        page.WaitForAssertion(() => page.Find("form.line-entry"));
+        Assert.Equal("96", page.Find("form.line-entry input[type=number]").GetAttribute("value"));
+        page.Find("form.line-entry input[type=text]").Input("L2026-11A");
+        page.Find("form.line-entry").Submit();
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("tbody tr")));
+        page.Find(".form-actions .btn-primary").Click();
+
+        page.WaitForAssertion(() => Assert.Contains("ENT-", page.Find(".alert-ok").TextContent, StringComparison.Ordinal));
+        var slot = await Services.GetRequiredService<IOrdaliApi>().GetScheduledEventAsync(EventId(3));
+        Assert.Equal(ScheduledEventStatus.Completed, slot.Status);
+        Assert.StartsWith("ENT-", slot.Outcome, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Supervisor_ships_a_loading_from_the_suggested_locations()
+    {
+        await SignInAsync("encargado@demo.local");
+        var page = Render<ShipEvent>(p => p.Add(x => x.Id, EventId(2)));
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("tbody tr").Count));
+        page.Find(".form-actions .btn-primary").Click();
+
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        await page.WaitForAssertionAsync(async () => Assert.Equal(ScheduledEventStatus.Completed, (await api.GetScheduledEventAsync(EventId(2))).Status));
+        var rice = await api.GetStockAsync(productId: Guid.Parse("4b8e7a10-0000-4000-8000-200000000002"));
+        Assert.Equal(40, rice.Sum(s => s.Quantity));
+    }
+
+    private static Guid EventId(int n) => Guid.Parse($"6d3e0f50-0000-4000-8000-1000000000{n:D2}");
+
     private static readonly Guid ScrewsId = Guid.Parse("4b8e7a10-0000-4000-8000-200000000003");
 
     private static void Scan<T>(IRenderedComponent<T> page, string selector, string code)

@@ -4,7 +4,7 @@
 
 <PageTitle>Nueva entrada · Ordali</PageTitle>
 
-<PageHeader Title="Nueva entrada" Subtitle="Registra lo que ha llegado. Queda en el muelle hasta que se ubica desde Traslados." />
+<PageHeader Title="Nueva entrada" Subtitle="@(scheduled is null ? "Registra lo que ha llegado. Queda en el muelle hasta que se ubica desde Traslados." : $"Descarga «{scheduled.Title}»{(scheduled.Partner is null ? "" : $" de {scheduled.Partner}")}. Queda en el muelle hasta que se ubica desde Traslados.")" />
 
 @if (products is null)
 {
@@ -23,8 +23,50 @@ else
             <span>
                 Entrada <strong class="mono">@saved.Code</strong> registrada en @saved.DockLocationCode. Ya aparece en Traslados.
                 <a href="traslados?entrada=@Uri.EscapeDataString(saved.Code)">Ubicarla ahora</a>
+                @if (EventId is { } eventId)
+                {
+                    <span> · <a href="calendario/@eventId">Volver a la cita</a></span>
+                }
             </span>
         </div>
+    }
+
+    @if (scheduled is not null && saved is null)
+    {
+        <section class="card form-card planned">
+            <header class="panel-head">
+                <h2>Previsto en la cita</h2>
+                @if (scheduled.Lines.Any(l => !l.TracksLots))
+                {
+                    <button type="button" class="btn btn-sm" @onclick="AddPlannedWithoutLots">Añadir lo que no lleva lote</button>
+                }
+            </header>
+            @if (scheduled.Lines.Count == 0)
+            {
+                <p class="muted small">La cita no dice qué mercancía llega: escanea lo que descarguéis.</p>
+            }
+            else
+            {
+                <ul class="planned-list">
+                    @foreach (var line in scheduled.Lines)
+                    {
+                        var received = lines.Where(l => l.Product.Id == line.ProductId).Sum(l => l.Quantity);
+                        <li>
+                            <span><strong class="mono">@line.Sku</strong> @line.ProductName</span>
+                            <span class="muted">@Labels.Quantity(received) de @Labels.Quantity(line.Quantity) @line.Unit</span>
+                            @if (received < line.Quantity)
+                            {
+                                <button type="button" class="btn btn-sm" @onclick="() => Plan(line, line.Quantity - received)">Recibir</button>
+                            }
+                            else
+                            {
+                                <Icon Name="check" Class="text-ok" />
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
     }
 
     <div class="card form-card">
@@ -141,12 +183,27 @@ else
     private Exception? error;
     private bool busy;
     private Func<Task>? focusAfterRender;
+    private ScheduledEvent? scheduled;
+
+    /// <summary>The unloading slot of the calendar this receipt closes, if it comes from one.</summary>
+    [SupplyParameterFromQuery(Name = "cita")] private Guid? EventId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             products = await Api.GetProductsAsync();
+            if (EventId is { } eventId)
+            {
+                scheduled = await Api.GetScheduledEventAsync(eventId);
+                if (scheduled.Type != ScheduledEventType.Inbound || scheduled.Status != ScheduledEventStatus.Scheduled)
+                {
+                    error = new ApiException(HttpStatusCode.Conflict, "Esta cita ya no espera ninguna descarga. La entrada se registrará suelta.");
+                    scheduled = null;
+                    EventId = null;
+                }
+            }
+
             focusAfterRender = () => codeInput.FocusAsync().AsTask();
         }
         catch (ApiException ex)
@@ -211,6 +268,28 @@ else
         focusAfterRender = product.TracksLots ? () => lotInput.FocusAsync().AsTask() : () => quantityInput.FocusAsync().AsTask();
     }
 
+    // Picks a planned item with the quantity still expected; the lot, if any, is typed or scanned next.
+    private void Plan(ScheduledEventLine line, decimal quantityLeft)
+    {
+        if (products!.FirstOrDefault(p => p.Id == line.ProductId) is { } product)
+        {
+            Select(product);
+            quantity = quantityLeft.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    private void AddPlannedWithoutLots()
+    {
+        foreach (var line in scheduled!.Lines.Where(l => !l.TracksLots))
+        {
+            var left = line.Quantity - lines.Where(l => l.Product.Id == line.ProductId).Sum(l => l.Quantity);
+            if (left > 0 && products!.FirstOrDefault(p => p.Id == line.ProductId) is { } product)
+            {
+                lines.Add(new Draft(product, null, left));
+            }
+        }
+    }
+
     private void AddLine()
     {
         lineError = null;
@@ -262,12 +341,23 @@ else
         saved = null;
         try
         {
-            saved = await Api.CreateReceiptAsync(new ReceiptInput
+            var input = new ReceiptInput
             {
                 Code = string.IsNullOrWhiteSpace(code) ? null : code,
                 Reference = reference,
                 Lines = [.. lines.Select(l => new ReceiptLineInput { ProductId = l.Product.Id, Lot = l.Lot, Quantity = l.Quantity })],
-            });
+            };
+            if (scheduled is not null)
+            {
+                // Recording it from the calendar also closes the slot, in the same step.
+                var done = await Api.ReceiveScheduledEventAsync(scheduled.Id, input);
+                saved = (await Api.GetReceiptsAsync(pendingOnly: true)).FirstOrDefault(r => r.Code == done.Outcome);
+                scheduled = null;
+            }
+            else
+            {
+                saved = await Api.CreateReceiptAsync(input);
+            }
             lines.Clear();
             code = "";
             reference = null;

@@ -1,0 +1,316 @@
+@page "/calendario/nueva"
+@page "/calendario/{Id:guid}/editar"
+@using System.Globalization
+@attribute [Authorize(Policy = Permissions.CalendarEdit)]
+@inject IOrdaliApi Api
+@inject TimeProvider Time
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Programar" : "Cambiar cita") · Ordali</PageTitle>
+
+<PageHeader Title="@(IsNew ? "Programar" : "Cambiar cita")" />
+
+@if (products is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <form class="card form-card" @onsubmit="SaveAsync">
+        <div class="segmented" role="radiogroup" aria-label="Tipo">
+            @foreach (var type in Types)
+            {
+                <button type="button" role="radio" aria-checked="@(input.Type == type)" class="@(input.Type == type ? "active" : "")"
+                        @onclick="() => SetType(type)">
+                    @Labels.Of(type)
+                </button>
+            }
+        </div>
+
+        <div class="form-grid">
+            <label class="field field-wide">
+                <span>Título</span>
+                <input type="text" @bind="input.Title" placeholder="@TitleHint" maxlength="120" autocomplete="off" />
+                <FieldError Errors="fieldErrors" Name="title" />
+            </label>
+            <label class="field">
+                <span>@PartnerLabel (opcional)</span>
+                <input type="text" @bind="input.Partner" maxlength="120" autocomplete="off" />
+            </label>
+            <label class="field">
+                <span>@(input.Type == ScheduledEventType.Other ? "Lugar" : "Muelle") (opcional)</span>
+                <select @bind="dockId">
+                    <option value="">Sin reservar</option>
+                    @foreach (var dock in Docks)
+                    {
+                        <option value="@dock.Id">@dock.Code · @dock.Zone</option>
+                    }
+                </select>
+                <FieldError Errors="fieldErrors" Name="dockLocationId" />
+            </label>
+            <label class="field">
+                <span>Día</span>
+                <input type="date" @bind="date" @bind:format="yyyy-MM-dd" />
+                <FieldError Errors="fieldErrors" Name="startsAt" />
+            </label>
+            <div class="field-row">
+                <label class="field">
+                    <span>Desde</span>
+                    <input type="time" @bind="startTime" />
+                </label>
+                <label class="field">
+                    <span>Hasta</span>
+                    <input type="time" @bind="endTime" />
+                </label>
+            </div>
+            <FieldError Errors="fieldErrors" Name="endsAt" Class="field-wide" />
+            @if (IsNew)
+            {
+                <label class="field">
+                    <span>Repetir</span>
+                    <select @bind="input.RepeatWeeks">
+                        <option value="0">Solo esta vez</option>
+                        @foreach (var weeks in RepeatOptions)
+                        {
+                            <option value="@weeks">Cada semana, @(weeks + 1) veces</option>
+                        }
+                    </select>
+                </label>
+            }
+            <label class="field field-wide">
+                <span>Notas (opcional)</span>
+                <textarea rows="2" @bind="input.Notes" maxlength="500" placeholder="Matrícula, contacto del chófer, si trae palés de cambio…"></textarea>
+            </label>
+        </div>
+
+        @if (input.Type != ScheduledEventType.Other)
+        {
+            <h2 class="card-title">Mercancía prevista</h2>
+            <p class="muted small">Opcional. Sirve para preparar el muelle y rellena la entrada o la salida cuando llegue el camión.</p>
+            <div class="line-entry">
+                <label class="field">
+                    <span>Artículo</span>
+                    <select @bind="lineProductId">
+                        <option value="">Elige un artículo</option>
+                        @foreach (var product in products)
+                        {
+                            <option value="@product.Id">@product.Sku · @product.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="field field-quantity">
+                    <span>Cantidad</span>
+                    <input type="number" min="0" step="any" inputmode="decimal" @bind="lineQuantity" />
+                </label>
+                <button type="button" class="btn" disabled="@(lineProductId is null || lineQuantity is not > 0)" @onclick="AddLine">
+                    <Icon Name="plus" /><span>Añadir</span>
+                </button>
+            </div>
+            <FieldError Errors="fieldErrors" Name="lines" />
+            @if (input.Lines.Count > 0)
+            {
+                <table class="table table-compact">
+                    <thead><tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var line in input.Lines)
+                        {
+                            var product = products.FirstOrDefault(p => p.Id == line.ProductId);
+                            <tr>
+                                <td data-label="SKU"><strong class="mono">@product?.Sku</strong></td>
+                                <td data-label="Artículo">@product?.Name</td>
+                                <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @product?.Unit</td>
+                                <td class="row-actions">
+                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @product?.Sku"
+                                            @onclick="() => input.Lines.Remove(line)">
+                                        <Icon Name="trash" />
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+
+        @if (overlapWarning is not null)
+        {
+            <div class="alert alert-warning" role="alert">
+                <Icon Name="alert" />
+                <span>@overlapWarning</span>
+            </div>
+        }
+        <ErrorAlert Error="error" />
+
+        <div class="form-actions">
+            <a class="btn" href="@(IsNew ? "calendario" : $"calendario/{Id}")">Cancelar</a>
+            <button type="submit" class="btn btn-primary" disabled="@busy">
+                @(busy ? "Guardando…" : overlapWarning is not null ? "Programar igualmente" : IsNew ? "Programar" : "Guardar cambios")
+            </button>
+        </div>
+    </form>
+}
+
+@code {
+    private static readonly ScheduledEventType[] Types = [ScheduledEventType.Inbound, ScheduledEventType.Outbound, ScheduledEventType.Other];
+    private static readonly int[] RepeatOptions = [1, 3, 7, 11, 25];
+
+    [Parameter] public Guid? Id { get; set; }
+
+    [SupplyParameterFromQuery(Name = "fecha")] private string? Date { get; set; }
+
+    private IReadOnlyList<Product>? products;
+    private IReadOnlyList<Location> locations = [];
+    private ScheduledEventInput input = new();
+    private DateTime date;
+    private TimeOnly startTime = new(8, 0);
+    private TimeOnly endTime = new(9, 0);
+    private string dockId = "";
+    private Guid? lineProductId;
+    private decimal? lineQuantity;
+    private IReadOnlyDictionary<string, string[]> fieldErrors = new Dictionary<string, string[]>();
+    private string? overlapWarning;
+    private Exception? error;
+    private bool busy;
+
+    private bool IsNew => Id is null;
+
+    private IEnumerable<Location> Docks => input.Type switch
+    {
+        ScheduledEventType.Inbound => locations.Where(l => l.Type == LocationType.Receiving),
+        ScheduledEventType.Outbound => locations.Where(l => l.Type == LocationType.Shipping),
+        _ => locations,
+    };
+
+    private string PartnerLabel => input.Type switch
+    {
+        ScheduledEventType.Inbound => "Proveedor",
+        ScheduledEventType.Outbound => "Cliente o transportista",
+        _ => "Con quién",
+    };
+
+    private string TitleHint => input.Type switch
+    {
+        ScheduledEventType.Inbound => "Descarga semanal de aceite",
+        ScheduledEventType.Outbound => "Pedido cliente 10240",
+        _ => "Recuento del pasillo B",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        date = DateTime.TryParseExact(Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day.Date
+            : Time.GetLocalNow().Date;
+        try
+        {
+            products = await Api.GetProductsAsync();
+            locations = await Api.GetLocationsAsync();
+            if (Id is { } id)
+            {
+                var current = await Api.GetScheduledEventAsync(id);
+                input = ScheduledEventInput.From(current);
+                var start = current.StartsAt.ToLocalTime();
+                date = start.Date;
+                startTime = TimeOnly.FromDateTime(start.DateTime);
+                endTime = TimeOnly.FromDateTime(current.EndsAt.ToLocalTime().DateTime);
+                dockId = current.DockLocationId?.ToString() ?? "";
+            }
+            else
+            {
+                dockId = Docks.FirstOrDefault()?.Id.ToString() ?? "";
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private void SetType(ScheduledEventType type)
+    {
+        input.Type = type;
+        overlapWarning = null;
+        // Keep the dock only when it suits the new kind of entry.
+        if (!Docks.Any(d => d.Id.ToString() == dockId))
+        {
+            dockId = type == ScheduledEventType.Other ? "" : Docks.FirstOrDefault()?.Id.ToString() ?? "";
+        }
+    }
+
+    private void AddLine()
+    {
+        if (lineProductId is not { } productId || lineQuantity is not > 0)
+        {
+            return;
+        }
+
+        var same = input.Lines.FirstOrDefault(l => l.ProductId == productId);
+        if (same is not null)
+        {
+            same.Quantity += lineQuantity.Value;
+        }
+        else
+        {
+            input.Lines.Add(new ScheduledEventLineInput { ProductId = productId, Quantity = lineQuantity.Value });
+        }
+
+        lineProductId = null;
+        lineQuantity = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        error = null;
+        fieldErrors = new Dictionary<string, string[]>();
+        var start = date.Add(startTime.ToTimeSpan());
+        // An end earlier than the start means it finishes after midnight.
+        var end = date.Add(endTime.ToTimeSpan());
+        if (end <= start)
+        {
+            end = end.AddDays(1);
+        }
+
+        input.StartsAt = Local(start);
+        input.EndsAt = Local(end);
+        input.DockLocationId = Guid.TryParse(dockId, out var dock) ? dock : null;
+        input.AllowOverlap = overlapWarning is not null;
+        if (input.Type == ScheduledEventType.Other)
+        {
+            input.Lines.Clear();
+        }
+
+        try
+        {
+            if (Id is { } id)
+            {
+                await Api.UpdateScheduledEventAsync(id, input);
+                Navigation.NavigateTo($"calendario/{id}");
+            }
+            else
+            {
+                var created = await Api.CreateScheduledEventAsync(input);
+                Navigation.NavigateTo(created.Count == 1 ? $"calendario/{created[0].Id}" : $"calendario?dia={date:yyyy-MM-dd}");
+            }
+        }
+        catch (ApiException ex) when (ex.Status == HttpStatusCode.Conflict && !input.AllowOverlap)
+        {
+            // The dock is booked: say so and let the user book it anyway with a second click.
+            overlapWarning = ex.Message;
+        }
+        catch (ApiException ex)
+        {
+            fieldErrors = ex.Errors.ToDictionary(e => char.ToLowerInvariant(e.Key[0]) + e.Key[1..], e => e.Value);
+            error = fieldErrors.Count > 0 ? null : ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private DateTimeOffset Local(DateTime value) => new(value, Time.LocalTimeZone.GetUtcOffset(value));
+}

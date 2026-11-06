@@ -73,6 +73,11 @@ Todas las rutas bajo `/api/v1`, JSON en camelCase y enums como texto (`"Transfer
 | GET | `/receipts?pending=&code=`, `/receipts/{id}` | `movements.view` |
 | POST | `/receipts` (`{ code, reference, lines: [{ productId, lot, quantity }] }`) | `movements.create` |
 | POST | `/receipts/{id}/putaway` (`{ productId, lot, toLocationId, quantity }`) | `movements.create` |
+| GET | `/calendar?from=&to=` (como mucho 100 días), `/calendar/{id}` | `calendar.view` |
+| POST / PUT | `/calendar`, `/calendar/{id}` (`{ type, title, partner, startsAt, endsAt, dockLocationId, notes, lines: [{ productId, quantity }], repeatWeeks, allowOverlap }`; 409 si el muelle está reservado) | `calendar.edit` |
+| POST | `/calendar/{id}/cancel`, `/calendar/{id}/complete` (solo tipo `Other`) | `calendar.edit` |
+| POST | `/calendar/{id}/receive` (mismo cuerpo que `/receipts`) | `movements.create` |
+| POST | `/calendar/{id}/ship` (`{ reference, lines: [{ productId, fromLocationId, lot, quantity }] }`) | `movements.create` |
 | GET | `/profile-templates`, `/profile-templates/{id}` | `users.view` o `users.create` |
 | POST / PUT / DELETE | `/profile-templates`, `/profile-templates/{id}` | Administrador |
 | GET | `/users`, `/users/{id}` | `users.view` |

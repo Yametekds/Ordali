@@ -38,7 +38,7 @@ public static class DemoSeed
             Name = "Mozo de almacén",
             Description = "Consulta el inventario y registra entradas, salidas y traslados.",
             Category = UserCategory.Operator,
-            Permissions = Permissions.Normalize([Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.MovementsCreate]),
+            Permissions = Permissions.Normalize([Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.MovementsCreate, Permissions.CalendarView]),
         };
         var supervisorTemplate = new ProfileTemplate
         {
@@ -54,7 +54,7 @@ public static class DemoSeed
             Name = "Solo consulta",
             Description = "Ve el inventario sin poder cambiar nada.",
             Category = UserCategory.Operator,
-            Permissions = Permissions.Normalize([Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView]),
+            Permissions = Permissions.Normalize([Permissions.ProductsView, Permissions.LocationsView, Permissions.StockView, Permissions.MovementsView, Permissions.CalendarView]),
         };
         db.ProfileTemplates.AddRange(operatorTemplate, supervisorTemplate, readOnlyTemplate);
 
@@ -126,7 +126,50 @@ public static class DemoSeed
             },
             supervisor.Id, supervisor.Name, cancellationToken, now.AddHours(-3));
         await movements.RecordAsync(Move(MovementType.Adjustment, 4, null, 8, null, -2, "Recuento: rollos dañados"), admin.Id, admin.Name, cancellationToken, now.AddHours(-2));
+
+        // A week of dock appointments around today, including the unloading ENTRADA2 came from.
+        var today = new DateTimeOffset(now.UtcDateTime.Date, TimeSpan.Zero);
+        // On the hour, so the slot ENTRADA2 came from reads like a real booking.
+        var hour = today.AddHours(now.UtcDateTime.Hour);
+        var weekly = Guid.Parse("6d3e0f50-0000-4000-8000-000000000001");
+        db.ScheduledEvents.AddRange(
+            Slot(1, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte", hour.AddHours(-3), hour.AddHours(-2), 1, supervisor.Name, [(3, 20), (6, 10), (5, 10)],
+                completed: (supervisor.Name, now.AddHours(-3), "ENTRADA2"), series: weekly),
+            Slot(2, ScheduledEventType.Outbound, "Pedido cliente 10240", "Hostelería Centro", today.AddHours(15), today.AddHours(16), 2, supervisor.Name, [(2, 20), (4, 6)]),
+            Slot(3, ScheduledEventType.Inbound, "Aceite campaña nueva", "Almazara del Sur", today.AddDays(1).AddHours(7), today.AddDays(1).AddHours(8), 1, supervisor.Name, [(1, 96)]),
+            Slot(4, ScheduledEventType.Outbound, "Ruta Getafe-Leganés", "Transportes Ruiz", today.AddDays(2).AddHours(12), today.AddDays(2).AddHours(13), 2, supervisor.Name, [(3, 10), (6, 4)]),
+            Slot(5, ScheduledEventType.Other, "Recuento del pasillo A", null, today.AddDays(3).AddHours(6), today.AddDays(3).AddHours(9), null, admin.Name, []));
+        for (var week = 1; week <= 3; week++)
+        {
+            db.ScheduledEvents.Add(Slot(10 + week, ScheduledEventType.Inbound, "Descarga semanal", "Suministros Norte",
+                hour.AddHours(-3).AddDays(7 * week), hour.AddHours(-2).AddDays(7 * week), 1, supervisor.Name, [(3, 20), (6, 10)], series: weekly));
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
+
+    public static Guid EventId(int n) => Guid.Parse($"6d3e0f50-0000-4000-8000-1000000000{n:D2}");
+
+    private static ScheduledEvent Slot(
+        int n, ScheduledEventType type, string title, string? partner, DateTimeOffset starts, DateTimeOffset ends, int? dock, string createdBy,
+        (int Product, decimal Quantity)[] lines, (string By, DateTimeOffset At, string Outcome)? completed = null, Guid? series = null) => new()
+    {
+        Id = EventId(n),
+        Type = type,
+        Title = title,
+        Partner = partner,
+        StartsAt = starts,
+        EndsAt = ends,
+        DockLocationId = dock is { } d ? LocationId(d) : null,
+        SeriesId = series,
+        Status = completed is null ? ScheduledEventStatus.Scheduled : ScheduledEventStatus.Completed,
+        CreatedByName = createdBy,
+        CreatedAt = starts.AddDays(-5),
+        CompletedByName = completed?.By,
+        CompletedAt = completed?.At,
+        Outcome = completed?.Outcome,
+        Lines = [.. lines.Select(l => new ScheduledEventLine { Id = Guid.NewGuid(), ProductId = ProductId(l.Product), Quantity = l.Quantity })],
+    };
 
     public static Guid LocationId(int n) => Guid.Parse($"4b8e7a10-0000-4000-8000-1000000000{n:D2}");
 

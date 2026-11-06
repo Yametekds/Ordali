@@ -20,6 +20,8 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
 
     public DbSet<Receipt> Receipts => Set<Receipt>();
 
+    public DbSet<ScheduledEvent> ScheduledEvents => Set<ScheduledEvent>();
+
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         foreach (var entry in ChangeTracker.Entries<StockMovement>())
@@ -151,6 +153,30 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             line.Property(l => l.Quantity).HasPrecision(18, 3);
             line.Property(l => l.PutAwayQuantity).HasPrecision(18, 3);
             line.Property(l => l.Version).IsConcurrencyToken();
+            line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ScheduledEvent>(scheduled =>
+        {
+            scheduled.ToTable("ScheduledEvents", "planning");
+            scheduled.Property(e => e.Type).HasConversion<string>().HasMaxLength(16);
+            scheduled.Property(e => e.Status).HasConversion<string>().HasMaxLength(16);
+            scheduled.Property(e => e.Title).HasMaxLength(120);
+            scheduled.Property(e => e.Partner).HasMaxLength(120);
+            scheduled.Property(e => e.Notes).HasMaxLength(500);
+            scheduled.Property(e => e.CreatedByName).HasMaxLength(120);
+            scheduled.Property(e => e.CompletedByName).HasMaxLength(120);
+            scheduled.Property(e => e.Outcome).HasMaxLength(40);
+            scheduled.HasIndex(e => new { e.StartsAt, e.EndsAt });
+            scheduled.HasIndex(e => e.SeriesId);
+            scheduled.HasOne<Location>().WithMany().HasForeignKey(e => e.DockLocationId).OnDelete(DeleteBehavior.Restrict);
+            scheduled.HasMany(e => e.Lines).WithOne().HasForeignKey(l => l.EventId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScheduledEventLine>(line =>
+        {
+            line.ToTable("ScheduledEventLines", "planning");
+            line.Property(l => l.Quantity).HasPrecision(18, 3);
             line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
     }

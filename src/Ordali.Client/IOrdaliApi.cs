@@ -45,6 +45,27 @@ public interface IOrdaliApi
     /// <summary>Transfers units of one receipt line from the dock to their location.</summary>
     Task<Receipt> PutAwayAsync(Guid receiptId, PutAwayInput input, CancellationToken cancellationToken = default);
 
+    /// <summary>Calendar entries that overlap [start, until), earliest first. At most 100 days.</summary>
+    Task<IReadOnlyList<ScheduledEvent>> GetCalendarAsync(DateTimeOffset start, DateTimeOffset until, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> GetScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns every entry created: one, or one per week when it repeats.</summary>
+    Task<IReadOnlyList<ScheduledEvent>> CreateScheduledEventAsync(ScheduledEventInput input, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> UpdateScheduledEventAsync(Guid id, ScheduledEventInput input, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> CancelScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks done an entry that doesn't move stock.</summary>
+    Task<ScheduledEvent> CompleteScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the receipt of an unloading slot and closes it.</summary>
+    Task<ScheduledEvent> ReceiveScheduledEventAsync(Guid id, ReceiptInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Ships the goods of a loading slot and closes it.</summary>
+    Task<ScheduledEvent> ShipScheduledEventAsync(Guid id, ShipEventInput input, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
     Task<ProfileTemplate> GetTemplateAsync(Guid id, CancellationToken cancellationToken = default);

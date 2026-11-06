@@ -234,3 +234,89 @@ public sealed class MovementInput
     [StringLength(200, ErrorMessage = "El motivo no puede pasar de 200 caracteres.")]
     public string? Reason { get; set; }
 }
+
+public sealed record ScheduledEventLineDto(Guid ProductId, string Sku, string ProductName, string Unit, bool TracksLots, decimal Quantity);
+
+public sealed record ScheduledEventDto(
+    Guid Id,
+    ScheduledEventType Type,
+    ScheduledEventStatus Status,
+    string Title,
+    string? Partner,
+    DateTimeOffset StartsAt,
+    DateTimeOffset EndsAt,
+    Guid? DockLocationId,
+    string? DockLocationCode,
+    string? Notes,
+    Guid? SeriesId,
+    string CreatedByName,
+    DateTimeOffset CreatedAt,
+    string? CompletedByName,
+    DateTimeOffset? CompletedAt,
+    string? Outcome,
+    IReadOnlyList<ScheduledEventLineDto> Lines);
+
+public sealed class ScheduledEventInput
+{
+    public ScheduledEventType Type { get; set; } = ScheduledEventType.Inbound;
+
+    [Required(ErrorMessage = "Escribe un título.")]
+    [StringLength(120, ErrorMessage = "El título no puede pasar de 120 caracteres.")]
+    public string Title { get; set; } = "";
+
+    [StringLength(120, ErrorMessage = "El proveedor o cliente no puede pasar de 120 caracteres.")]
+    public string? Partner { get; set; }
+
+    public DateTimeOffset StartsAt { get; set; }
+
+    public DateTimeOffset EndsAt { get; set; }
+
+    public Guid? DockLocationId { get; set; }
+
+    [StringLength(500, ErrorMessage = "Las notas no pueden pasar de 500 caracteres.")]
+    public string? Notes { get; set; }
+
+    /// <summary>Goods expected. Only loading and unloading slots keep them.</summary>
+    public List<ScheduledEventLineInput> Lines { get; set; } = [];
+
+    /// <summary>On creation, how many more weeks to repeat it on the same weekday and time.</summary>
+    [Range(0, 26, ErrorMessage = "Se puede repetir como mucho 26 semanas.")]
+    public int RepeatWeeks { get; set; }
+
+    /// <summary>
+    /// A dock already booked at that time is answered with 409 and a warning; sending true
+    /// books it anyway.
+    /// </summary>
+    public bool AllowOverlap { get; set; }
+}
+
+public sealed class ScheduledEventLineInput
+{
+    public Guid? ProductId { get; set; }
+
+    [Range(0, 1_000_000, ErrorMessage = "La cantidad está fuera de rango.")]
+    public decimal Quantity { get; set; }
+}
+
+/// <summary>Loads an outbound slot: each line leaves the warehouse as a shipment.</summary>
+public sealed class ShipEventInput
+{
+    /// <summary>Order or delivery note the shipments are logged under. Left empty, the title is used.</summary>
+    [StringLength(40, ErrorMessage = "La referencia no puede pasar de 40 caracteres.")]
+    public string? Reference { get; set; }
+
+    public List<ShipLineInput> Lines { get; set; } = [];
+}
+
+public sealed class ShipLineInput
+{
+    public Guid? ProductId { get; set; }
+
+    public Guid? FromLocationId { get; set; }
+
+    [StringLength(40, ErrorMessage = "El lote no puede pasar de 40 caracteres.")]
+    public string? Lot { get; set; }
+
+    [Range(0, 1_000_000, ErrorMessage = "La cantidad está fuera de rango.")]
+    public decimal Quantity { get; set; }
+}
