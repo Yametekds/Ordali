@@ -203,3 +203,77 @@ public sealed class ReceiptLine
     /// <summary>Same idea as <see cref="StockLine.Version"/>: two people can't put away the same units.</summary>
     public Guid Version { get; set; }
 }
+
+public enum ScheduledEventType
+{
+    /// <summary>A truck that comes to unload: becomes a receipt when it arrives.</summary>
+    Inbound,
+
+    /// <summary>A truck that comes to load: the goods leave as shipments.</summary>
+    Outbound,
+
+    /// <summary>Anything else worth having on the calendar, such as a stock count or a visit.</summary>
+    Other,
+}
+
+public enum ScheduledEventStatus
+{
+    Scheduled,
+    Completed,
+    Cancelled,
+}
+
+/// <summary>
+/// An entry of the warehouse calendar. Loading and unloading slots carry the goods expected, so
+/// the dock knows what is coming and the receipt or the shipments can be filled in from them.
+/// </summary>
+public sealed class ScheduledEvent
+{
+    public Guid Id { get; set; }
+
+    public ScheduledEventType Type { get; set; }
+
+    public required string Title { get; set; }
+
+    /// <summary>Supplier, customer or carrier.</summary>
+    public string? Partner { get; set; }
+
+    public DateTimeOffset StartsAt { get; set; }
+
+    public DateTimeOffset EndsAt { get; set; }
+
+    /// <summary>The dock booked for the slot, if any.</summary>
+    public Guid? DockLocationId { get; set; }
+
+    public string? Notes { get; set; }
+
+    public ScheduledEventStatus Status { get; set; }
+
+    /// <summary>Events created together as a weekly series share it.</summary>
+    public Guid? SeriesId { get; set; }
+
+    public required string CreatedByName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public string? CompletedByName { get; set; }
+
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>What closed it: the receipt code, or the reference of the shipments.</summary>
+    public string? Outcome { get; set; }
+
+    public List<ScheduledEventLine> Lines { get; set; } = [];
+}
+
+/// <summary>Goods expected on a loading or unloading slot.</summary>
+public sealed class ScheduledEventLine
+{
+    public Guid Id { get; set; }
+
+    public Guid EventId { get; set; }
+
+    public Guid ProductId { get; set; }
+
+    public decimal Quantity { get; set; }
+}
