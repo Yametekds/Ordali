@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Ordali.Client.Auth;
 using Ordali.Client.Http;
 using Ordali.Client.Models;
@@ -19,7 +20,16 @@ public sealed class OrdaliApiFactory : WebApplicationFactory<Program>
     public const string Password = "Demo1234!";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-        builder.UseSetting("Database:InMemoryName", Guid.NewGuid().ToString());
+        builder
+            .UseSetting("Database:InMemoryName", Guid.NewGuid().ToString())
+            // The suite signs in far more often than the per-IP limit allows; LoginProtectionTests checks the limit.
+            .ConfigureAppConfiguration(config => config.AddInMemoryCollection(new Dictionary<string, string?> { ["Login:PermitPerMinute"] = "10000" }));
+
+    /// <summary>The same API with extra settings, for tests about configuration.</summary>
+    public WebApplicationFactory<Program> With(string environment, params (string Key, string? Value)[] settings) =>
+        WithWebHostBuilder(builder => builder
+            .UseEnvironment(environment)
+            .ConfigureAppConfiguration(config => config.AddInMemoryCollection(settings.ToDictionary(s => s.Key, s => s.Value))));
 
     /// <summary>The same HTTP client the web and mobile apps use, so these tests also check the contract.</summary>
     public HttpOrdaliApi CreateApi(out SessionState session)

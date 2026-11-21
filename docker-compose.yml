@@ -19,8 +19,10 @@ services:
       dockerfile: src/Ordali.Api/Dockerfile
     environment:
       ConnectionStrings__Ordali: "Server=sqlserver;Database=Ordali;User Id=sa;Password=${SA_PASSWORD:-Demo_Passw0rd!};TrustServerCertificate=True"
-      # Demo key: set JWT_SIGNING_KEY to your own value outside the demo.
-      Jwt__SigningKey: ${JWT_SIGNING_KEY:-demo-signing-key-change-me-0123456789abcdef}
+      # Without JWT_SIGNING_KEY the API generates a random key on each start (sessions end on restart).
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-}
+      # Demo profiles with the published password Demo1234!. Set SEED_DEMO_DATA=false outside the demo.
+      Database__SeedDemoData: ${SEED_DEMO_DATA:-true}
       Swagger__Enabled: "true"
       Cors__AllowedOrigins__0: "${WEB_ORIGIN:-http://localhost:8081}"
     ports:

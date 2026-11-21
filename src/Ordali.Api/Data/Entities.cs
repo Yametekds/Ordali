@@ -25,6 +25,12 @@ public sealed class User
 
     public bool Active { get; set; } = true;
 
+    /// <summary>Wrong passwords in a row since the last successful sign-in or lockout.</summary>
+    public int FailedLoginCount { get; set; }
+
+    /// <summary>Until when sign-in is blocked after too many wrong passwords.</summary>
+    public DateTimeOffset? LockoutEnd { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public Guid? CreatedById { get; set; }

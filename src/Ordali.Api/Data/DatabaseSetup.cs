@@ -28,7 +28,9 @@ public static partial class DatabaseSetup
 
     /// <summary>
     /// Applies pending migrations and the demo data when enabled. In production you can turn
-    /// it off and run the migrations as a separate deployment step instead.
+    /// the migrations off and run them as a separate deployment step instead. The demo data is
+    /// off unless Database:SeedDemoData is true (Development and Docker Compose turn it on),
+    /// because its profiles share a published password.
     /// </summary>
     public static async Task InitializeDatabaseAsync(this WebApplication app)
     {
@@ -48,7 +50,7 @@ public static partial class DatabaseSetup
             await db.Database.EnsureCreatedAsync();
         }
 
-        if (app.Configuration.GetValue("Database:SeedDemoData", true))
+        if (app.Configuration.GetValue("Database:SeedDemoData", false))
         {
             await DemoSeed.SeedAsync(scope.ServiceProvider);
         }

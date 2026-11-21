@@ -63,6 +63,8 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             user.Property(u => u.Category).HasConversion<string>().HasMaxLength(16);
             user.HasOne<ProfileTemplate>().WithMany().HasForeignKey(u => u.TemplateId).OnDelete(DeleteBehavior.SetNull);
             user.HasIndex(u => u.Category);
+            // Parallel wrong passwords must not overwrite each other's count (see IdentityModule).
+            user.Property(u => u.FailedLoginCount).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<ProfileTemplate>(template =>

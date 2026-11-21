@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var connectionString = builder.Configuration.GetConnectionString("Ordali");
 builder.Services.AddOrdaliDatabase(builder.Configuration);
-builder.Services.AddIdentityModule(builder.Configuration);
+builder.Services.AddIdentityModule(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<MovementService>();
 builder.Services.AddScoped<ReceiptService>();
 builder.Services.AddScoped<CalendarService>();
@@ -64,6 +64,7 @@ if (app.Configuration.GetValue("Swagger:Enabled", app.Environment.IsDevelopment(
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Liveness only says the process is up; readiness also checks the database.
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
@@ -78,6 +79,7 @@ v1.MapInventoryEndpoints();
 v1.MapReceiptEndpoints();
 v1.MapCalendarEndpoints();
 
+app.WarnIfSigningKeyGenerated();
 await app.InitializeDatabaseAsync();
 await app.RunAsync();
 

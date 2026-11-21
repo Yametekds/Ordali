@@ -46,6 +46,14 @@ ConnectionStrings__Ordali="Server=localhost;Database=Ordali;User Id=sa;Password=
 
 Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producción se puede desactivar y aplicarlas como un paso aparte con `dotnet ef database update`.
 
+### Configuración fuera de la demo
+
+| Variable | Qué hace |
+| --- | --- |
+| `Jwt__SigningKey` (`JWT_SIGNING_KEY` en Docker Compose) | Clave para firmar los tokens, de 32 caracteres o más. Si no se define, la API genera una aleatoria en cada arranque y las sesiones caducan al reiniciar. Fuera de `Development` la API no arranca con las claves de ejemplo que hay en el repositorio. |
+| `Database__SeedDemoData` (`SEED_DEMO_DATA`) | Crea los datos y perfiles de demo, con la contraseña pública `Demo1234!`. Solo está activo en `Development` y en Docker Compose; en un despliegue real va a `false`. |
+| `Login__PermitPerMinute`, `Login__MaxFailedAttempts`, `Login__LockoutMinutes` | Intentos de inicio de sesión por IP y minuto (10), contraseñas erróneas seguidas antes de bloquear el perfil (5) y minutos de bloqueo (15). Un administrador desbloquea el perfil al guardarlo. |
+
 ## Endpoints disponibles
 
 | Ruta | Para qué sirve |

@@ -203,10 +203,25 @@ public static class UsersModule
                 detail: "No puedes quitarte a ti mismo la categoría de administrador ni desactivar tu perfil.");
         }
 
-        user.Category = input.Category;
-        user.Permissions = Permissions.Normalize(input.Permissions);
-        user.Active = input.Active;
-        await db.SaveChangesAsync(cancellationToken);
+        for (var attempt = 0; ; attempt++)
+        {
+            user.Category = input.Category;
+            user.Permissions = Permissions.Normalize(input.Permissions);
+            user.Active = input.Active;
+            // Saving the profile also lifts a lockout from too many wrong passwords.
+            user.FailedLoginCount = 0;
+            user.LockoutEnd = null;
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 3)
+            {
+                // A wrong password was counted meanwhile (the count is a concurrency token).
+                await db.Entry(user).ReloadAsync(cancellationToken);
+            }
+        }
         return Results.Ok(ToDto(user, await TemplateNamesAsync(db, cancellationToken)));
     }
 
