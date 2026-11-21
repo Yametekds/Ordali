@@ -55,37 +55,19 @@ public static class ReceiptsModule
             : Results.Ok((await ToDtosAsync(db, [receipt], cancellationToken))[0]);
     }
 
-    private static Task<IResult> CreateAsync(
-        ReceiptInput input, ClaimsPrincipal user, ReceiptService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () =>
-        {
-            var receipt = await service.CreateAsync(input, user.UserId(), user.Identity!.Name!, cancellationToken);
-            var dto = (await ToDtosAsync(db, [receipt], cancellationToken))[0];
-            return Results.CreatedAtRoute("GetReceipt", new { id = receipt.Id }, dto);
-        });
-
-    private static Task<IResult> PutAwayAsync(
-        Guid id, PutAwayInput input, ClaimsPrincipal user, ReceiptService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () =>
-        {
-            var receipt = await service.PutAwayAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken);
-            return Results.Ok((await ToDtosAsync(db, [receipt], cancellationToken))[0]);
-        });
-
-    private static async Task<IResult> HandleAsync(Func<Task<IResult>> action)
+    private static async Task<IResult> CreateAsync(
+        ReceiptInput input, ClaimsPrincipal user, ReceiptService service, OrdaliDbContext db, CancellationToken cancellationToken)
     {
-        try
-        {
-            return await action();
-        }
-        catch (MovementRejectedException ex) when (ex.Errors is not null)
-        {
-            return Results.ValidationProblem(ex.Errors, detail: ex.Message, title: "Revisa los datos enviados.");
-        }
-        catch (MovementRejectedException ex)
-        {
-            return Results.Problem(statusCode: ex.Status, detail: ex.Message);
-        }
+        var receipt = await service.CreateAsync(input, user.UserId(), user.Identity!.Name!, cancellationToken);
+        var dto = (await ToDtosAsync(db, [receipt], cancellationToken))[0];
+        return Results.CreatedAtRoute("GetReceipt", new { id = receipt.Id }, dto);
+    }
+
+    private static async Task<IResult> PutAwayAsync(
+        Guid id, PutAwayInput input, ClaimsPrincipal user, ReceiptService service, OrdaliDbContext db, CancellationToken cancellationToken)
+    {
+        var receipt = await service.PutAwayAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken);
+        return Results.Ok((await ToDtosAsync(db, [receipt], cancellationToken))[0]);
     }
 
     private static async Task<List<ReceiptDto>> ToDtosAsync(OrdaliDbContext db, IReadOnlyList<Receipt> receipts, CancellationToken cancellationToken)

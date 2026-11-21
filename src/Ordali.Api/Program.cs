@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
 using Ordali.Api.Calendar;
 using Ordali.Api.Catalog;
+using Ordali.Api.Common;
 using Ordali.Api.Data;
 using Ordali.Api.Identity;
 using Ordali.Api.Inventory;
@@ -11,6 +12,8 @@ using Ordali.Api.Locations;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
+// Business rules and write conflicts become 4xx ProblemDetails; anything else stays a logged 500.
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSingleton(TimeProvider.System);
 

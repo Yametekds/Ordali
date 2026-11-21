@@ -26,7 +26,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
             .Where(l => l.Type == LocationType.Receiving)
             .OrderBy(l => l.Code)
             .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new MovementRejectedException(
+            ?? throw new RequestRejectedException(
                 StatusCodes.Status409Conflict, "No hay ninguna ubicación de recepción donde dejar la mercancía. Crea una de tipo Recepción.");
 
         var now = at ?? time.GetUtcNow();
@@ -65,7 +65,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
     public async Task<Receipt> PutAwayAsync(Guid receiptId, PutAwayInput input, Guid userId, string userName, CancellationToken cancellationToken, DateTimeOffset? at = null)
     {
         var receipt = await db.Receipts.Include(r => r.Lines).FirstOrDefaultAsync(r => r.Id == receiptId, cancellationToken)
-            ?? throw new MovementRejectedException(StatusCodes.Status404NotFound, "La entrada no existe.");
+            ?? throw new RequestRejectedException(StatusCodes.Status404NotFound, "La entrada no existe.");
 
         var errors = new Dictionary<string, string[]>();
         if (input.ProductId is null)
@@ -89,7 +89,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
 
         if (errors.Count > 0)
         {
-            throw new MovementRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos del traslado.", errors);
+            throw new RequestRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos del traslado.", errors);
         }
 
         var lot = string.IsNullOrWhiteSpace(input.Lot) ? null : input.Lot.Trim();
@@ -108,7 +108,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
         var pending = line.Quantity - line.PutAwayQuantity;
         if (pending <= 0)
         {
-            throw new MovementRejectedException(StatusCodes.Status409Conflict, "Este artículo ya está ubicado del todo.");
+            throw new RequestRejectedException(StatusCodes.Status409Conflict, "Este artículo ya está ubicado del todo.");
         }
 
         if (input.Quantity > pending)
@@ -187,7 +187,7 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
 
         if (errors.Count > 0)
         {
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status400BadRequest, "Revisa las líneas de la entrada.", new Dictionary<string, string[]> { ["lines"] = [.. errors] });
         }
 
@@ -207,6 +207,6 @@ public sealed class ReceiptService(OrdaliDbContext db, MovementService movements
         }
     }
 
-    private static MovementRejectedException Invalid(string field, string message) =>
+    private static RequestRejectedException Invalid(string field, string message) =>
         new(StatusCodes.Status400BadRequest, message, new Dictionary<string, string[]> { [field] = [message] });
 }

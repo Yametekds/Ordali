@@ -65,20 +65,9 @@ public static class InventoryModule
             return Results.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "No tienes permiso para registrar ajustes.");
         }
 
-        try
-        {
-            var movement = await service.RecordAsync(input, user.UserId(), user.Identity!.Name!, cancellationToken);
-            var dto = await Project(db, db.StockMovements.Where(m => m.Id == movement.Id)).FirstAsync(cancellationToken);
-            return Results.Created($"/api/v1/movements/{dto.Id}", dto);
-        }
-        catch (MovementRejectedException ex) when (ex.Errors is not null)
-        {
-            return Results.ValidationProblem(ex.Errors, detail: ex.Message, title: "Revisa los datos enviados.");
-        }
-        catch (MovementRejectedException ex)
-        {
-            return Results.Problem(statusCode: ex.Status, detail: ex.Message);
-        }
+        var movement = await service.RecordAsync(input, user.UserId(), user.Identity!.Name!, cancellationToken);
+        var dto = await Project(db, db.StockMovements.Where(m => m.Id == movement.Id)).FirstAsync(cancellationToken);
+        return Results.Created($"/api/v1/movements/{dto.Id}", dto);
     }
 
     private static IQueryable<MovementDto> Project(OrdaliDbContext db, IQueryable<StockMovement> movements) =>

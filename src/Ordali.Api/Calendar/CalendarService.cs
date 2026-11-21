@@ -80,7 +80,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
         var scheduled = await FindOpenAsync(id, cancellationToken);
         if (scheduled.Type != ScheduledEventType.Other)
         {
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status409Conflict,
                 scheduled.Type == ScheduledEventType.Inbound
                     ? "Una descarga se cierra registrando su entrada."
@@ -99,7 +99,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
         var scheduled = await FindOpenAsync(id, cancellationToken);
         if (scheduled.Type != ScheduledEventType.Inbound)
         {
-            throw new MovementRejectedException(StatusCodes.Status409Conflict, "Solo se registra una entrada desde una descarga.");
+            throw new RequestRejectedException(StatusCodes.Status409Conflict, "Solo se registra una entrada desde una descarga.");
         }
 
         if (string.IsNullOrWhiteSpace(input.Reference))
@@ -122,7 +122,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
         var scheduled = await FindOpenAsync(id, cancellationToken);
         if (scheduled.Type != ScheduledEventType.Outbound)
         {
-            throw new MovementRejectedException(StatusCodes.Status409Conflict, "Solo se registra una salida desde una carga.");
+            throw new RequestRejectedException(StatusCodes.Status409Conflict, "Solo se registra una salida desde una carga.");
         }
 
         var lines = input.Lines.Where(l => l.Quantity != 0 || l.ProductId is not null).ToList();
@@ -153,7 +153,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
 
         if (errors.Count > 0)
         {
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status400BadRequest, "Revisa las líneas de la carga.", new Dictionary<string, string[]> { ["lines"] = [.. errors] });
         }
 
@@ -264,7 +264,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
 
         if (errors.Count > 0)
         {
-            throw new MovementRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos de la cita.", errors);
+            throw new RequestRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos de la cita.", errors);
         }
 
         return lines;
@@ -300,7 +300,7 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
         if (clash is not null)
         {
             var dock = await db.Locations.AsNoTracking().Where(l => l.Id == dockId).Select(l => l.Code).FirstAsync(cancellationToken);
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status409Conflict,
                 $"{dock} ya está reservado a esa hora para «{clash.Title}». Puedes programarlo igualmente.");
         }
@@ -309,10 +309,10 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
     private async Task<ScheduledEvent> FindOpenAsync(Guid id, CancellationToken cancellationToken)
     {
         var scheduled = await db.ScheduledEvents.Include(e => e.Lines).FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
-            ?? throw new MovementRejectedException(StatusCodes.Status404NotFound, "La cita no existe.");
+            ?? throw new RequestRejectedException(StatusCodes.Status404NotFound, "La cita no existe.");
         return scheduled.Status == ScheduledEventStatus.Scheduled
             ? scheduled
-            : throw new MovementRejectedException(
+            : throw new RequestRejectedException(
                 StatusCodes.Status409Conflict,
                 scheduled.Status == ScheduledEventStatus.Completed ? "Esta cita ya está hecha." : "Esta cita está anulada.");
     }
@@ -327,6 +327,6 @@ public sealed class CalendarService(OrdaliDbContext db, MovementService movement
 
     private static string Truncate(string text, int length) => text.Length <= length ? text : text[..length].TrimEnd();
 
-    private static MovementRejectedException Invalid(string field, string message) =>
+    private static RequestRejectedException Invalid(string field, string message) =>
         new(StatusCodes.Status400BadRequest, message, new Dictionary<string, string[]> { [field] = [message] });
 }

@@ -4,15 +4,6 @@ using Ordali.Api.Data;
 
 namespace Ordali.Api.Inventory;
 
-/// <summary>A movement that can't be applied, with the HTTP status and the message for the user.</summary>
-public sealed class MovementRejectedException(int status, string message, IDictionary<string, string[]>? errors = null)
-    : Exception(message)
-{
-    public int Status { get; } = status;
-
-    public IDictionary<string, string[]>? Errors { get; } = errors;
-}
-
 /// <summary>Applies a movement to the stock and writes it to the log in the same save.</summary>
 public sealed class MovementService(OrdaliDbContext db, TimeProvider time)
 {
@@ -33,16 +24,16 @@ public sealed class MovementService(OrdaliDbContext db, TimeProvider time)
         var errors = MovementRules.Validate(input);
         if (errors.Count > 0)
         {
-            throw new MovementRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos del movimiento.", errors);
+            throw new RequestRejectedException(StatusCodes.Status400BadRequest, "Revisa los datos del movimiento.", errors);
         }
 
         var product = await db.Products.FirstOrDefaultAsync(p => p.Id == input.ProductId, cancellationToken)
-            ?? throw new MovementRejectedException(StatusCodes.Status404NotFound, "El artículo no existe.");
+            ?? throw new RequestRejectedException(StatusCodes.Status404NotFound, "El artículo no existe.");
 
         var lot = string.IsNullOrWhiteSpace(input.Lot) ? null : input.Lot.Trim();
         if (product.TracksLots && lot is null)
         {
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status400BadRequest,
                 "Este artículo se controla por lotes: indica el lote.",
                 new Dictionary<string, string[]> { ["lot"] = ["Este artículo se controla por lotes: indica el lote."] });
@@ -72,14 +63,14 @@ public sealed class MovementService(OrdaliDbContext db, TimeProvider time)
                 var line = await LineAsync(product.Id, to!.Id, lot, cancellationToken);
                 if (line.Quantity + input.Quantity < 0)
                 {
-                    throw new MovementRejectedException(
+                    throw new RequestRejectedException(
                         StatusCodes.Status409Conflict, $"El ajuste dejaría el stock en negativo (hay {line.Quantity:0.##}).");
                 }
 
                 line.Quantity += input.Quantity;
                 break;
             default:
-                throw new MovementRejectedException(StatusCodes.Status400BadRequest, "Tipo de movimiento desconocido.");
+                throw new RequestRejectedException(StatusCodes.Status400BadRequest, "Tipo de movimiento desconocido.");
         }
 
         var movement = new StockMovement
@@ -107,19 +98,20 @@ public sealed class MovementService(OrdaliDbContext db, TimeProvider time)
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException ex) when (DatabaseErrors.IsWriteConflict(ex))
         {
             // Someone else changed the same stock line between our read and our write
-            // (stale Version, or both created the same line).
+            // (stale Version, or both created the same line). Other database errors are bugs
+            // and go up to the default handler as a 500.
             db.ChangeTracker.Clear();
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status409Conflict, "El stock ha cambiado mientras se guardaba el movimiento. Vuelve a intentarlo.");
         }
     }
 
     private async Task<Location> FindLocationAsync(Guid id, CancellationToken cancellationToken) =>
         await db.Locations.FirstOrDefaultAsync(l => l.Id == id, cancellationToken)
-        ?? throw new MovementRejectedException(StatusCodes.Status404NotFound, "La ubicación no existe.");
+        ?? throw new RequestRejectedException(StatusCodes.Status404NotFound, "La ubicación no existe.");
 
     private async Task TakeAsync(Product product, Location from, string? lot, decimal quantity, CancellationToken cancellationToken)
     {
@@ -127,7 +119,7 @@ public sealed class MovementService(OrdaliDbContext db, TimeProvider time)
         var available = line?.Quantity ?? 0;
         if (available < quantity)
         {
-            throw new MovementRejectedException(
+            throw new RequestRejectedException(
                 StatusCodes.Status409Conflict,
                 $"No hay stock suficiente de {product.Sku} en {from.Code}: hay {available:0.##} y se piden {quantity:0.##}.");
         }

@@ -76,54 +76,35 @@ public static class CalendarModule
             : Results.Ok((await ToDtosAsync(db, [scheduled], cancellationToken))[0]);
     }
 
-    private static Task<IResult> CreateAsync(
-        ScheduledEventInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () =>
-        {
-            var created = await service.CreateAsync(input, user.Identity!.Name!, cancellationToken);
-            return Results.CreatedAtRoute("GetScheduledEvent", new { id = created[0].Id }, await ToDtosAsync(db, created, cancellationToken));
-        });
-
-    private static Task<IResult> UpdateAsync(
-        Guid id, ScheduledEventInput input, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () => Results.Ok(await OneAsync(db, await service.UpdateAsync(id, input, cancellationToken), cancellationToken)));
-
-    private static Task<IResult> CancelAsync(
-        Guid id, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () => Results.Ok(await OneAsync(db, await service.CancelAsync(id, user.Identity!.Name!, cancellationToken), cancellationToken)));
-
-    private static Task<IResult> CompleteAsync(
-        Guid id, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () => Results.Ok(await OneAsync(db, await service.CompleteAsync(id, user.Identity!.Name!, cancellationToken), cancellationToken)));
-
-    private static Task<IResult> ReceiveAsync(
-        Guid id, ReceiptInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () =>
-        {
-            var (scheduled, _) = await service.ReceiveAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken);
-            return Results.Ok(await OneAsync(db, scheduled, cancellationToken));
-        });
-
-    private static Task<IResult> ShipAsync(
-        Guid id, ShipEventInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
-        HandleAsync(async () =>
-            Results.Ok(await OneAsync(db, await service.ShipAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken), cancellationToken)));
-
-    private static async Task<IResult> HandleAsync(Func<Task<IResult>> action)
+    private static async Task<IResult> CreateAsync(
+        ScheduledEventInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken)
     {
-        try
-        {
-            return await action();
-        }
-        catch (MovementRejectedException ex) when (ex.Errors is not null)
-        {
-            return Results.ValidationProblem(ex.Errors, detail: ex.Message, title: "Revisa los datos enviados.");
-        }
-        catch (MovementRejectedException ex)
-        {
-            return Results.Problem(statusCode: ex.Status, detail: ex.Message);
-        }
+        var created = await service.CreateAsync(input, user.Identity!.Name!, cancellationToken);
+        return Results.CreatedAtRoute("GetScheduledEvent", new { id = created[0].Id }, await ToDtosAsync(db, created, cancellationToken));
     }
+
+    private static async Task<IResult> UpdateAsync(
+        Guid id, ScheduledEventInput input, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
+        Results.Ok(await OneAsync(db, await service.UpdateAsync(id, input, cancellationToken), cancellationToken));
+
+    private static async Task<IResult> CancelAsync(
+        Guid id, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
+        Results.Ok(await OneAsync(db, await service.CancelAsync(id, user.Identity!.Name!, cancellationToken), cancellationToken));
+
+    private static async Task<IResult> CompleteAsync(
+        Guid id, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
+        Results.Ok(await OneAsync(db, await service.CompleteAsync(id, user.Identity!.Name!, cancellationToken), cancellationToken));
+
+    private static async Task<IResult> ReceiveAsync(
+        Guid id, ReceiptInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken)
+    {
+        var (scheduled, _) = await service.ReceiveAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken);
+        return Results.Ok(await OneAsync(db, scheduled, cancellationToken));
+    }
+
+    private static async Task<IResult> ShipAsync(
+        Guid id, ShipEventInput input, ClaimsPrincipal user, CalendarService service, OrdaliDbContext db, CancellationToken cancellationToken) =>
+        Results.Ok(await OneAsync(db, await service.ShipAsync(id, input, user.UserId(), user.Identity!.Name!, cancellationToken), cancellationToken));
 
     private static async Task<ScheduledEventDto> OneAsync(OrdaliDbContext db, ScheduledEvent scheduled, CancellationToken cancellationToken) =>
         (await ToDtosAsync(db, [scheduled], cancellationToken))[0];
