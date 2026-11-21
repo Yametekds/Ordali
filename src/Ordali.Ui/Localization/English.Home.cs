@@ -12,6 +12,7 @@ internal static partial class English
         ("en {0} líneas", "in {0} lines"),
         ("Movimientos hoy", "Movements today"),
         ("Pendiente", "To do"),
+        ("Nada pendiente: no quedan cargas ni descargas hoy, todas las entradas están ubicadas y el stock está por encima del mínimo.", "Nothing to do: no loading or unloading left today, every receipt is put away and stock is above its minimum."),
         ("Nada pendiente: todas las entradas están ubicadas y el stock está por encima del mínimo.", "Nothing to do: every receipt is put away and stock is above its minimum."),
         ("{0} de {1} uds.", "{0} of {1} pcs"),
         ("Bajo mínimo", "Below minimum"),

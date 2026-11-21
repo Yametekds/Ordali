@@ -28,6 +28,14 @@ public sealed class User
     public DateTimeOffset CreatedAt { get; set; }
 
     public Guid? CreatedById { get; set; }
+
+    /// <summary>
+    /// When an administrator removed the profile. Removed profiles are hidden everywhere and can't
+    /// sign in, but the row stays so the profile can be restored with its permissions.
+    /// </summary>
+    public DateTimeOffset? DeletedAt { get; set; }
+
+    public Guid? DeletedById { get; set; }
 }
 
 /// <summary>
@@ -92,10 +100,20 @@ public sealed class Product
 
     public bool TracksLots { get; set; }
 
+    /// <summary>Bottom of the safe range: below it the item goes on its distributor's next order.</summary>
     public decimal MinStock { get; set; }
+
+    /// <summary>
+    /// Top of the safe range, the level an order refills the item up to. Zero means it isn't set
+    /// and the order only brings the item back to <see cref="MinStock"/>.
+    /// </summary>
+    public decimal MaxStock { get; set; }
 
     /// <summary>Where the item is usually stored. Put-away suggests it for every receipt.</summary>
     public Guid? DefaultLocationId { get; set; }
+
+    /// <summary>The distributor the item is usually ordered from.</summary>
+    public Guid? SupplierId { get; set; }
 }
 
 /// <summary>Quantity of one product and lot in one location.</summary>
@@ -202,4 +220,153 @@ public sealed class ReceiptLine
 
     /// <summary>Same idea as <see cref="StockLine.Version"/>: two people can't put away the same units.</summary>
     public Guid Version { get; set; }
+}
+
+/// <summary>A distributor the warehouse orders goods from.</summary>
+public sealed class Supplier
+{
+    public Guid Id { get; set; }
+
+    public required string Name { get; set; }
+
+    public string? ContactName { get; set; }
+
+    public string? Email { get; set; }
+
+    public string? Phone { get; set; }
+
+    /// <summary>Inactive distributors are kept for their past orders but can't get new ones.</summary>
+    public bool Active { get; set; } = true;
+}
+
+public enum PurchaseOrderStatus
+{
+    Draft,
+    Sent,
+    Received,
+    Cancelled,
+}
+
+/// <summary>
+/// An order to one distributor. It starts as a draft, usually prefilled with the items that are
+/// below their safe range, and can be changed until it is sent.
+/// </summary>
+public sealed class PurchaseOrder
+{
+    public Guid Id { get; set; }
+
+    /// <summary>"PED-0001", numbered in order.</summary>
+    public required string Code { get; set; }
+
+    public Guid SupplierId { get; set; }
+
+    public PurchaseOrderStatus Status { get; set; }
+
+    /// <summary>When the goods should arrive, if the order asks for a date.</summary>
+    public DateOnly? DeliveryDate { get; set; }
+
+    public string? Notes { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public required string UserName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
+
+    public DateTimeOffset? SentAt { get; set; }
+
+    public List<PurchaseOrderLine> Lines { get; set; } = [];
+}
+
+public sealed class PurchaseOrderLine
+{
+    public Guid Id { get; set; }
+
+    public Guid PurchaseOrderId { get; set; }
+
+    public Guid ProductId { get; set; }
+
+    public decimal Quantity { get; set; }
+
+    /// <summary>What the order proposed when the item was below its safe range; null for items added by hand.</summary>
+    public decimal? SuggestedQuantity { get; set; }
+
+    /// <summary>Keeps the lines in the order they were added.</summary>
+    public int Position { get; set; }
+}
+
+public enum ScheduledEventType
+{
+    /// <summary>A truck that comes to unload: becomes a receipt when it arrives.</summary>
+    Inbound,
+
+    /// <summary>A truck that comes to load: the goods leave as shipments.</summary>
+    Outbound,
+
+    /// <summary>Anything else worth having on the calendar, such as a stock count or a visit.</summary>
+    Other,
+}
+
+public enum ScheduledEventStatus
+{
+    Scheduled,
+    Completed,
+    Cancelled,
+}
+
+/// <summary>
+/// An entry of the warehouse calendar. Loading and unloading slots carry the goods expected, so
+/// the dock knows what is coming and the receipt or the shipments can be filled in from them.
+/// </summary>
+public sealed class ScheduledEvent
+{
+    public Guid Id { get; set; }
+
+    public ScheduledEventType Type { get; set; }
+
+    public required string Title { get; set; }
+
+    /// <summary>Supplier, customer or carrier.</summary>
+    public string? Partner { get; set; }
+
+    public DateTimeOffset StartsAt { get; set; }
+
+    public DateTimeOffset EndsAt { get; set; }
+
+    /// <summary>The dock booked for the slot, if any.</summary>
+    public Guid? DockLocationId { get; set; }
+
+    public string? Notes { get; set; }
+
+    public ScheduledEventStatus Status { get; set; }
+
+    /// <summary>Events created together as a weekly series share it.</summary>
+    public Guid? SeriesId { get; set; }
+
+    public required string CreatedByName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public string? CompletedByName { get; set; }
+
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>What closed it: the receipt code, or the reference of the shipments.</summary>
+    public string? Outcome { get; set; }
+
+    public List<ScheduledEventLine> Lines { get; set; } = [];
+}
+
+/// <summary>Goods expected on a loading or unloading slot.</summary>
+public sealed class ScheduledEventLine
+{
+    public Guid Id { get; set; }
+
+    public Guid EventId { get; set; }
+
+    public Guid ProductId { get; set; }
+
+    public decimal Quantity { get; set; }
 }

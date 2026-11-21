@@ -1,0 +1,21 @@
+@* One calendar entry as a row of a list: when, what, where and how it stands. *@
+<a class="task event-row @(Event.Status == ScheduledEventStatus.Cancelled ? "is-cancelled" : "")" href="calendario/@Event.Id">
+    <span class="event-time">
+        <strong>@Labels.Time(Event.StartsAt)</strong>
+        <small>@Labels.Time(Event.EndsAt)</small>
+    </span>
+    <span class="task-what">
+        <span class="event-title">
+            <span class="type-dot type-@Labels.Css(Event.Type)" aria-hidden="true"></span>
+            <b>@Event.Title</b>
+        </span>
+        <span>@Labels.Of(Event.Type)@(Event.Partner is null ? "" : $" · {Event.Partner}")@(Event.DockLocationCode is null ? "" : $" · {Event.DockLocationCode}")</span>
+    </span>
+    <span class="task-meta"><ScheduledEventStatusBadge Event="Event" Now="Now" /></span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public ScheduledEvent Event { get; set; } = default!;
+
+    [Parameter, EditorRequired] public DateTimeOffset Now { get; set; }
+}

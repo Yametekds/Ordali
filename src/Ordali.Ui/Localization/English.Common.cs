@@ -114,5 +114,16 @@ internal static partial class English
         ("Escribe una contraseña inicial.", "Enter an initial password."),
         ("La contraseña necesita al menos 8 caracteres.", "The password needs at least 8 characters."),
         ("Elige una plantilla.", "Choose a template."),
+        ("El stock máximo no puede ser negativo.", "The maximum stock can't be negative."),
+        ("Escribe un título.", "Enter a title."),
+        ("El título no puede pasar de 120 caracteres.", "The title can't be longer than 120 characters."),
+        ("El proveedor o cliente no puede pasar de 120 caracteres.", "The supplier or customer can't be longer than 120 characters."),
+        ("Las notas no pueden pasar de 500 caracteres.", "The notes can't be longer than 500 characters."),
+        ("Se puede repetir como mucho 26 semanas.", "It can repeat for 26 weeks at most."),
+        ("La referencia no puede pasar de 40 caracteres.", "The reference can't be longer than 40 characters."),
+        ("El contacto no puede pasar de 120 caracteres.", "The contact can't be longer than 120 characters."),
+        ("El email no puede pasar de 256 caracteres.", "The email can't be longer than 256 characters."),
+        ("El teléfono no puede pasar de 32 caracteres.", "The phone can't be longer than 32 characters."),
+        ("Elige el distribuidor.", "Choose the distributor."),
     ];
 }

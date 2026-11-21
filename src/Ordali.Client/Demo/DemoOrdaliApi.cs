@@ -8,7 +8,7 @@ namespace Ordali.Client.Demo;
 /// In-memory backend that follows the same rules as the API, so the web app can be tried
 /// on GitHub Pages without a server. Data lives until the page is reloaded.
 /// </summary>
-public sealed class DemoOrdaliApi : IOrdaliApi
+public sealed partial class DemoOrdaliApi : IOrdaliApi
 {
     private readonly Lock _lock = new();
     private readonly SessionState _session;
@@ -20,6 +20,7 @@ public sealed class DemoOrdaliApi : IOrdaliApi
     private readonly List<DemoReceipt> _receipts = [];
     private readonly List<UserProfile> _users;
     private readonly List<ProfileTemplate> _templates;
+    private readonly List<(UserProfile Profile, DateTimeOffset DeletedAt, string DeletedBy)> _deletedUsers = [];
     private readonly Dictionary<Guid, string> _passwords = [];
 
     public DemoOrdaliApi(SessionState session, TimeProvider time)
@@ -32,6 +33,8 @@ public sealed class DemoOrdaliApi : IOrdaliApi
         _templates = [.. DemoData.Templates()];
         _stock = [.. DemoData.Stock().Select(s => new StockLine(DemoData.ProductId(s.Product), DemoData.LocationId(s.Location), s.Lot, s.Quantity))];
         SeedMovements();
+        SeedOrders();
+        SeedCalendar();
     }
 
     public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -296,6 +299,14 @@ public sealed class DemoOrdaliApi : IOrdaliApi
                 }
             }
 
+            for (var i = 0; i < _deletedUsers.Count; i++)
+            {
+                if (_deletedUsers[i].Profile.TemplateId == id)
+                {
+                    _deletedUsers[i] = _deletedUsers[i] with { Profile = _deletedUsers[i].Profile with { TemplateId = null, TemplateName = null } };
+                }
+            }
+
             return Task.CompletedTask;
         }
     }
@@ -327,6 +338,11 @@ public sealed class DemoOrdaliApi : IOrdaliApi
             if (_users.Any(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase)))
             {
                 throw Invalid(nameof(NewUserInput.Email), Text.Get("Ya hay un perfil con ese email."));
+            }
+
+            if (_deletedUsers.Any(d => string.Equals(d.Profile.Email, email, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw Invalid(nameof(NewUserInput.Email), "Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados.");
             }
 
             var template = input.TemplateId is { } templateId
@@ -371,6 +387,53 @@ public sealed class DemoOrdaliApi : IOrdaliApi
             };
             _users[_users.IndexOf(user)] = updated;
             return Result(updated);
+        }
+    }
+
+    public Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var admin = EnsureAdmin();
+        lock (_lock)
+        {
+            var user = FindUser(id);
+            if (user.Id == admin.Id)
+            {
+                throw new ApiException(HttpStatusCode.Conflict, "No puedes eliminar tu propio perfil.");
+            }
+
+            _users.Remove(user);
+            _deletedUsers.Add((user, _time.GetUtcNow(), admin.Name));
+            return Task.CompletedTask;
+        }
+    }
+
+    public Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default)
+    {
+        EnsureAdmin();
+        lock (_lock)
+        {
+            return Result<IReadOnlyList<DeletedUser>>([.. _deletedUsers
+                .OrderByDescending(d => d.DeletedAt)
+                .Select(d => new DeletedUser(
+                    d.Profile.Id, d.Profile.Name, d.Profile.Email, d.Profile.Category, d.Profile.TemplateName, d.DeletedAt, d.DeletedBy))]);
+        }
+    }
+
+    public Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        EnsureAdmin();
+        lock (_lock)
+        {
+            var index = _deletedUsers.FindIndex(d => d.Profile.Id == id);
+            if (index < 0)
+            {
+                throw new ApiException(HttpStatusCode.NotFound, "El perfil no existe.");
+            }
+
+            var user = _deletedUsers[index].Profile;
+            _deletedUsers.RemoveAt(index);
+            _users.Add(user);
+            return Result(user);
         }
     }
 
@@ -732,6 +795,16 @@ public sealed class DemoOrdaliApi : IOrdaliApi
 
     private Product ToProduct(Guid id, ProductInput input)
     {
+        if (input.MaxStock > 0 && input.MaxStock < input.MinStock)
+        {
+            throw Invalid(nameof(ProductInput.MaxStock), "El stock máximo no puede ser menor que el mínimo.");
+        }
+
+        if (input.SupplierId is { } supplierId && _suppliers.All(s => s.Id != supplierId))
+        {
+            throw Invalid(nameof(ProductInput.SupplierId), "El distribuidor no existe.");
+        }
+
         if (input.DefaultLocationId is { } locationId && _locations.All(l => l.Id != locationId))
         {
             throw Invalid(nameof(ProductInput.DefaultLocationId), Text.Get("La ubicación no existe."));
@@ -745,7 +818,9 @@ public sealed class DemoOrdaliApi : IOrdaliApi
             input.Unit.Trim(),
             input.TracksLots,
             input.MinStock,
-            input.DefaultLocationId);
+            input.DefaultLocationId,
+            input.MaxStock,
+            input.SupplierId);
     }
 
     // Like the API, permissions are read from the stored profile on every call, so an admin's

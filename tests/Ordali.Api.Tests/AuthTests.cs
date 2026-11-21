@@ -19,7 +19,7 @@ public class AuthTests(OrdaliApiFactory factory) : IClassFixture<OrdaliApiFactor
         Assert.Equal("Javier Ruiz", user.GetProperty("name").GetString());
         Assert.Equal("Operator", user.GetProperty("category").GetString());
         Assert.Equal(
-            ["locations.view", "movements.create", "movements.view", "products.view", "stock.view"],
+            ["calendar.view", "locations.view", "movements.create", "movements.view", "products.view", "stock.view"],
             user.GetProperty("permissions").EnumerateArray().Select(p => p.GetString()));
     }
 

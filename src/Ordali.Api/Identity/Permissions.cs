@@ -25,8 +25,12 @@ public static class Permissions
     public const string MovementsView = "movements.view";
     public const string MovementsCreate = "movements.create";
     public const string MovementsAdjust = "movements.adjust";
+    public const string CalendarView = "calendar.view";
+    public const string CalendarEdit = "calendar.edit";
     public const string UsersView = "users.view";
     public const string UsersCreate = "users.create";
+    public const string OrdersView = "orders.view";
+    public const string OrdersEdit = "orders.edit";
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
@@ -38,8 +42,12 @@ public static class Permissions
         new(MovementsView, "Ver movimientos", "Consultar el registro de movimientos."),
         new(MovementsCreate, "Registrar movimientos", "Registrar entradas, ubicarlas con traslados y registrar salidas."),
         new(MovementsAdjust, "Registrar ajustes", "Corregir el stock con ajustes de inventario."),
+        new(CalendarView, "Ver calendario", "Consultar las cargas, descargas y demás citas programadas."),
+        new(CalendarEdit, "Programar en el calendario", "Programar cargas, descargas y otras citas, cambiarlas y anularlas."),
         new(UsersView, "Ver usuarios", "Consultar los perfiles por categoría."),
         new(UsersCreate, "Crear perfiles", "Crear perfiles nuevos a partir de las plantillas."),
+        new(OrdersView, "Ver pedidos", "Consultar los pedidos a distribuidores y los distribuidores."),
+        new(OrdersEdit, "Preparar pedidos", "Preparar, enviar y cerrar pedidos a distribuidores y mantener la lista de distribuidores."),
     ];
 
     public static IReadOnlySet<string> Keys { get; } = All.Select(p => p.Key).ToHashSet(StringComparer.Ordinal);
