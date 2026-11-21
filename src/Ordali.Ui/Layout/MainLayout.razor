@@ -25,9 +25,13 @@
             <nav class="nav">
                 <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>@L["Inicio"]</span></NavLink>
 
-                @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
+                @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate) || Can(Permissions.CalendarView))
                 {
                     <div class="nav-section">@L["Operación"]</div>
+                    @if (Can(Permissions.CalendarView))
+                    {
+                        <NavLink class="nav-link" href="calendario"><Icon Name="calendar" /><span>@L["Calendario"]</span></NavLink>
+                    }
                     @if (Can(Permissions.MovementsView))
                     {
                         <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>@L["Entradas"]</span></NavLink>
@@ -48,6 +52,13 @@
                     {
                         <NavLink class="nav-link" href="ubicaciones"><Icon Name="map" /><span>@L["Ubicaciones"]</span></NavLink>
                     }
+                }
+
+                @if (Can(Permissions.OrdersView))
+                {
+                    <div class="nav-section">@L["Compras"]</div>
+                    <NavLink class="nav-link" href="pedidos"><Icon Name="cart" /><span>@L["Pedidos"]</span></NavLink>
+                    <NavLink class="nav-link" href="distribuidores"><Icon Name="truck" /><span>@L["Distribuidores"]</span></NavLink>
                 }
 
                 @if (Can(Permissions.ProductsView) || Can(Permissions.UsersView))

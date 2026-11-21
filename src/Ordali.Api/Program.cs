@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.OpenApi;
+using Ordali.Api.Calendar;
 using Ordali.Api.Catalog;
 using Ordali.Api.Data;
 using Ordali.Api.Identity;
 using Ordali.Api.Inventory;
 using Ordali.Api.Locations;
+using Ordali.Api.Purchasing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +42,7 @@ builder.Services.AddOrdaliDatabase(builder.Configuration);
 builder.Services.AddIdentityModule(builder.Configuration);
 builder.Services.AddScoped<MovementService>();
 builder.Services.AddScoped<ReceiptService>();
+builder.Services.AddScoped<CalendarService>();
 
 var healthChecks = builder.Services.AddHealthChecks();
 if (!string.IsNullOrWhiteSpace(connectionString))
@@ -74,6 +77,8 @@ v1.MapCatalogEndpoints();
 v1.MapLocationsEndpoints();
 v1.MapInventoryEndpoints();
 v1.MapReceiptEndpoints();
+v1.MapPurchasingEndpoints();
+v1.MapCalendarEndpoints();
 
 await app.InitializeDatabaseAsync();
 await app.RunAsync();

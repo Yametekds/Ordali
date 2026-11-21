@@ -45,6 +45,50 @@ public interface IOrdaliApi
     /// <summary>Transfers units of one receipt line from the dock to their location.</summary>
     Task<Receipt> PutAwayAsync(Guid receiptId, PutAwayInput input, CancellationToken cancellationToken = default);
 
+    /// <summary>Distributors by name; <paramref name="activeOnly"/> leaves out the ones no longer used.</summary>
+    Task<IReadOnlyList<Supplier>> GetSuppliersAsync(bool activeOnly = false, CancellationToken cancellationToken = default);
+
+    Task<Supplier> CreateSupplierAsync(SupplierInput input, CancellationToken cancellationToken = default);
+
+    Task<Supplier> UpdateSupplierAsync(Guid id, SupplierInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Items below their safe range, grouped by distributor, with the quantity that refills each one.</summary>
+    Task<IReadOnlyList<ReorderSuggestion>> GetReorderSuggestionsAsync(Guid? supplierId = null, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PurchaseOrder>> GetPurchaseOrdersAsync(PurchaseOrderStatus? status = null, CancellationToken cancellationToken = default);
+
+    Task<PurchaseOrder> GetPurchaseOrderAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Creates the order as a draft.</summary>
+    Task<PurchaseOrder> CreatePurchaseOrderAsync(PurchaseOrderInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Only while the order is a draft.</summary>
+    Task<PurchaseOrder> UpdatePurchaseOrderAsync(Guid id, PurchaseOrderInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Draft to Sent or Cancelled; Sent to Received or Cancelled.</summary>
+    Task<PurchaseOrder> ChangePurchaseOrderStatusAsync(Guid id, PurchaseOrderStatus status, CancellationToken cancellationToken = default);
+
+    /// <summary>Calendar entries that overlap [start, until), earliest first. At most 100 days.</summary>
+    Task<IReadOnlyList<ScheduledEvent>> GetCalendarAsync(DateTimeOffset start, DateTimeOffset until, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> GetScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns every entry created: one, or one per week when it repeats.</summary>
+    Task<IReadOnlyList<ScheduledEvent>> CreateScheduledEventAsync(ScheduledEventInput input, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> UpdateScheduledEventAsync(Guid id, ScheduledEventInput input, CancellationToken cancellationToken = default);
+
+    Task<ScheduledEvent> CancelScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Marks done an entry that doesn't move stock.</summary>
+    Task<ScheduledEvent> CompleteScheduledEventAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the receipt of an unloading slot and closes it.</summary>
+    Task<ScheduledEvent> ReceiveScheduledEventAsync(Guid id, ReceiptInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Ships the goods of a loading slot and closes it.</summary>
+    Task<ScheduledEvent> ShipScheduledEventAsync(Guid id, ShipEventInput input, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
     Task<ProfileTemplate> GetTemplateAsync(Guid id, CancellationToken cancellationToken = default);
@@ -62,4 +106,11 @@ public interface IOrdaliApi
     Task<UserProfile> CreateUserAsync(NewUserInput input, CancellationToken cancellationToken = default);
 
     Task<UserProfile> UpdateUserAccessAsync(Guid id, UserAccessInput input, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a profile so it can no longer sign in. It stays recoverable with <see cref="RestoreUserAsync"/>.</summary>
+    Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default);
+
+    Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default);
 }

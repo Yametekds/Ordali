@@ -1,0 +1,200 @@
+@page "/calendario/{Id:guid}"
+@attribute [Authorize(Policy = Permissions.CalendarView)]
+@inject IOrdaliApi Api
+@inject TimeProvider Time
+@inject SessionState Session
+
+<PageTitle>@(item?.Title ?? "Cita") · Ordali</PageTitle>
+
+@if (item is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <PageHeader Title="@item.Title">
+        <Actions>
+            <a class="btn" href="calendario?dia=@item.StartsAt.ToLocalTime().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)">
+                <Icon Name="calendar" /><span>Ver en el calendario</span>
+            </a>
+            @if (IsOpen)
+            {
+                @if (item.Type == ScheduledEventType.Inbound && Can(Permissions.MovementsCreate))
+                {
+                    <a class="btn btn-primary" href="entradas/nueva?cita=@item.Id"><Icon Name="inbox" /><span>Registrar la descarga</span></a>
+                }
+                else if (item.Type == ScheduledEventType.Outbound && Can(Permissions.MovementsCreate))
+                {
+                    <a class="btn btn-primary" href="calendario/@item.Id/carga"><Icon Name="truck" /><span>Registrar la carga</span></a>
+                }
+                else if (item.Type == ScheduledEventType.Other && Can(Permissions.CalendarEdit))
+                {
+                    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="CompleteAsync"><Icon Name="check" /><span>Marcar como hecha</span></button>
+                }
+            }
+        </Actions>
+    </PageHeader>
+
+    <ErrorAlert Error="error" />
+
+    <div class="event-layout">
+        <section class="card">
+            <div class="event-badges">
+                <span class="badge badge-@Labels.Css(item.Type)">@Labels.Of(item.Type)</span>
+                <ScheduledEventStatusBadge Event="item" Now="now" />
+                @if (item.SeriesId is not null)
+                {
+                    <span class="badge">Se repite cada semana</span>
+                }
+            </div>
+            <dl class="facts">
+                <div><dt>Día</dt><dd>@Labels.LongDate(item.StartsAt.ToLocalTime().Date)</dd></div>
+                <div><dt>Horario</dt><dd>@Labels.TimeRange(item.StartsAt, item.EndsAt)</dd></div>
+                @if (item.Partner is not null)
+                {
+                    <div><dt>@PartnerLabel</dt><dd>@item.Partner</dd></div>
+                }
+                @if (item.DockLocationCode is not null)
+                {
+                    <div><dt>Muelle</dt><dd class="mono">@item.DockLocationCode</dd></div>
+                }
+                <div><dt>Programada por</dt><dd>@item.CreatedByName</dd></div>
+                @if (item.CompletedAt is { } closedAt)
+                {
+                    <div>
+                        <dt>@(item.Status == ScheduledEventStatus.Cancelled ? "Anulada por" : "Hecha por")</dt>
+                        <dd>@item.CompletedByName · @Labels.DateTime(closedAt)</dd>
+                    </div>
+                }
+                @if (item.Outcome is not null)
+                {
+                    <div>
+                        <dt>@(item.Type == ScheduledEventType.Inbound ? "Entrada" : "Referencia de la salida")</dt>
+                        <dd>
+                            @if (item.Type == ScheduledEventType.Inbound && Can(Permissions.MovementsView))
+                            {
+                                <a class="mono" href="entradas">@item.Outcome</a>
+                            }
+                            else
+                            {
+                                <span class="mono">@item.Outcome</span>
+                            }
+                        </dd>
+                    </div>
+                }
+            </dl>
+            @if (item.Notes is not null)
+            {
+                <p class="event-notes">@item.Notes</p>
+            }
+
+            @if (IsOpen && Can(Permissions.CalendarEdit))
+            {
+                <div class="form-actions">
+                    @if (confirmCancel)
+                    {
+                        <span class="muted small">¿Anular la cita? Seguirá en el calendario, tachada.</span>
+                        <button type="button" class="btn" @onclick="() => confirmCancel = false">No</button>
+                        <button type="button" class="btn btn-danger-ghost" disabled="@busy" @onclick="CancelAsync">Sí, anular</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-danger-ghost" @onclick="() => confirmCancel = true">Anular</button>
+                        <a class="btn" href="calendario/@item.Id/editar"><Icon Name="edit" /><span>Cambiar</span></a>
+                    }
+                </div>
+            }
+        </section>
+
+        @if (item.Type != ScheduledEventType.Other)
+        {
+            <section class="card card-flush">
+                <header class="panel-head panel-head-flush">
+                    <h2>Mercancía prevista</h2>
+                </header>
+                @if (item.Lines.Count == 0)
+                {
+                    <div class="panel-body"><EmptyState Text="No se indicó qué mercancía llega o sale." /></div>
+                }
+                else
+                {
+                    <table class="table table-compact">
+                        <thead><tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th></tr></thead>
+                        <tbody>
+                            @foreach (var line in item.Lines)
+                            {
+                                <tr>
+                                    <td data-label="SKU"><strong class="mono">@line.Sku</strong></td>
+                                    <td data-label="Artículo">@line.ProductName</td>
+                                    <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Unit</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ScheduledEvent? item;
+    private DateTimeOffset now;
+    private Exception? error;
+    private bool busy;
+    private bool confirmCancel;
+
+    private bool IsOpen => item?.Status == ScheduledEventStatus.Scheduled;
+
+    private string PartnerLabel => item!.Type switch
+    {
+        ScheduledEventType.Inbound => "Proveedor",
+        ScheduledEventType.Outbound => "Cliente o transportista",
+        _ => "Con quién",
+    };
+
+    private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        now = Time.GetUtcNow();
+        try
+        {
+            item = await Api.GetScheduledEventAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private Task CompleteAsync() => RunAsync(() => Api.CompleteScheduledEventAsync(Id));
+
+    private Task CancelAsync() => RunAsync(() => Api.CancelScheduledEventAsync(Id));
+
+    private async Task RunAsync(Func<Task<ScheduledEvent>> action)
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            item = await action();
+            now = Time.GetUtcNow();
+            confirmCancel = false;
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

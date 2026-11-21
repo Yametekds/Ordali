@@ -283,6 +283,42 @@ public class DemoOrdaliApiTests
     }
 
     [Fact]
+    public async Task Deleted_profile_cannot_sign_in_until_it_is_restored()
+    {
+        await SignInAsync("admin@demo.local");
+        var mozo = (await _api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+
+        await _api.DeleteUserAsync(mozo.Id);
+
+        Assert.DoesNotContain(await _api.GetUsersAsync(), u => u.Id == mozo.Id);
+        var deleted = Assert.Single(await _api.GetDeletedUsersAsync());
+        Assert.Equal("Lucía Martín", deleted.DeletedByName);
+        var login = await Assert.ThrowsAsync<ApiException>(() => _api.LoginAsync(new LoginRequest("mozo@demo.local", "Demo1234!")));
+        Assert.Equal(HttpStatusCode.Unauthorized, login.Status);
+
+        var restored = await _api.RestoreUserAsync(mozo.Id);
+
+        Assert.Equal(mozo, restored);
+        Assert.Empty(await _api.GetDeletedUsersAsync());
+        await SignInAsync("mozo@demo.local");
+    }
+
+    [Fact]
+    public async Task Only_admins_delete_profiles_and_never_their_own()
+    {
+        await SignInAsync("admin@demo.local");
+        var me = _session.Current!.User;
+        var self = await Assert.ThrowsAsync<ApiException>(() => _api.DeleteUserAsync(me.Id));
+
+        await SignInAsync("encargado@demo.local");
+        var mozo = (await _api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+        var bySupervisor = await Assert.ThrowsAsync<ApiException>(() => _api.DeleteUserAsync(mozo.Id));
+
+        Assert.Equal(HttpStatusCode.Conflict, self.Status);
+        Assert.Equal(HttpStatusCode.Forbidden, bySupervisor.Status);
+    }
+
+    [Fact]
     public async Task Admin_cannot_demote_themself()
     {
         await SignInAsync("admin@demo.local");
@@ -325,6 +361,47 @@ public class DemoOrdaliApiTests
         var products = await _api.GetProductsAsync(sku);
         var locations = await _api.GetLocationsAsync();
         return (products.Single(p => p.Sku == sku).Id, locations.Single(l => l.Code == from).Id, locations.Single(l => l.Code == to).Id);
+    }
+
+    [Fact]
+    public async Task Demo_proposes_the_same_orders_as_the_api()
+    {
+        await SignInAsync("encargado@demo.local");
+
+        var suggestions = await _api.GetReorderSuggestionsAsync();
+
+        Assert.Equal(
+            [("Distribuciones Alimentarias del Centro", "ARR-002", 140m), ("Suministros Norte", "CIN-050", 122m)],
+            suggestions.Select(s => (s.SupplierName!, s.Lines.Single().Sku, s.Lines.Single().SuggestedQuantity)));
+    }
+
+    [Fact]
+    public async Task Demo_orders_follow_the_status_rules()
+    {
+        await SignInAsync("encargado@demo.local");
+        var supplier = (await _api.GetSuppliersAsync()).Single(s => s.Name == "Suministros Norte");
+
+        var order = await _api.CreatePurchaseOrderAsync(new PurchaseOrderInput
+        {
+            SupplierId = supplier.Id,
+            Lines = [new() { ProductId = (await _api.GetProductsAsync("CIN-050")).Single().Id, Quantity = 120, SuggestedQuantity = 122 }],
+        });
+        await _api.ChangePurchaseOrderStatusAsync(order.Id, PurchaseOrderStatus.Sent);
+        var locked = await Assert.ThrowsAsync<ApiException>(() => _api.UpdatePurchaseOrderAsync(order.Id, new PurchaseOrderInput { SupplierId = supplier.Id }));
+
+        Assert.Equal("PED-0003", order.Code);
+        Assert.Equal(HttpStatusCode.Conflict, locked.Status);
+        Assert.DoesNotContain(await _api.GetReorderSuggestionsAsync(supplier.Id), s => s.Lines.Any(l => l.Sku == "CIN-050"));
+    }
+
+    [Fact]
+    public async Task Pickers_cannot_see_demo_orders()
+    {
+        await SignInAsync("mozo@demo.local");
+
+        var ex = await Assert.ThrowsAsync<ApiException>(() => _api.GetPurchaseOrdersAsync());
+
+        Assert.Equal(HttpStatusCode.Forbidden, ex.Status);
     }
 
     private async Task<decimal> QuantityAsync(Guid product, Guid location) =>
