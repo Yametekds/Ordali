@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -98,6 +99,34 @@ public sealed class HttpOrdaliApi : IOrdaliApi
     public Task<PurchaseOrder> ChangePurchaseOrderStatusAsync(Guid id, PurchaseOrderStatus status, CancellationToken cancellationToken = default) =>
         SendAsync<PurchaseOrder>(HttpMethod.Post, $"api/v1/purchase-orders/{id}/status", new { status }, cancellationToken);
 
+    public Task<IReadOnlyList<ScheduledEvent>> GetCalendarAsync(DateTimeOffset start, DateTimeOffset until, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<ScheduledEvent>>(
+            HttpMethod.Get,
+            "api/v1/calendar" + Query(("from", start.ToString("O", CultureInfo.InvariantCulture)), ("to", until.ToString("O", CultureInfo.InvariantCulture))),
+            null,
+            cancellationToken);
+
+    public Task<ScheduledEvent> GetScheduledEventAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Get, $"api/v1/calendar/{id}", null, cancellationToken);
+
+    public Task<IReadOnlyList<ScheduledEvent>> CreateScheduledEventAsync(ScheduledEventInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<ScheduledEvent>>(HttpMethod.Post, "api/v1/calendar", input, cancellationToken);
+
+    public Task<ScheduledEvent> UpdateScheduledEventAsync(Guid id, ScheduledEventInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Put, $"api/v1/calendar/{id}", input, cancellationToken);
+
+    public Task<ScheduledEvent> CancelScheduledEventAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Post, $"api/v1/calendar/{id}/cancel", null, cancellationToken);
+
+    public Task<ScheduledEvent> CompleteScheduledEventAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Post, $"api/v1/calendar/{id}/complete", null, cancellationToken);
+
+    public Task<ScheduledEvent> ReceiveScheduledEventAsync(Guid id, ReceiptInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Post, $"api/v1/calendar/{id}/receive", input, cancellationToken);
+
+    public Task<ScheduledEvent> ShipScheduledEventAsync(Guid id, ShipEventInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<ScheduledEvent>(HttpMethod.Post, $"api/v1/calendar/{id}/ship", input, cancellationToken);
+
     public Task<IReadOnlyList<ProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyList<ProfileTemplate>>(HttpMethod.Get, "api/v1/profile-templates", null, cancellationToken);
 
@@ -124,6 +153,15 @@ public sealed class HttpOrdaliApi : IOrdaliApi
 
     public Task<UserProfile> UpdateUserAccessAsync(Guid id, UserAccessInput input, CancellationToken cancellationToken = default) =>
         SendAsync<UserProfile>(HttpMethod.Put, $"api/v1/users/{id}/access", input, cancellationToken);
+
+    public Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<object?>(HttpMethod.Delete, $"api/v1/users/{id}", null, cancellationToken, expectBody: false);
+
+    public Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<DeletedUser>>(HttpMethod.Get, "api/v1/users/deleted", null, cancellationToken);
+
+    public Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<UserProfile>(HttpMethod.Post, $"api/v1/users/{id}/restore", null, cancellationToken);
 
     private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken, bool expectBody = true)
     {

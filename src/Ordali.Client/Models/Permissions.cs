@@ -14,6 +14,8 @@ public static class Permissions
     public const string MovementsView = "movements.view";
     public const string MovementsCreate = "movements.create";
     public const string MovementsAdjust = "movements.adjust";
+    public const string CalendarView = "calendar.view";
+    public const string CalendarEdit = "calendar.edit";
     public const string UsersView = "users.view";
     public const string UsersCreate = "users.create";
     public const string OrdersView = "orders.view";
@@ -22,7 +24,7 @@ public static class Permissions
     public static IReadOnlyList<string> All { get; } =
     [
         ProductsView, ProductsEdit, LocationsView, LocationsEdit, StockView,
-        MovementsView, MovementsCreate, MovementsAdjust, UsersView, UsersCreate,
+        MovementsView, MovementsCreate, MovementsAdjust, CalendarView, CalendarEdit, UsersView, UsersCreate,
         OrdersView, OrdersEdit,
     ];
 

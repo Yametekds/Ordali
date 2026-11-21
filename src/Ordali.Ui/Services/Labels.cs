@@ -50,6 +50,30 @@ public static class Labels
         _ => "badge-cancelled",
     };
 
+    public static string Of(ScheduledEventType type) => type switch
+    {
+        ScheduledEventType.Inbound => "Descarga",
+        ScheduledEventType.Outbound => "Carga",
+        ScheduledEventType.Other => "Otra cita",
+        _ => type.ToString(),
+    };
+
+    public static string Of(ScheduledEventStatus status) => status switch
+    {
+        ScheduledEventStatus.Scheduled => "Programada",
+        ScheduledEventStatus.Completed => "Hecha",
+        ScheduledEventStatus.Cancelled => "Anulada",
+        _ => status.ToString(),
+    };
+
+    /// <summary>CSS modifier shared by the calendar chips and badges of each kind of entry.</summary>
+    public static string Css(ScheduledEventType type) => type switch
+    {
+        ScheduledEventType.Inbound => "in",
+        ScheduledEventType.Outbound => "out",
+        _ => "other",
+    };
+
     public static string Of(UserCategory category) => category switch
     {
         UserCategory.Admin => "Administrador",
@@ -76,6 +100,8 @@ public static class Labels
         Permissions.MovementsView => "Ver movimientos",
         Permissions.MovementsCreate => "Registrar entradas, traslados y salidas",
         Permissions.MovementsAdjust => "Hacer ajustes de inventario",
+        Permissions.CalendarView => "Ver el calendario",
+        Permissions.CalendarEdit => "Programar cargas, descargas y citas",
         Permissions.UsersView => "Ver perfiles de usuario",
         Permissions.UsersCreate => "Crear perfiles desde una plantilla",
         Permissions.OrdersView => "Ver pedidos y distribuidores",
@@ -89,6 +115,7 @@ public static class Labels
         ("Catálogo", [Permissions.ProductsView, Permissions.ProductsEdit]),
         ("Almacén", [Permissions.LocationsView, Permissions.LocationsEdit, Permissions.StockView]),
         ("Movimientos", [Permissions.MovementsView, Permissions.MovementsCreate, Permissions.MovementsAdjust]),
+        ("Planificación", [Permissions.CalendarView, Permissions.CalendarEdit]),
         ("Compras", [Permissions.OrdersView, Permissions.OrdersEdit]),
         ("Personal", [Permissions.UsersView, Permissions.UsersCreate]),
     ];
@@ -104,6 +131,21 @@ public static class Labels
     public static string Date(DateOnly value) => value.ToString("dd/MM/yyyy", Culture);
 
     public static string DateTime(DateTimeOffset value) => value.ToLocalTime().ToString("dd/MM/yyyy HH:mm", Culture);
+
+    public static string Time(DateTimeOffset value) => value.ToLocalTime().ToString("HH:mm", Culture);
+
+    /// <summary>"08:00–09:30", with the end date when it finishes on another day.</summary>
+    public static string TimeRange(DateTimeOffset start, DateTimeOffset end) =>
+        start.ToLocalTime().Date == end.ToLocalTime().Date
+            ? $"{Time(start)}–{Time(end)}"
+            : $"{Time(start)}–{end.ToLocalTime().ToString("d MMM HH:mm", Culture)}";
+
+    /// <summary>"Jueves, 5 de noviembre".</summary>
+    public static string LongDate(DateTime date)
+    {
+        var text = date.ToString("dddd, d 'de' MMMM", Culture);
+        return char.ToUpper(text[0], Culture) + text[1..];
+    }
 
     public static string Relative(DateTimeOffset value, DateTimeOffset now)
     {

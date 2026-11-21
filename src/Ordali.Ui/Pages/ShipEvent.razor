@@ -1,0 +1,190 @@
+@page "/calendario/{Id:guid}/carga"
+@attribute [Authorize(Policy = Permissions.MovementsCreate)]
+@inject IOrdaliApi Api
+@inject NavigationManager Navigation
+
+<PageTitle>Registrar carga · Ordali</PageTitle>
+
+<PageHeader Title="Registrar carga" Subtitle="@Subtitle" />
+
+@if (item is null)
+{
+    <ErrorAlert Error="error" />
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (item.Status != ScheduledEventStatus.Scheduled || item.Type != ScheduledEventType.Outbound)
+{
+    <EmptyState IconName="check" Text="Esta cita ya no tiene nada que cargar.">
+        <a class="link" href="calendario/@item.Id">Volver a la cita <Icon Name="arrow-right" /></a>
+    </EmptyState>
+}
+else
+{
+    <div class="card form-card form-card-wide">
+        <label class="field">
+            <span>Referencia de la salida (opcional)</span>
+            <input type="text" @bind="reference" maxlength="40" placeholder="@item.Title" autocomplete="off" />
+            <small class="muted">El número de pedido o de albarán con el que quedan los movimientos.</small>
+        </label>
+
+        <h2 class="card-title ship-title">Qué sale y de dónde</h2>
+        @if (rows.Count == 0)
+        {
+            <EmptyState Text="La cita no tiene mercancía prevista. Añade lo que se carga desde la cita o registra la salida en Movimientos." />
+        }
+        else
+        {
+            <table class="table table-compact">
+                <thead><tr><th>Artículo</th><th>Sale de</th><th class="num">Previsto</th><th>Cantidad</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        var options = StockOf(row.Line.ProductId);
+                        <tr>
+                            <td data-label="Artículo"><strong class="mono">@row.Line.Sku</strong> @row.Line.ProductName</td>
+                            <td data-label="Sale de">
+                                @if (options.Count == 0)
+                                {
+                                    <span class="text-warning">Sin stock</span>
+                                }
+                                else
+                                {
+                                    <select @bind="row.StockKey" aria-label="Ubicación de @row.Line.Sku">
+                                        <option value="">Elige ubicación</option>
+                                        @foreach (var stockItem in options)
+                                        {
+                                            <option value="@Key(stockItem)">@stockItem.LocationCode@(stockItem.Lot is null ? "" : $" · {stockItem.Lot}") (@Labels.Quantity(stockItem.Quantity))</option>
+                                        }
+                                    </select>
+                                }
+                            </td>
+                            <td data-label="Previsto" class="num">@Labels.Quantity(row.Line.Quantity) @row.Line.Unit</td>
+                            <td data-label="Cantidad">
+                                <input class="input-quantity" type="number" min="0" step="any" inputmode="decimal" @bind="row.Quantity" aria-label="Cantidad de @row.Line.Sku" />
+                            </td>
+                            <td class="row-actions">
+                                <button type="button" class="btn btn-sm" title="Sacar parte de otra ubicación" @onclick="() => Split(row)">
+                                    <Icon Name="plus" /><span>Otra ubicación</span>
+                                </button>
+                                <button type="button" class="btn btn-icon btn-sm btn-danger-ghost" title="Quitar" aria-label="Quitar @row.Line.Sku" @onclick="() => rows.Remove(row)">
+                                    <Icon Name="trash" />
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <ErrorAlert Error="error" />
+
+        <div class="form-actions">
+            <a class="btn" href="calendario/@item.Id">Cancelar</a>
+            <button type="button" class="btn btn-primary" disabled="@(busy || rows.Count == 0)" @onclick="ShipAsync">
+                <Icon Name="truck" /><span>@(busy ? "Registrando…" : "Registrar la salida")</span>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private ScheduledEvent? item;
+    private IReadOnlyList<StockItem> stock = [];
+    private readonly List<Row> rows = [];
+    private string? reference;
+    private Exception? error;
+    private bool busy;
+
+    private string? Subtitle => item is null ? null : $"{item.Title}{(item.Partner is null ? "" : $" · {item.Partner}")} · {Labels.LongDate(item.StartsAt.ToLocalTime().Date)}, {Labels.TimeRange(item.StartsAt, item.EndsAt)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            item = await Api.GetScheduledEventAsync(Id);
+            stock = await Api.GetStockAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            return;
+        }
+
+        // Start each line from the place with the most stock, picking first.
+        foreach (var line in item.Lines)
+        {
+            var best = StockOf(line.ProductId).FirstOrDefault();
+            rows.Add(new Row(line)
+            {
+                StockKey = best is null ? "" : Key(best),
+                Quantity = best is null ? line.Quantity : Math.Min(line.Quantity, best.Quantity),
+            });
+        }
+    }
+
+    private List<StockItem> StockOf(Guid productId) =>
+        [.. stock.Where(s => s.ProductId == productId && s.Quantity > 0)
+            .OrderByDescending(s => s.LocationCode.StartsWith("PCK", StringComparison.Ordinal))
+            .ThenByDescending(s => s.Quantity)];
+
+    private static string Key(StockItem s) => $"{s.LocationId}|{s.Lot}";
+
+    private void Split(Row row)
+    {
+        var left = row.Line.Quantity - rows.Where(r => r.Line == row.Line).Sum(r => r.Quantity ?? 0);
+        var used = rows.Where(r => r.Line == row.Line).Select(r => r.StockKey).ToHashSet();
+        var next = StockOf(row.Line.ProductId).FirstOrDefault(s => !used.Contains(Key(s)));
+        rows.Insert(rows.IndexOf(row) + 1, new Row(row.Line)
+        {
+            StockKey = next is null ? "" : Key(next),
+            Quantity = Math.Max(left, 0),
+        });
+    }
+
+    private async Task ShipAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.ShipScheduledEventAsync(Id, new ShipEventInput
+            {
+                Reference = string.IsNullOrWhiteSpace(reference) ? null : reference.Trim(),
+                Lines = [.. rows.Where(r => r.Quantity is > 0).Select(r =>
+                {
+                    var parts = r.StockKey.Split('|');
+                    return new ShipLineInput
+                    {
+                        ProductId = r.Line.ProductId,
+                        FromLocationId = Guid.TryParse(parts[0], out var location) ? location : null,
+                        Lot = parts.Length > 1 && parts[1].Length > 0 ? parts[1] : null,
+                        Quantity = r.Quantity!.Value,
+                    };
+                })],
+            });
+            Navigation.NavigateTo($"calendario/{Id}");
+        }
+        catch (ApiException ex)
+        {
+            error = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m))) : ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private sealed class Row(ScheduledEventLine line)
+    {
+        public ScheduledEventLine Line { get; } = line;
+
+        public string StockKey { get; set; } = "";
+
+        public decimal? Quantity { get; set; }
+    }
+}

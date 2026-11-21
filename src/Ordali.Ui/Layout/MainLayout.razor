@@ -25,9 +25,13 @@
             <nav class="nav">
                 <NavLink class="nav-link" href="" Match="NavLinkMatch.All"><Icon Name="home" /><span>Inicio</span></NavLink>
 
-                @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate))
+                @if (Can(Permissions.StockView) || Can(Permissions.MovementsView) || Can(Permissions.LocationsView) || Can(Permissions.MovementsCreate) || Can(Permissions.CalendarView))
                 {
                     <div class="nav-section">Operación</div>
+                    @if (Can(Permissions.CalendarView))
+                    {
+                        <NavLink class="nav-link" href="calendario"><Icon Name="calendar" /><span>Calendario</span></NavLink>
+                    }
                     @if (Can(Permissions.MovementsView))
                     {
                         <NavLink class="nav-link" href="entradas"><Icon Name="inbox" /><span>Entradas</span></NavLink>
