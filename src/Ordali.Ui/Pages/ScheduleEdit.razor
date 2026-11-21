@@ -35,7 +35,7 @@ else
             <label class="field field-wide">
                 <span>Título</span>
                 <input type="text" @bind="input.Title" placeholder="@TitleHint" maxlength="120" autocomplete="off" />
-                <FieldError Errors="fieldErrors" Name="title" />
+                <ApiFieldError Errors="fieldErrors" Name="title" />
             </label>
             <label class="field">
                 <span>@PartnerLabel (opcional)</span>
@@ -50,12 +50,12 @@ else
                         <option value="@dock.Id">@dock.Code · @dock.Zone</option>
                     }
                 </select>
-                <FieldError Errors="fieldErrors" Name="dockLocationId" />
+                <ApiFieldError Errors="fieldErrors" Name="dockLocationId" />
             </label>
             <label class="field">
                 <span>Día</span>
                 <input type="date" @bind="date" @bind:format="yyyy-MM-dd" />
-                <FieldError Errors="fieldErrors" Name="startsAt" />
+                <ApiFieldError Errors="fieldErrors" Name="startsAt" />
             </label>
             <div class="field-row">
                 <label class="field">
@@ -67,7 +67,7 @@ else
                     <input type="time" @bind="endTime" />
                 </label>
             </div>
-            <FieldError Errors="fieldErrors" Name="endsAt" Class="field-wide" />
+            <ApiFieldError Errors="fieldErrors" Name="endsAt" Class="field-wide" />
             @if (IsNew)
             {
                 <label class="field">
@@ -110,7 +110,7 @@ else
                     <Icon Name="plus" /><span>Añadir</span>
                 </button>
             </div>
-            <FieldError Errors="fieldErrors" Name="lines" />
+            <ApiFieldError Errors="fieldErrors" Name="lines" />
             @if (input.Lines.Count > 0)
             {
                 <table class="table table-compact">

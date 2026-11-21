@@ -1,19 +1,23 @@
 @page "/registros/usuarios"
 @attribute [Authorize(Policy = Permissions.UsersView)]
 @inject IOrdaliApi Api
+@inject SessionState Session
 
-<PageTitle>Usuarios · Ordali</PageTitle>
+<PageTitle>@L["Usuarios"] · Ordali</PageTitle>
 
-<PageHeader Title="Usuarios">
+<PageHeader Title="@L["Usuarios"]">
     <Actions>
+        <AuthorizeView Policy="@Policies.Admin">
+            <a class="btn" href="registros/usuarios/eliminados"><Icon Name="trash" /><span>Eliminados</span></a>
+        </AuthorizeView>
         <AuthorizeView Policy="@Permissions.UsersCreate">
-            <a class="btn btn-primary" href="registros/usuarios/nuevo"><Icon Name="plus" /><span>Nuevo perfil</span></a>
+            <a class="btn btn-primary" href="registros/usuarios/nuevo"><Icon Name="plus" /><span>@L["Nuevo perfil"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
 
-<div class="tabs" role="tablist" aria-label="Categoría">
-    <a class="tab @(Category is null ? "active" : "")" href="registros/usuarios">Todos <span class="tab-count">@(users?.Count ?? 0)</span></a>
+<div class="tabs" role="tablist" aria-label="@L["Categoría"]">
+    <a class="tab @(Category is null ? "active" : "")" href="registros/usuarios">@L["Todos"] <span class="tab-count">@(users?.Count ?? 0)</span></a>
     @foreach (var category in Categories)
     {
         <a class="tab @(Category == category ? "active" : "")" href="registros/usuarios?categoria=@category">
@@ -23,6 +27,30 @@
 </div>
 
 <ErrorAlert Error="error" />
+
+@if (confirming is not null)
+{
+    <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-delete">
+        <Icon Name="alert" />
+        <span class="alert-text" id="confirm-delete">
+            ¿Eliminar el perfil de <strong>@confirming.Name</strong>? Dejará de poder entrar. Podrás recuperarlo desde Eliminados.
+        </span>
+        <span class="alert-actions">
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => confirming = null">Cancelar</button>
+            <button class="btn btn-sm btn-primary" type="button" disabled="@busy" @onclick="DeleteAsync">@(busy ? "Eliminando…" : "Eliminar")</button>
+        </span>
+    </div>
+}
+else if (removed is not null)
+{
+    <div class="alert alert-ok" role="status">
+        <Icon Name="check" />
+        <span class="alert-text">Has eliminado el perfil de <strong>@removed.Name</strong>.</span>
+        <span class="alert-actions">
+            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="UndoAsync"><Icon Name="restore" /><span>Deshacer</span></button>
+        </span>
+    </div>
+}
 
 @if (users is null)
 {
@@ -40,7 +68,7 @@ else
             <h2 class="group-title">@Labels.Plural(group) <span class="muted">(@members.Count)</span></h2>
             @if (members.Count == 0)
             {
-                <EmptyState IconName="users" Text="No hay perfiles en esta categoría." />
+                <EmptyState IconName="users" Text="@L["No hay perfiles en esta categoría."]" />
             }
             else
             {
@@ -48,11 +76,11 @@ else
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Nombre</th>
+                                <th>@L["Nombre"]</th>
                                 <th>Email</th>
-                                <th>Plantilla</th>
-                                <th class="num">Permisos</th>
-                                <th>Estado</th>
+                                <th>@L["Plantilla"]</th>
+                                <th class="num">@L["Permisos"]</th>
+                                <th>@L["Estado"]</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -60,20 +88,27 @@ else
                             @foreach (var user in members)
                             {
                                 <tr class="@(user.Active ? "" : "row-inactive")">
-                                    <td data-label="Nombre"><strong>@user.Name</strong></td>
+                                    <td data-label="@L["Nombre"]"><strong>@user.Name</strong></td>
                                     <td data-label="Email">@user.Email</td>
-                                    <td data-label="Plantilla">@(user.TemplateName ?? "—")</td>
-                                    <td data-label="Permisos" class="num">
-                                        @(user.Category == UserCategory.Admin ? "Todos" : user.Permissions.Count.ToString(Labels.Culture))
+                                    <td data-label="@L["Plantilla"]">@(user.TemplateName ?? "—")</td>
+                                    <td data-label="@L["Permisos"]" class="num">
+                                        @(user.Category == UserCategory.Admin ? L["Todos"] : user.Permissions.Count.ToString(Labels.Culture))
                                     </td>
-                                    <td data-label="Estado">
-                                        <span class="badge @(user.Active ? "badge-receipt" : "")">@(user.Active ? "Activo" : "Desactivado")</span>
+                                    <td data-label="@L["Estado"]">
+                                        <span class="badge @(user.Active ? "badge-receipt" : "")">@(user.Active ? L["Activo"] : L["Desactivado"])</span>
                                     </td>
                                     <td class="row-actions">
                                         <AuthorizeView Policy="@Policies.Admin">
-                                            <a class="btn btn-ghost btn-icon" href="registros/usuarios/@user.Id" title="Editar permisos" aria-label="Editar @user.Name">
+                                            <a class="btn btn-ghost btn-icon" href="registros/usuarios/@user.Id" title="@L["Editar permisos"]" aria-label="@L["Editar {0}", user.Name]">
                                                 <Icon Name="edit" />
                                             </a>
+                                            @if (user.Id != Session.Current?.User.Id)
+                                            {
+                                                <button class="btn btn-danger-ghost btn-icon" type="button" title="Eliminar perfil" aria-label="Eliminar @user.Name"
+                                                        @onclick="() => Confirm(user)">
+                                                    <Icon Name="trash" />
+                                                </button>
+                                            }
                                         </AuthorizeView>
                                     </td>
                                 </tr>
@@ -93,6 +128,9 @@ else
 
     private IReadOnlyList<UserProfile>? users;
     private Exception? error;
+    private UserProfile? confirming;
+    private UserProfile? removed;
+    private bool busy;
 
     private UserCategory? Category => Enum.TryParse<UserCategory>(CategoryName, ignoreCase: true, out var c) ? c : null;
 
@@ -105,6 +143,56 @@ else
         catch (ApiException ex)
         {
             error = ex;
+        }
+    }
+
+    private void Confirm(UserProfile user)
+    {
+        confirming = user;
+        removed = null;
+        error = null;
+    }
+
+    private async Task DeleteAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.DeleteUserAsync(confirming!.Id);
+            removed = confirming;
+            confirming = null;
+            users = await Api.GetUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+            confirming = null;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // Lets the admin take a removal back straight away, without going to the list of removed profiles.
+    private async Task UndoAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await Api.RestoreUserAsync(removed!.Id);
+            removed = null;
+            users = await Api.GetUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            busy = false;
         }
     }
 }

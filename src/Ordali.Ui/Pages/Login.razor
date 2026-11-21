@@ -5,36 +5,36 @@
 @inject NavigationManager Navigation
 @inject OrdaliClientOptions Options
 
-<PageTitle>Iniciar sesión · Ordali</PageTitle>
+<PageTitle>@L["Iniciar sesión"] · Ordali</PageTitle>
 
 <div class="auth-card">
-    <h1>Iniciar sesión</h1>
+    <h1>@L["Iniciar sesión"]</h1>
 
     <EditForm Model="model" OnValidSubmit="SubmitAsync" FormName="login">
         <DataAnnotationsValidator />
         <label class="field">
             <span>Email</span>
             <InputText @bind-Value="model.Email" type="email" autocomplete="username" />
-            <ValidationMessage For="() => model.Email" />
+            <FieldError For="() => model.Email" />
         </label>
         <label class="field">
-            <span>Contraseña</span>
+            <span>@L["Contraseña"]</span>
             <InputText @bind-Value="model.Password" type="password" autocomplete="current-password" />
-            <ValidationMessage For="() => model.Password" />
+            <FieldError For="() => model.Password" />
         </label>
 
         <ErrorAlert Error="error" />
 
         <button class="btn btn-primary btn-block" type="submit" disabled="@busy">
-            @(busy ? "Entrando…" : "Entrar")
+            @(busy ? L["Entrando…"] : L["Entrar"])
         </button>
     </EditForm>
 
     @if (Options.IsDemo)
     {
         <section class="demo-users" aria-labelledby="demo-title">
-            <h2 id="demo-title">Probar la demo</h2>
-            <p class="muted small">Funciona sin servidor y con datos de ejemplo. Cada perfil ve un menú distinto según sus permisos.</p>
+            <h2 id="demo-title">@L["Probar la demo"]</h2>
+            <p class="muted small">@L["Funciona sin servidor y con datos de ejemplo. Cada perfil ve un menú distinto según sus permisos."]</p>
             @foreach (var demo in DemoProfiles)
             {
                 <button class="demo-user" type="button" disabled="@busy" @onclick="() => SignInAsDemoAsync(demo.Email)">
@@ -42,23 +42,23 @@
                     <span>@demo.Can</span>
                 </button>
             }
-            <p class="muted small">Contraseña de todos: <span class="mono">Demo1234!</span></p>
+            <p class="muted small">@L["Contraseña de todos:"] <span class="mono">Demo1234!</span></p>
         </section>
     }
     else
     {
-        <p class="muted small">Conectado a @Options.ApiBaseUrl</p>
+        <p class="muted small">@L["Conectado a {0}", Options.ApiBaseUrl!]</p>
     }
 </div>
 
 @code {
     [SupplyParameterFromQuery(Name = "volver")] public string? ReturnUrl { get; set; }
 
-    private static readonly (string Role, string Can, string Email)[] DemoProfiles =
+    private (string Role, string Can, string Email)[] DemoProfiles =>
     [
-        ("Administrador", "Todo, incluidas las plantillas y los permisos de cada perfil.", "admin@demo.local"),
-        ("Encargado", "Entradas, traslados, ajustes de inventario, catálogo y altas de personal.", "encargado@demo.local"),
-        ("Mozo", "Escanea entradas y traslados y consulta el stock.", "mozo@demo.local"),
+        (L["Administrador"], L["Todo, incluidas las plantillas y los permisos de cada perfil."], "admin@demo.local"),
+        (L["Encargado"], L["Entradas, traslados, ajustes de inventario, catálogo y altas de personal."], "encargado@demo.local"),
+        (L["Mozo"], L["Escanea entradas y traslados y consulta el stock."], "mozo@demo.local"),
     ];
 
     private readonly LoginModel model = new();

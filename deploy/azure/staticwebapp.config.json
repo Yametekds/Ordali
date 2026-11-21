@@ -1,0 +1,17 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/_framework/*", "/_content/*", "/css/*", "/js/*", "*.{png,ico,svg,json,js,css,wasm,dat,blat,webmanifest,woff,woff2}"]
+  },
+  "routes": [
+    { "route": "/appsettings.json", "headers": { "Cache-Control": "no-cache" } },
+    { "route": "/service-worker.js", "headers": { "Cache-Control": "no-cache" } },
+    { "route": "/service-worker-assets.js", "headers": { "Cache-Control": "no-cache" } }
+  ],
+  "mimeTypes": {
+    ".dat": "application/octet-stream",
+    ".blat": "application/octet-stream",
+    ".wasm": "application/wasm",
+    ".webmanifest": "application/manifest+json"
+  }
+}

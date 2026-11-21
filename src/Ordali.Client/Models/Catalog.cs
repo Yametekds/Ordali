@@ -8,7 +8,9 @@ public sealed record Product(
     string Unit,
     bool TracksLots,
     decimal MinStock,
-    Guid? DefaultLocationId = null);
+    Guid? DefaultLocationId = null,
+    decimal MaxStock = 0,
+    Guid? SupplierId = null);
 
 public sealed record Site(Guid Id, string Code, string Name);
 

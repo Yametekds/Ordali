@@ -1,0 +1,26 @@
+@inject ILanguageStore Store
+<div class="lang-picker @Class" role="group" aria-label="@L["Idioma"]">
+    @foreach (var option in Language.Supported)
+    {
+        var current = option.Code == Language.Current;
+        <button type="button" class="lang-option @(current ? "active" : "")" lang="@option.Code" title="@option.Name"
+                aria-label="@option.Name" aria-pressed="@(current ? "true" : "false")" @onclick="() => ChangeAsync(option.Code)">
+            @option.Code.ToUpperInvariant()
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Class { get; set; }
+
+    private async Task ChangeAsync(string code)
+    {
+        if (code == Language.Current)
+        {
+            return;
+        }
+
+        await Store.SaveAsync(code);
+        Language.Set(code);
+    }
+}

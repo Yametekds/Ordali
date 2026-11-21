@@ -2,12 +2,12 @@
 @attribute [Authorize(Policy = Permissions.MovementsView)]
 @inject IOrdaliApi Api
 
-<PageTitle>Movimientos · Ordali</PageTitle>
+<PageTitle>@L["Movimientos"] · Ordali</PageTitle>
 
-<PageHeader Title="Movimientos" Subtitle="Cada movimiento guarda quién lo hizo y cuándo. No se pueden editar ni borrar.">
+<PageHeader Title="@L["Movimientos"]" Subtitle="@L["Cada movimiento guarda quién lo hizo y cuándo. No se pueden editar ni borrar."]">
     <Actions>
         <AuthorizeView Policy="@Permissions.MovementsCreate">
-            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>Registrar movimiento</span></a>
+            <a class="btn btn-primary" href="movimientos/nuevo"><Icon Name="plus" /><span>@L["Registrar movimiento"]</span></a>
         </AuthorizeView>
     </Actions>
 </PageHeader>
@@ -23,7 +23,7 @@
 }
 else if (movements.Count == 0)
 {
-    <EmptyState IconName="swap" Text="Todavía no hay movimientos." />
+    <EmptyState IconName="swap" Text="@L["Todavía no hay movimientos."]" />
 }
 else
 {
@@ -31,30 +31,30 @@ else
         <table class="table">
             <thead>
                 <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
+                    <th>@L["Fecha"]</th>
+                    <th>@L["Tipo"]</th>
                     <th>SKU</th>
-                    <th>Lote</th>
-                    <th>Origen → destino</th>
-                    <th class="num">Cantidad</th>
-                    <th>Usuario</th>
-                    <th>Entrada</th>
-                    <th>Motivo</th>
+                    <th>@L["Lote"]</th>
+                    <th>@L["Origen → destino"]</th>
+                    <th class="num">@L["Cantidad"]</th>
+                    <th>@L["Usuario"]</th>
+                    <th>@L["Entrada"]</th>
+                    <th>@L["Motivo"]</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var m in movements)
                 {
                     <tr>
-                        <td data-label="Fecha">@Labels.DateTime(m.CreatedAt)</td>
-                        <td data-label="Tipo"><MovementTypeBadge Type="m.Type" /></td>
+                        <td data-label="@L["Fecha"]">@Labels.DateTime(m.CreatedAt)</td>
+                        <td data-label="@L["Tipo"]"><MovementTypeBadge Type="m.Type" /></td>
                         <td data-label="SKU"><strong class="mono">@m.Sku</strong></td>
-                        <td data-label="Lote" class="mono">@(m.Lot ?? "—")</td>
-                        <td data-label="Ruta" class="mono">@(m.FromLocationCode ?? "—") → @(m.ToLocationCode ?? "—")</td>
-                        <td data-label="Cantidad" class="num">@(m.Type == MovementType.Adjustment ? Labels.SignedQuantity(m.Quantity) : Labels.Quantity(m.Quantity))</td>
-                        <td data-label="Usuario">@m.UserName</td>
-                        <td data-label="Entrada" class="mono">@m.Reference</td>
-                        <td data-label="Motivo" class="muted">@m.Reason</td>
+                        <td data-label="@L["Lote"]" class="mono">@(m.Lot ?? "—")</td>
+                        <td data-label="@L["Ruta"]" class="mono">@(m.FromLocationCode ?? "—") → @(m.ToLocationCode ?? "—")</td>
+                        <td data-label="@L["Cantidad"]" class="num">@(m.Type == MovementType.Adjustment ? Labels.SignedQuantity(m.Quantity) : Labels.Quantity(m.Quantity))</td>
+                        <td data-label="@L["Usuario"]">@m.UserName</td>
+                        <td data-label="@L["Entrada"]" class="mono">@m.Reference</td>
+                        <td data-label="@L["Motivo"]" class="muted">@m.Reason</td>
                     </tr>
                 }
             </tbody>

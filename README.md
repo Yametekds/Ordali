@@ -23,6 +23,10 @@ Después abre:
 
 La web en modo demo (datos de ejemplo en el navegador, sin servidor) se publica en GitHub Pages: `https://yametekds.github.io/Ordali/`. Más detalles en [src/Ordali.Web/README.md](src/Ordali.Web/README.md).
 
+### En Azure
+
+La API, la base de datos y la web se pueden desplegar en Azure usando solo planes gratuitos (App Service F1, la oferta gratuita de Azure SQL Database y Static Web Apps Free). El workflow `azure.yml` publica cada cambio de `main`. Los pasos, desde crear la cuenta hasta el primer despliegue, están en [docs/azure.md](docs/azure.md).
+
 ### Sin instalar nada
 
 Pulsa **Code → Codespaces → Create codespace** en GitHub. El entorno arranca la API, la web y SQL Server solo, y abre la web en el navegador; la API queda en el puerto 8080. Usa la cuota gratuita mensual de tu cuenta de GitHub.
@@ -61,10 +65,15 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 | `GET`/`POST /api/v1/calendar` | Calendario: cargas, descargas y otras citas; `repeatWeeks` las repite cada semana y un muelle ocupado pide confirmación (409 y `allowOverlap`) |
 | `POST /api/v1/calendar/{id}/receive`, `/ship` | Cierra una descarga registrando su entrada, o una carga registrando la salida de cada línea |
 | `GET`/`POST /api/v1/movements` | Movimientos (salidas, traslados y ajustes) con quién los hizo y la entrada a la que pertenecen |
+| `GET`/`POST`/`PUT /api/v1/suppliers` | Distribuidores; cada artículo indica a cuál se le pide |
+| `GET /api/v1/purchase-orders/suggestions` | Artículos por debajo de su rango seguro, agrupados por distribuidor, con la cantidad que los devuelve al máximo |
+| `GET`/`POST`/`PUT /api/v1/purchase-orders` | Pedidos a distribuidores; se editan mientras están en borrador |
+| `POST /api/v1/purchase-orders/{id}/status` | Borrador → Enviado o Anulado; Enviado → Recibido o Anulado |
 | `GET /api/v1/permissions` | Los permisos que se pueden marcar en una plantilla |
 | `/api/v1/profile-templates` | Plantillas de perfil: las crea el administrador y las usan quienes pueden crear perfiles |
 | `GET`/`POST /api/v1/users` | Perfiles por categoría y alta a partir de una plantilla |
 | `PUT /api/v1/users/{id}/access` | Cambiar categoría, permisos especiales o desactivar un perfil (solo administrador) |
+| `DELETE /api/v1/users/{id}`, `GET /api/v1/users/deleted`, `POST /api/v1/users/{id}/restore` | Eliminar un perfil y recuperarlo después (solo administrador) |
 | `/health/live` | El proceso está en marcha |
 | `/health/ready` | La API puede atender peticiones (incluye la base de datos) |
 
@@ -83,12 +92,22 @@ El encargado programa en el **calendario** los camiones que vienen a descargar o
 
 Las pantallas funcionan con lectores USB, Bluetooth y terminales Android (Zebra, Honeywell…) que escriben el código y pulsan Intro: cada paso deja el cursor en el campo siguiente y avisa con un pitido si el código no encaja. En móviles con Chrome o Edge también se puede escanear con la cámara.
 
+## Pedidos a distribuidores
+
+Cada artículo tiene un **rango seguro** (stock mínimo y máximo) y un distribuidor habitual.
+
+1. En **Pedidos**, la sección *Por pedir* agrupa por distribuidor los artículos que han bajado del mínimo. Lo que ya está pedido y no ha llegado cuenta como stock, para no pedirlo dos veces.
+2. *Preparar pedido* abre la lista de ese distribuidor con la cantidad propuesta (lo que falta hasta el máximo) ya escrita; se puede cambiar o quitar cada línea.
+3. Debajo se añaden otros artículos del catálogo con la cantidad que se quiera, sean o no de ese distribuidor.
+4. El pedido se guarda como borrador o se marca como enviado, y se puede imprimir o guardar en PDF desde el navegador.
+
 ## Perfiles y permisos
 
 Cada perfil tiene una **categoría** (Mozo, Encargado o Administrador) y una lista de **permisos** que se marcan uno a uno: ver artículos, editarlos, ver stock, registrar movimientos, registrar ajustes, ver el calendario, programar en él, ver usuarios, crear perfiles...
 
 - El **administrador** tiene todos los permisos. Además, es el único que crea **plantillas de perfil** y que puede cambiar un perfil ya creado: darle permisos especiales, subirlo de categoría o desactivarlo.
 - Las plantillas se comparten con todos los que tienen el permiso *crear perfiles*, que las usan para dar de alta perfiles nuevos. Nadie salvo el administrador puede usar una plantilla con permisos que él mismo no tiene.
+- El administrador también puede **eliminar perfiles**. Un perfil eliminado deja de poder entrar y desaparece de las listas, pero no se borra: su historial de movimientos se conserva y el administrador lo puede **recuperar** con la misma categoría y los mismos permisos.
 - Los permisos se comprueban en la API en cada petición, así que un cambio se aplica al momento.
 
 Perfiles de ejemplo (contraseña `Demo1234!`):
@@ -100,6 +119,39 @@ Perfiles de ejemplo (contraseña `Demo1234!`):
 | `mozo@demo.local` | Mozo | Mozo de almacén: consultar y registrar movimientos, sin ajustes |
 
 Cada movimiento guarda el usuario y la hora, y no se puede modificar ni borrar: los errores se corrigen con un ajuste.
+
+## Copias de seguridad
+
+Con `docker compose up`, el servicio `backup` hace una copia completa de la base de datos (artículos, stock, entradas, movimientos, usuarios y plantillas) en cuanto arranca y después **cada día a las 03:00** (hora de Madrid). Cada copia se comprueba con `RESTORE VERIFYONLY` y las de más de 14 días se borran solas. Los datos y las copias viven en los volúmenes `sqldata` y `backups`, así que sobreviven a `docker compose down` (solo `docker compose down -v` los borra).
+
+```bash
+docker compose logs backup                          # cuándo se hizo la última y cuándo toca la siguiente
+docker compose exec backup backup.sh                # copia en este momento
+docker compose exec backup ls -l /var/opt/mssql/backup
+docker compose exec backup restore.sh               # restaura la más reciente
+docker compose exec backup restore.sh Ordali_20261105_030000.bak
+docker compose cp backup:/var/opt/mssql/backup ./copias   # llevarlas a tu equipo
+docker compose cp ./copia.bak backup:/var/opt/mssql/backup/   # traer una de fuera
+```
+
+La restauración cierra las conexiones abiertas y la API vuelve a conectarse sola. Se configura con variables de entorno (o un archivo `.env`):
+
+| Variable | Por defecto | Para qué sirve |
+| --- | --- | --- |
+| `BACKUP_TIME` | `03:00` | Hora de la copia diaria |
+| `BACKUP_EVERY_MINUTES` | (vacía) | Si tiene valor, una copia cada N minutos en lugar de la diaria |
+| `BACKUP_KEEP_DAYS` | `14` | Días que se guardan las copias |
+| `TZ` | `Europe/Madrid` | Zona horaria de `BACKUP_TIME` |
+
+Para verlo funcionar sin esperar: `BACKUP_EVERY_MINUTES=1 docker compose up`. El CI hace una copia, cambia datos, restaura y comprueba que la API sigue respondiendo.
+
+## Idiomas
+
+La web y la app están en **español e inglés**. El selector está en el menú lateral y en la pantalla de entrada; el cambio se aplica al momento, sin recargar, y se recuerda para la próxima vez. La primera vez se usa el idioma del navegador o del móvil.
+
+- Los textos se escriben en español en la propia página (`@L["Nuevo producto"]`) y ese texto es la clave de su traducción. La traducción inglesa va en `src/Ordali.Ui/Localization/English.*.cs`, un archivo por área de la app.
+- Una prueba recorre el código y falla si algún texto no tiene su traducción o si cambian los huecos `{0}`.
+- Los mensajes del modo demo también se traducen. La API recibe el idioma en la cabecera `Accept-Language`, aunque de momento sus mensajes siguen en español.
 
 ## Estructura
 
@@ -114,6 +166,10 @@ tests/Ordali.Ui.Tests             Tests de los componentes de la interfaz
 .github/workflows/ci.yml          Build, tests y prueba del stack con Docker Compose
 .github/workflows/pages.yml       Publica la demo web en GitHub Pages
 .github/workflows/apps.yml        Compila la app y, con una etiqueta v*, la publica en Releases
+.github/workflows/azure.yml       Despliega la API y la web en Azure
+deploy/azure/                     Configuración de Azure Static Web Apps
+docs/azure.md                     Guía de despliegue en Azure
+ops/backup/                       Scripts de las copias de seguridad programadas y la restauración
 .devcontainer/                    Configuración de GitHub Codespaces
 ```
 

@@ -8,7 +8,7 @@ namespace Ordali.Client;
 public sealed class ApiException : Exception
 {
     public ApiException()
-        : this(HttpStatusCode.InternalServerError, "Error inesperado.")
+        : this(HttpStatusCode.InternalServerError, Text.Get("Error inesperado."))
     {
     }
 
