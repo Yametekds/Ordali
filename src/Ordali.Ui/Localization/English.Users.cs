@@ -5,6 +5,30 @@ internal static partial class English
     /// <summary>Profiles, permissions and profile templates.</summary>
     public static (string, string)[] Users =>
     [
+        // Deleting and restoring profiles
+        ("Eliminados", "Deleted"),
+        ("Usuarios eliminados", "Deleted users"),
+        ("Perfiles que ya no pueden entrar. Al recuperarlos vuelven con su categoría y sus permisos.",
+            "Profiles that can no longer sign in. Restoring them brings back their category and permissions."),
+        ("Volver a usuarios", "Back to users"),
+        ("Has recuperado el perfil de", "You've restored the profile of"),
+        ("Revisar sus permisos", "Review their permissions"),
+        ("No hay perfiles eliminados.", "There are no deleted profiles."),
+        ("Eliminado", "Deleted"),
+        ("por {0}", "by {0}"),
+        ("Recuperar", "Restore"),
+        ("¿Eliminar el perfil de", "Delete the profile of"),
+        ("Dejará de poder entrar. Podrás recuperarlo desde Eliminados.", "They won't be able to sign in. You can restore it from Deleted."),
+        ("Has eliminado el perfil de", "You've deleted the profile of"),
+        ("Deshacer", "Undo"),
+        ("Eliminar perfil", "Delete profile"),
+        ("Eliminar {0}", "Delete {0}"),
+        ("¿Seguro? {0} dejará de poder entrar.", "Are you sure? {0} won't be able to sign in."),
+        ("Eliminando…", "Deleting…"),
+        ("Eliminar", "Delete"),
+        ("Deja de poder entrar y desaparece de la lista. Su historial se conserva y puedes recuperarlo desde Usuarios eliminados.",
+            "They can no longer sign in and disappear from the list. Their history is kept and you can restore them from Deleted users."),
+
         ("Nuevo perfil", "New profile"),
         ("Editar perfil", "Edit profile"),
         ("Editar permisos", "Edit permissions"),

@@ -3,13 +3,13 @@
 @inject IOrdaliApi Api
 @inject SessionState Session
 
-<PageTitle>Distribuidores · Ordali</PageTitle>
+<PageTitle>@L["Distribuidores"] · Ordali</PageTitle>
 
-<PageHeader Title="Distribuidores" Subtitle="A quién se piden los artículos. Cada artículo se asigna a uno desde su ficha.">
+<PageHeader Title="@L["Distribuidores"]" Subtitle="@L["A quién se piden los artículos. Cada artículo se asigna a uno desde su ficha."]">
     <Actions>
         @if (CanEdit && editing is null)
         {
-            <button class="btn btn-primary" type="button" @onclick="StartNew"><Icon Name="plus" /><span>Nuevo distribuidor</span></button>
+            <button class="btn btn-primary" type="button" @onclick="StartNew"><Icon Name="plus" /><span>@L["Nuevo distribuidor"]</span></button>
         }
     </Actions>
 </PageHeader>
@@ -17,35 +17,35 @@
 @if (editing is not null)
 {
     <div class="card form-card">
-        <h2 class="card-title">@(editingId is null ? "Nuevo distribuidor" : "Editar distribuidor")</h2>
+        <h2 class="card-title">@(editingId is null ? L["Nuevo distribuidor"] : L["Editar distribuidor"])</h2>
         <EditForm EditContext="editContext" OnValidSubmit="SaveAsync" FormName="supplier">
             <DataAnnotationsValidator />
             <div class="form-grid">
                 <label class="field field-wide">
-                    <span>Nombre</span>
+                    <span>@L["Nombre"]</span>
                     <InputText @bind-Value="editing.Name" />
-                    <ValidationMessage For="() => editing.Name" />
+                    <FieldError For="() => editing.Name" />
                 </label>
                 <label class="field">
-                    <span>Persona de contacto</span>
-                    <InputText @bind-Value="editing.ContactName" placeholder="Opcional" />
-                    <ValidationMessage For="() => editing.ContactName" />
+                    <span>@L["Persona de contacto"]</span>
+                    <InputText @bind-Value="editing.ContactName" placeholder="@L["Opcional"]" />
+                    <FieldError For="() => editing.ContactName" />
                 </label>
                 <label class="field">
-                    <span>Teléfono</span>
-                    <InputText @bind-Value="editing.Phone" inputmode="tel" placeholder="Opcional" />
-                    <ValidationMessage For="() => editing.Phone" />
+                    <span>@L["Teléfono"]</span>
+                    <InputText @bind-Value="editing.Phone" inputmode="tel" placeholder="@L["Opcional"]" />
+                    <FieldError For="() => editing.Phone" />
                 </label>
                 <label class="field field-wide">
-                    <span>Email para pedidos</span>
-                    <InputText @bind-Value="editing.Email" type="email" placeholder="Opcional" />
-                    <ValidationMessage For="() => editing.Email" />
+                    <span>@L["Email para pedidos"]</span>
+                    <InputText @bind-Value="editing.Email" type="email" placeholder="@L["Opcional"]" />
+                    <FieldError For="() => editing.Email" />
                 </label>
                 @if (editingId is not null)
                 {
                     <label class="check field-wide">
                         <InputCheckbox @bind-Value="editing.Active" />
-                        <span>Activo (los dados de baja conservan sus pedidos, pero no reciben nuevos)</span>
+                        <span>@L["Activo (los dados de baja conservan sus pedidos, pero no reciben nuevos)"]</span>
                     </label>
                 }
             </div>
@@ -53,8 +53,8 @@
             <ErrorAlert Error="saveError" />
 
             <div class="form-actions">
-                <button class="btn" type="button" @onclick="Cancel">Cancelar</button>
-                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? "Guardando…" : "Guardar")</button>
+                <button class="btn" type="button" @onclick="Cancel">@L["Cancelar"]</button>
+                <button class="btn btn-primary" type="submit" disabled="@busy">@(busy ? L["Guardando…"] : L["Guardar"])</button>
             </div>
         </EditForm>
     </div>
@@ -71,7 +71,7 @@
 }
 else if (suppliers.Count == 0)
 {
-    <EmptyState IconName="truck" Text="Todavía no hay distribuidores." />
+    <EmptyState IconName="truck" Text="@L["Todavía no hay distribuidores."]" />
 }
 else
 {
@@ -79,11 +79,11 @@ else
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nombre</th>
-                    <th>Contacto</th>
-                    <th>Email</th>
-                    <th>Teléfono</th>
-                    <th>Estado</th>
+                    <th>@L["Nombre"]</th>
+                    <th>@L["Contacto"]</th>
+                    <th>@L["Email"]</th>
+                    <th>@L["Teléfono"]</th>
+                    <th>@L["Estado"]</th>
                     <th></th>
                 </tr>
             </thead>
@@ -91,9 +91,9 @@ else
                 @foreach (var supplier in suppliers)
                 {
                     <tr>
-                        <td data-label="Nombre"><strong>@supplier.Name</strong></td>
-                        <td data-label="Contacto">@(supplier.ContactName ?? "—")</td>
-                        <td data-label="Email">
+                        <td data-label="@L["Nombre"]"><strong>@supplier.Name</strong></td>
+                        <td data-label="@L["Contacto"]">@(supplier.ContactName ?? "—")</td>
+                        <td data-label="@L["Email"]">
                             @if (supplier.Email is { } email)
                             {
                                 <a href="mailto:@email">@email</a>
@@ -103,18 +103,18 @@ else
                                 <span class="muted">—</span>
                             }
                         </td>
-                        <td data-label="Teléfono">@(supplier.Phone ?? "—")</td>
-                        <td data-label="Estado">
-                            <span class="badge @(supplier.Active ? "badge-receipt" : "badge-draft")">@(supplier.Active ? "Activo" : "De baja")</span>
+                        <td data-label="@L["Teléfono"]">@(supplier.Phone ?? "—")</td>
+                        <td data-label="@L["Estado"]">
+                            <span class="badge @(supplier.Active ? "badge-receipt" : "badge-draft")">@(supplier.Active ? L["Activo"] : L["De baja"])</span>
                         </td>
                         <td class="row-actions">
                             @if (CanEdit)
                             {
                                 @if (supplier.Active)
                                 {
-                                    <a class="btn btn-sm" href="pedidos/nuevo?distribuidor=@supplier.Id">Preparar pedido</a>
+                                    <a class="btn btn-sm" href="pedidos/nuevo?distribuidor=@supplier.Id">@L["Preparar pedido"]</a>
                                 }
-                                <button class="btn btn-ghost btn-icon" type="button" title="Editar" aria-label="Editar @supplier.Name" @onclick="() => StartEdit(supplier)">
+                                <button class="btn btn-ghost btn-icon" type="button" title="@L["Editar"]" aria-label="@L["Editar {0}", supplier.Name]" @onclick="() => StartEdit(supplier)">
                                     <Icon Name="edit" />
                                 </button>
                             }

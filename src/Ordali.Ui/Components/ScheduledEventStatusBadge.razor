@@ -1,6 +1,6 @@
 @if (Event.IsLate(Now))
 {
-    <span class="badge badge-warning">Con retraso</span>
+    <span class="badge badge-warning">@L["Con retraso"]</span>
 }
 else if (Event.Status == ScheduledEventStatus.Completed)
 {

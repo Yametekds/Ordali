@@ -3,9 +3,9 @@
 @inject IOrdaliApi Api
 @inject NavigationManager Navigation
 
-<PageTitle>Registrar carga · Ordali</PageTitle>
+<PageTitle>@L["Registrar carga"] · Ordali</PageTitle>
 
-<PageHeader Title="Registrar carga" Subtitle="@Subtitle" />
+<PageHeader Title="@L["Registrar carga"]" Subtitle="@Subtitle" />
 
 @if (item is null)
 {
@@ -17,43 +17,43 @@
 }
 else if (item.Status != ScheduledEventStatus.Scheduled || item.Type != ScheduledEventType.Outbound)
 {
-    <EmptyState IconName="check" Text="Esta cita ya no tiene nada que cargar.">
-        <a class="link" href="calendario/@item.Id">Volver a la cita <Icon Name="arrow-right" /></a>
+    <EmptyState IconName="check" Text="@L["Esta cita ya no tiene nada que cargar."]">
+        <a class="link" href="calendario/@item.Id">@L["Volver a la cita"] <Icon Name="arrow-right" /></a>
     </EmptyState>
 }
 else
 {
     <div class="card form-card form-card-wide">
         <label class="field">
-            <span>Referencia de la salida (opcional)</span>
+            <span>@L["Referencia de la salida (opcional)"]</span>
             <input type="text" @bind="reference" maxlength="40" placeholder="@item.Title" autocomplete="off" />
-            <small class="muted">El número de pedido o de albarán con el que quedan los movimientos.</small>
+            <small class="muted">@L["El número de pedido o de albarán con el que quedan los movimientos."]</small>
         </label>
 
-        <h2 class="card-title ship-title">Qué sale y de dónde</h2>
+        <h2 class="card-title ship-title">@L["Qué sale y de dónde"]</h2>
         @if (rows.Count == 0)
         {
-            <EmptyState Text="La cita no tiene mercancía prevista. Añade lo que se carga desde la cita o registra la salida en Movimientos." />
+            <EmptyState Text="@L["La cita no tiene mercancía prevista. Añade lo que se carga desde la cita o registra la salida en Movimientos."]" />
         }
         else
         {
             <table class="table table-compact">
-                <thead><tr><th>Artículo</th><th>Sale de</th><th class="num">Previsto</th><th>Cantidad</th><th></th></tr></thead>
+                <thead><tr><th>@L["Artículo"]</th><th>@L["Sale de"]</th><th class="num">@L["Previsto"]</th><th>@L["Cantidad"]</th><th></th></tr></thead>
                 <tbody>
                     @foreach (var row in rows)
                     {
                         var options = StockOf(row.Line.ProductId);
                         <tr>
-                            <td data-label="Artículo"><strong class="mono">@row.Line.Sku</strong> @row.Line.ProductName</td>
-                            <td data-label="Sale de">
+                            <td data-label="@L["Artículo"]"><strong class="mono">@row.Line.Sku</strong> @row.Line.ProductName</td>
+                            <td data-label="@L["Sale de"]">
                                 @if (options.Count == 0)
                                 {
-                                    <span class="text-warning">Sin stock</span>
+                                    <span class="text-warning">@L["Sin stock"]</span>
                                 }
                                 else
                                 {
-                                    <select @bind="row.StockKey" aria-label="Ubicación de @row.Line.Sku">
-                                        <option value="">Elige ubicación</option>
+                                    <select @bind="row.StockKey" aria-label="@L["Ubicación de {0}", row.Line.Sku]">
+                                        <option value="">@L["Elige ubicación"]</option>
                                         @foreach (var stockItem in options)
                                         {
                                             <option value="@Key(stockItem)">@stockItem.LocationCode@(stockItem.Lot is null ? "" : $" · {stockItem.Lot}") (@Labels.Quantity(stockItem.Quantity))</option>
@@ -61,15 +61,15 @@ else
                                     </select>
                                 }
                             </td>
-                            <td data-label="Previsto" class="num">@Labels.Quantity(row.Line.Quantity) @row.Line.Unit</td>
-                            <td data-label="Cantidad">
-                                <input class="input-quantity" type="number" min="0" step="any" inputmode="decimal" @bind="row.Quantity" aria-label="Cantidad de @row.Line.Sku" />
+                            <td data-label="@L["Previsto"]" class="num">@Labels.Quantity(row.Line.Quantity) @Labels.Unit(row.Line.Unit)</td>
+                            <td data-label="@L["Cantidad"]">
+                                <input class="input-quantity" type="number" min="0" step="any" inputmode="decimal" @bind="row.Quantity" aria-label="@L["Cantidad de {0}", row.Line.Sku]" />
                             </td>
                             <td class="row-actions">
-                                <button type="button" class="btn btn-sm" title="Sacar parte de otra ubicación" @onclick="() => Split(row)">
-                                    <Icon Name="plus" /><span>Otra ubicación</span>
+                                <button type="button" class="btn btn-sm" title="@L["Sacar parte de otra ubicación"]" @onclick="() => Split(row)">
+                                    <Icon Name="plus" /><span>@L["Otra ubicación"]</span>
                                 </button>
-                                <button type="button" class="btn btn-icon btn-sm btn-danger-ghost" title="Quitar" aria-label="Quitar @row.Line.Sku" @onclick="() => rows.Remove(row)">
+                                <button type="button" class="btn btn-icon btn-sm btn-danger-ghost" title="@L["Quitar"]" aria-label="@L["Quitar {0}", row.Line.Sku]" @onclick="() => rows.Remove(row)">
                                     <Icon Name="trash" />
                                 </button>
                             </td>
@@ -82,9 +82,9 @@ else
         <ErrorAlert Error="error" />
 
         <div class="form-actions">
-            <a class="btn" href="calendario/@item.Id">Cancelar</a>
+            <a class="btn" href="calendario/@item.Id">@L["Cancelar"]</a>
             <button type="button" class="btn btn-primary" disabled="@(busy || rows.Count == 0)" @onclick="ShipAsync">
-                <Icon Name="truck" /><span>@(busy ? "Registrando…" : "Registrar la salida")</span>
+                <Icon Name="truck" /><span>@(busy ? L["Registrando…"] : L["Registrar la salida"])</span>
             </button>
         </div>
     </div>
@@ -171,7 +171,7 @@ else
         }
         catch (ApiException ex)
         {
-            error = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m))) : ex;
+            error = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m).Select(m => L[m].Value))) : ex;
         }
         finally
         {

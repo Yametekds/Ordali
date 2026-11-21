@@ -35,15 +35,15 @@ else
     {
         <section class="card form-card planned">
             <header class="panel-head">
-                <h2>Previsto en la cita</h2>
+                <h2>@L["Previsto en la cita"]</h2>
                 @if (scheduled.Lines.Any(l => !l.TracksLots))
                 {
-                    <button type="button" class="btn btn-sm" @onclick="AddPlannedWithoutLots">Añadir lo que no lleva lote</button>
+                    <button type="button" class="btn btn-sm" @onclick="AddPlannedWithoutLots">@L["Añadir lo que no lleva lote"]</button>
                 }
             </header>
             @if (scheduled.Lines.Count == 0)
             {
-                <p class="muted small">La cita no dice qué mercancía llega: escanea lo que descarguéis.</p>
+                <p class="muted small">@L["La cita no dice qué mercancía llega: escanea lo que descarguéis."]</p>
             }
             else
             {
@@ -53,10 +53,10 @@ else
                         var received = lines.Where(l => l.Product.Id == line.ProductId).Sum(l => l.Quantity);
                         <li>
                             <span><strong class="mono">@line.Sku</strong> @line.ProductName</span>
-                            <span class="muted">@Labels.Quantity(received) de @Labels.Quantity(line.Quantity) @line.Unit</span>
+                            <span class="muted">@L["{0} de {1} {2}", Labels.Quantity(received), Labels.Quantity(line.Quantity), Labels.Unit(line.Unit)]</span>
                             @if (received < line.Quantity)
                             {
-                                <button type="button" class="btn btn-sm" @onclick="() => Plan(line, line.Quantity - received)">Recibir</button>
+                                <button type="button" class="btn btn-sm" @onclick="() => Plan(line, line.Quantity - received)">@L["Recibir"]</button>
                             }
                             else
                             {
@@ -198,7 +198,7 @@ else
                 scheduled = await Api.GetScheduledEventAsync(eventId);
                 if (scheduled.Type != ScheduledEventType.Inbound || scheduled.Status != ScheduledEventStatus.Scheduled)
                 {
-                    error = new ApiException(HttpStatusCode.Conflict, "Esta cita ya no espera ninguna descarga. La entrada se registrará suelta.");
+                    error = new ApiException(HttpStatusCode.Conflict, L["Esta cita ya no espera ninguna descarga. La entrada se registrará suelta."]);
                     scheduled = null;
                     EventId = null;
                 }

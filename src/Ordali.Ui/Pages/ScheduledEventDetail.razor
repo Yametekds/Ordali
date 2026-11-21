@@ -4,7 +4,7 @@
 @inject TimeProvider Time
 @inject SessionState Session
 
-<PageTitle>@(item?.Title ?? "Cita") · Ordali</PageTitle>
+<PageTitle>@(item?.Title ?? L["Cita"]) · Ordali</PageTitle>
 
 @if (item is null)
 {
@@ -19,21 +19,21 @@ else
     <PageHeader Title="@item.Title">
         <Actions>
             <a class="btn" href="calendario?dia=@item.StartsAt.ToLocalTime().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)">
-                <Icon Name="calendar" /><span>Ver en el calendario</span>
+                <Icon Name="calendar" /><span>@L["Ver en el calendario"]</span>
             </a>
             @if (IsOpen)
             {
                 @if (item.Type == ScheduledEventType.Inbound && Can(Permissions.MovementsCreate))
                 {
-                    <a class="btn btn-primary" href="entradas/nueva?cita=@item.Id"><Icon Name="inbox" /><span>Registrar la descarga</span></a>
+                    <a class="btn btn-primary" href="entradas/nueva?cita=@item.Id"><Icon Name="inbox" /><span>@L["Registrar la descarga"]</span></a>
                 }
                 else if (item.Type == ScheduledEventType.Outbound && Can(Permissions.MovementsCreate))
                 {
-                    <a class="btn btn-primary" href="calendario/@item.Id/carga"><Icon Name="truck" /><span>Registrar la carga</span></a>
+                    <a class="btn btn-primary" href="calendario/@item.Id/carga"><Icon Name="truck" /><span>@L["Registrar la carga"]</span></a>
                 }
                 else if (item.Type == ScheduledEventType.Other && Can(Permissions.CalendarEdit))
                 {
-                    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="CompleteAsync"><Icon Name="check" /><span>Marcar como hecha</span></button>
+                    <button type="button" class="btn btn-primary" disabled="@busy" @onclick="CompleteAsync"><Icon Name="check" /><span>@L["Marcar como hecha"]</span></button>
                 }
             }
         </Actions>
@@ -48,32 +48,32 @@ else
                 <ScheduledEventStatusBadge Event="item" Now="now" />
                 @if (item.SeriesId is not null)
                 {
-                    <span class="badge">Se repite cada semana</span>
+                    <span class="badge">@L["Se repite cada semana"]</span>
                 }
             </div>
             <dl class="facts">
-                <div><dt>Día</dt><dd>@Labels.LongDate(item.StartsAt.ToLocalTime().Date)</dd></div>
-                <div><dt>Horario</dt><dd>@Labels.TimeRange(item.StartsAt, item.EndsAt)</dd></div>
+                <div><dt>@L["Día"]</dt><dd>@Labels.LongDate(item.StartsAt.ToLocalTime().Date)</dd></div>
+                <div><dt>@L["Horario"]</dt><dd>@Labels.TimeRange(item.StartsAt, item.EndsAt)</dd></div>
                 @if (item.Partner is not null)
                 {
                     <div><dt>@PartnerLabel</dt><dd>@item.Partner</dd></div>
                 }
                 @if (item.DockLocationCode is not null)
                 {
-                    <div><dt>Muelle</dt><dd class="mono">@item.DockLocationCode</dd></div>
+                    <div><dt>@L["Muelle"]</dt><dd class="mono">@item.DockLocationCode</dd></div>
                 }
-                <div><dt>Programada por</dt><dd>@item.CreatedByName</dd></div>
+                <div><dt>@L["Programada por"]</dt><dd>@item.CreatedByName</dd></div>
                 @if (item.CompletedAt is { } closedAt)
                 {
                     <div>
-                        <dt>@(item.Status == ScheduledEventStatus.Cancelled ? "Anulada por" : "Hecha por")</dt>
+                        <dt>@(item.Status == ScheduledEventStatus.Cancelled ? L["Anulada por"] : L["Hecha por"])</dt>
                         <dd>@item.CompletedByName · @Labels.DateTime(closedAt)</dd>
                     </div>
                 }
                 @if (item.Outcome is not null)
                 {
                     <div>
-                        <dt>@(item.Type == ScheduledEventType.Inbound ? "Entrada" : "Referencia de la salida")</dt>
+                        <dt>@(item.Type == ScheduledEventType.Inbound ? L["Entrada"] : L["Referencia de la salida"])</dt>
                         <dd>
                             @if (item.Type == ScheduledEventType.Inbound && Can(Permissions.MovementsView))
                             {
@@ -97,14 +97,14 @@ else
                 <div class="form-actions">
                     @if (confirmCancel)
                     {
-                        <span class="muted small">¿Anular la cita? Seguirá en el calendario, tachada.</span>
-                        <button type="button" class="btn" @onclick="() => confirmCancel = false">No</button>
-                        <button type="button" class="btn btn-danger-ghost" disabled="@busy" @onclick="CancelAsync">Sí, anular</button>
+                        <span class="muted small">@L["¿Anular la cita? Seguirá en el calendario, tachada."]</span>
+                        <button type="button" class="btn" @onclick="() => confirmCancel = false">@L["No"]</button>
+                        <button type="button" class="btn btn-danger-ghost" disabled="@busy" @onclick="CancelAsync">@L["Sí, anular"]</button>
                     }
                     else
                     {
-                        <button type="button" class="btn btn-danger-ghost" @onclick="() => confirmCancel = true">Anular</button>
-                        <a class="btn" href="calendario/@item.Id/editar"><Icon Name="edit" /><span>Cambiar</span></a>
+                        <button type="button" class="btn btn-danger-ghost" @onclick="() => confirmCancel = true">@L["Anular"]</button>
+                        <a class="btn" href="calendario/@item.Id/editar"><Icon Name="edit" /><span>@L["Cambiar"]</span></a>
                     }
                 </div>
             }
@@ -114,23 +114,23 @@ else
         {
             <section class="card card-flush">
                 <header class="panel-head panel-head-flush">
-                    <h2>Mercancía prevista</h2>
+                    <h2>@L["Mercancía prevista"]</h2>
                 </header>
                 @if (item.Lines.Count == 0)
                 {
-                    <div class="panel-body"><EmptyState Text="No se indicó qué mercancía llega o sale." /></div>
+                    <div class="panel-body"><EmptyState Text="@L["No se indicó qué mercancía llega o sale."]" /></div>
                 }
                 else
                 {
                     <table class="table table-compact">
-                        <thead><tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th></tr></thead>
+                        <thead><tr><th>@L["SKU"]</th><th>@L["Artículo"]</th><th class="num">@L["Cantidad"]</th></tr></thead>
                         <tbody>
                             @foreach (var line in item.Lines)
                             {
                                 <tr>
-                                    <td data-label="SKU"><strong class="mono">@line.Sku</strong></td>
-                                    <td data-label="Artículo">@line.ProductName</td>
-                                    <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Unit</td>
+                                    <td data-label="@L["SKU"]"><strong class="mono">@line.Sku</strong></td>
+                                    <td data-label="@L["Artículo"]">@line.ProductName</td>
+                                    <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @Labels.Unit(line.Unit)</td>
                                 </tr>
                             }
                         </tbody>
@@ -154,9 +154,9 @@ else
 
     private string PartnerLabel => item!.Type switch
     {
-        ScheduledEventType.Inbound => "Proveedor",
-        ScheduledEventType.Outbound => "Cliente o transportista",
-        _ => "Con quién",
+        ScheduledEventType.Inbound => L["Proveedor"],
+        ScheduledEventType.Outbound => L["Cliente o transportista"],
+        _ => L["Con quién"],
     };
 
     private bool Can(string permission) => Session.Current?.User.Can(permission) ?? false;

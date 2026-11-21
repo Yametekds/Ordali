@@ -12,7 +12,7 @@
     <Actions>
         @if (order is not null)
         {
-            <button class="btn" type="button" @onclick="PrintAsync"><Icon Name="printer" /><span>Imprimir</span></button>
+            <button class="btn" type="button" @onclick="PrintAsync"><Icon Name="printer" /><span>@L["Imprimir"]</span></button>
         }
     </Actions>
 </PageHeader>
@@ -31,9 +31,9 @@ else if (Editable)
     <div class="card form-card form-card-wide">
         <div class="form-grid">
             <label class="field">
-                <span>Distribuidor</span>
+                <span>@L["Distribuidor"]</span>
                 <select value="@(supplierId?.ToString() ?? "")" @onchange="OnSupplierChangedAsync" disabled="@(order is not null)">
-                    <option value="">Elige un distribuidor</option>
+                    <option value="">@L["Elige un distribuidor"]</option>
                     @foreach (var supplier in suppliers.Where(s => s.Active || s.Id == supplierId))
                     {
                         <option value="@supplier.Id">@supplier.Name</option>
@@ -41,12 +41,12 @@ else if (Editable)
                 </select>
             </label>
             <label class="field">
-                <span>Entrega deseada (opcional)</span>
+                <span>@L["Entrega deseada (opcional)"]</span>
                 <input type="date" @bind="deliveryDate" />
             </label>
             <label class="field field-wide">
-                <span>Notas para el distribuidor (opcional)</span>
-                <textarea rows="2" maxlength="500" @bind="notes" placeholder="Horario de descarga, muelle, referencia interna…"></textarea>
+                <span>@L["Notas para el distribuidor (opcional)"]</span>
+                <textarea rows="2" maxlength="500" @bind="notes" placeholder="@L["Horario de descarga, muelle, referencia interna…"]"></textarea>
             </label>
         </div>
 
@@ -54,22 +54,22 @@ else if (Editable)
         {
             <div class="alert alert-info" role="status">
                 <Icon Name="info" />
-                <span>Ya hay un borrador para este distribuidor: <a href="pedidos/@existingDraft.Id">@existingDraft.Code</a>.</span>
+                <span>@L["Ya hay un borrador para este distribuidor:"] <a href="pedidos/@existingDraft.Id">@existingDraft.Code</a>.</span>
             </div>
         }
 
         @if (supplierId is not null)
         {
-            <h2 class="card-title">Artículos del pedido</h2>
+            <h2 class="card-title">@L["Artículos del pedido"]</h2>
             @if (SuggestedCount > 0)
             {
                 <p class="muted small">
-                    @SuggestedCount @(SuggestedCount == 1 ? "artículo ha bajado" : "artículos han bajado") del rango seguro. La cantidad propuesta lo devuelve al máximo; cámbiala si hace falta.
+                    @(SuggestedCount == 1 ? L["1 artículo ha bajado del rango seguro. La cantidad propuesta lo devuelve al máximo; cámbiala si hace falta."] : L["{0} artículos han bajado del rango seguro. La cantidad propuesta los devuelve al máximo; cámbiala si hace falta.", SuggestedCount])
                 </p>
             }
             else if (order is null)
             {
-                <p class="muted small">Ningún artículo de este distribuidor está por debajo de su mínimo. Añade abajo lo que quieras pedir.</p>
+                <p class="muted small">@L["Ningún artículo de este distribuidor está por debajo de su mínimo. Añade abajo lo que quieras pedir."]</p>
             }
 
             @if (lines.Count > 0)
@@ -77,11 +77,11 @@ else if (Editable)
                 <table class="table table-compact">
                     <thead>
                         <tr>
-                            <th>SKU</th>
-                            <th>Artículo</th>
-                            <th class="num">Stock</th>
-                            <th class="num">Rango seguro</th>
-                            <th class="num">Cantidad</th>
+                            <th>@L["SKU"]</th>
+                            <th>@L["Artículo"]</th>
+                            <th class="num">@L["Stock"]</th>
+                            <th class="num">@L["Rango seguro"]</th>
+                            <th class="num">@L["Cantidad"]</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -89,21 +89,21 @@ else if (Editable)
                         @foreach (var line in lines)
                         {
                             <tr>
-                                <td data-label="SKU"><strong>@line.Sku</strong></td>
-                                <td data-label="Artículo">
+                                <td data-label="@L["SKU"]"><strong>@line.Sku</strong></td>
+                                <td data-label="@L["Artículo"]">
                                     @line.Name
                                     @if (line.Suggested is null)
                                     {
-                                        <span class="badge badge-draft">Añadido</span>
+                                        <span class="badge badge-draft">@L["Añadido"]</span>
                                     }
                                 </td>
-                                <td data-label="Stock" class="num">
+                                <td data-label="@L["Stock"]" class="num">
                                     @if (line.Available is { } available)
                                     {
                                         <span class="@(line.Min > 0 && available < line.Min ? "text-warning" : "")">@Labels.Quantity(available)</span>
                                         @if (line.OnOrder > 0)
                                         {
-                                            <small class="muted"> (+@Labels.Quantity(line.OnOrder) en camino)</small>
+                                            <small class="muted"> @L["(+{0} en camino)", Labels.Quantity(line.OnOrder)]</small>
                                         }
                                     }
                                     else
@@ -111,20 +111,20 @@ else if (Editable)
                                         <span class="muted">—</span>
                                     }
                                 </td>
-                                <td data-label="Rango seguro" class="num range">@(line.Min > 0 ? Labels.SafeRange(line.Min, line.Max) : "—")</td>
-                                <td data-label="Cantidad">
+                                <td data-label="@L["Rango seguro"]" class="num range">@(line.Min > 0 ? Labels.SafeRange(line.Min, line.Max) : "—")</td>
+                                <td data-label="@L["Cantidad"]">
                                     <div class="qty-cell">
                                         <input class="qty-input" type="number" min="0" step="any" inputmode="decimal"
-                                               aria-label="Cantidad de @line.Sku" @bind="line.Quantity" @bind:event="oninput" />
-                                        <span>@line.Unit</span>
+                                               aria-label="@L["Cantidad de {0}", line.Sku]" @bind="line.Quantity" @bind:event="oninput" />
+                                        <span>@Labels.Unit(line.Unit)</span>
                                     </div>
                                     @if (line.Suggested is { } suggested && suggested != line.Quantity)
                                     {
-                                        <div class="qty-changed">Propuesto: @Labels.Quantity(suggested)</div>
+                                        <div class="qty-changed">@L["Propuesto: {0}", Labels.Quantity(suggested)]</div>
                                     }
                                 </td>
                                 <td class="row-actions">
-                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @line.Sku" @onclick="() => lines.Remove(line)">
+                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="@L["Quitar"]" aria-label="@L["Quitar {0}", line.Sku]" @onclick="() => lines.Remove(line)">
                                         <Icon Name="trash" />
                                     </button>
                                 </td>
@@ -136,15 +136,15 @@ else if (Editable)
 
             @if (products is not null)
             {
-                <h3 class="card-title">Añadir otros artículos</h3>
+                <h3 class="card-title">@L["Añadir otros artículos"]</h3>
                 <form class="add-line" @onsubmit="AddLine">
                     <label class="field">
-                        <span>Artículo</span>
-                        <select value="@(pickedId?.ToString() ?? "")" @onchange="OnPicked" aria-label="Artículo para añadir">
-                            <option value="">Elige un artículo</option>
+                        <span>@L["Artículo"]</span>
+                        <select value="@(pickedId?.ToString() ?? "")" @onchange="OnPicked" aria-label="@L["Artículo para añadir"]">
+                            <option value="">@L["Elige un artículo"]</option>
                             @if (Pickable(own: true).Any())
                             {
-                                <optgroup label="De este distribuidor">
+                                <optgroup label="@L["De este distribuidor"]">
                                     @foreach (var product in Pickable(own: true))
                                     {
                                         <option value="@product.Id">@product.Sku · @product.Name</option>
@@ -153,7 +153,7 @@ else if (Editable)
                             }
                             @if (Pickable(own: false).Any())
                             {
-                                <optgroup label="Otros artículos">
+                                <optgroup label="@L["Otros artículos"]">
                                     @foreach (var product in Pickable(own: false))
                                     {
                                         <option value="@product.Id">@product.Sku · @product.Name</option>
@@ -163,14 +163,14 @@ else if (Editable)
                         </select>
                     </label>
                     <label class="field field-qty">
-                        <span>Cantidad</span>
-                        <input type="number" min="0" step="any" inputmode="decimal" @bind="pickedQuantity" aria-label="Cantidad para añadir" />
+                        <span>@L["Cantidad"]</span>
+                        <input type="number" min="0" step="any" inputmode="decimal" @bind="pickedQuantity" aria-label="@L["Cantidad para añadir"]" />
                     </label>
-                    <button class="btn" type="submit" disabled="@(pickedId is null)"><Icon Name="plus" /><span>Añadir</span></button>
+                    <button class="btn" type="submit" disabled="@(pickedId is null)"><Icon Name="plus" /><span>@L["Añadir"]</span></button>
                 </form>
                 @if (lineError is not null)
                 {
-                    <div class="alert alert-error" role="alert"><Icon Name="alert" /><span>@lineError</span></div>
+                    <div class="alert alert-error" role="alert"><Icon Name="alert" /><span>@L[lineError]</span></div>
                 }
             }
         }
@@ -180,13 +180,13 @@ else if (Editable)
         <div class="form-actions">
             @if (order is not null)
             {
-                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">Anular</button>
+                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">@L["Anular"]</button>
                 <span class="topbar-spacer"></span>
             }
-            <a class="btn" href="pedidos">Volver</a>
-            <button class="btn" type="button" disabled="@(busy || !CanSave)" @onclick="() => SaveAsync(send: false)">Guardar borrador</button>
+            <a class="btn" href="pedidos">@L["Volver"]</a>
+            <button class="btn" type="button" disabled="@(busy || !CanSave)" @onclick="() => SaveAsync(send: false)">@L["Guardar borrador"]</button>
             <button class="btn btn-primary" type="button" disabled="@(busy || !CanSave)" @onclick="() => SaveAsync(send: true)">
-                <Icon Name="send" /><span>@(busy ? "Guardando…" : "Guardar y marcar enviado")</span>
+                <Icon Name="send" /><span>@(busy ? L["Guardando…"] : L["Guardar y marcar enviado"])</span>
             </button>
         </div>
     </div>
@@ -197,43 +197,43 @@ else if (order is not null)
         <div class="print-only"><BrandLogo Size="34" /></div>
         <div class="order-sheet-head">
             <dl>
-                <dt>Pedido</dt><dd class="mono"><strong>@order.Code</strong></dd>
-                <dt>Estado</dt><dd><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></dd>
-                <dt>Fecha</dt><dd>@Labels.DateTime(order.SentAt ?? order.CreatedAt)</dd>
-                <dt>Entrega</dt><dd>@(order.DeliveryDate is { } date ? Labels.Date(date) : "Lo antes posible")</dd>
+                <dt>@L["Pedido"]</dt><dd class="mono"><strong>@order.Code</strong></dd>
+                <dt>@L["Estado"]</dt><dd><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></dd>
+                <dt>@L["Fecha"]</dt><dd>@Labels.DateTime(order.SentAt ?? order.CreatedAt)</dd>
+                <dt>@L["Entrega"]</dt><dd>@(order.DeliveryDate is { } date ? Labels.Date(date) : L["Lo antes posible"])</dd>
             </dl>
             <dl>
-                <dt>Distribuidor</dt><dd><strong>@order.SupplierName</strong></dd>
+                <dt>@L["Distribuidor"]</dt><dd><strong>@order.SupplierName</strong></dd>
                 @if (Supplier is { } supplier)
                 {
                     @if (supplier.ContactName is not null)
                     {
-                        <dt>Contacto</dt><dd>@supplier.ContactName</dd>
+                        <dt>@L["Contacto"]</dt><dd>@supplier.ContactName</dd>
                     }
                     @if (supplier.Email is not null)
                     {
-                        <dt>Email</dt><dd>@supplier.Email</dd>
+                        <dt>@L["Email"]</dt><dd>@supplier.Email</dd>
                     }
                     @if (supplier.Phone is not null)
                     {
-                        <dt>Teléfono</dt><dd>@supplier.Phone</dd>
+                        <dt>@L["Teléfono"]</dt><dd>@supplier.Phone</dd>
                     }
                 }
-                <dt>Preparado por</dt><dd>@order.UserName</dd>
+                <dt>@L["Preparado por"]</dt><dd>@order.UserName</dd>
             </dl>
         </div>
 
         <table class="table table-compact">
             <thead>
-                <tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th></tr>
+                <tr><th>@L["SKU"]</th><th>@L["Artículo"]</th><th class="num">@L["Cantidad"]</th></tr>
             </thead>
             <tbody>
                 @foreach (var line in order.Lines)
                 {
                     <tr>
-                        <td data-label="SKU"><strong>@line.Sku</strong></td>
-                        <td data-label="Artículo">@line.ProductName</td>
-                        <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @line.Unit</td>
+                        <td data-label="@L["SKU"]"><strong>@line.Sku</strong></td>
+                        <td data-label="@L["Artículo"]">@line.ProductName</td>
+                        <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @Labels.Unit(line.Unit)</td>
                     </tr>
                 }
             </tbody>
@@ -241,18 +241,18 @@ else if (order is not null)
 
         @if (order.Notes is not null)
         {
-            <p><strong>Notas:</strong> @order.Notes</p>
+            <p><strong>@L["Notas:"]</strong> @order.Notes</p>
         }
 
         <ErrorAlert Error="saveError" />
 
         <div class="form-actions">
-            <a class="btn" href="pedidos">Volver</a>
+            <a class="btn" href="pedidos">@L["Volver"]</a>
             @if (CanEdit && order.Status == PurchaseOrderStatus.Sent)
             {
-                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">Anular</button>
+                <button class="btn btn-danger-ghost" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Cancelled)">@L["Anular"]</button>
                 <button class="btn btn-primary" type="button" disabled="@busy" @onclick="() => MoveAsync(PurchaseOrderStatus.Received)">
-                    <Icon Name="check" /><span>Marcar recibido</span>
+                    <Icon Name="check" /><span>@L["Marcar recibido"]</span>
                 </button>
             }
         </div>
@@ -292,10 +292,10 @@ else if (order is not null)
 
     private Supplier? Supplier => order is null ? null : suppliers.FirstOrDefault(s => s.Id == order.SupplierId);
 
-    private string Title => order is null ? "Nuevo pedido" : $"Pedido {order.Code}";
+    private string Title => order is null ? L["Nuevo pedido"] : L["Pedido {0}", order.Code];
 
     private string? Subtitle => order is null
-        ? "Elige el distribuidor: se cargan solos los artículos que han bajado de su rango seguro."
+        ? L["Elige el distribuidor: se cargan solos los artículos que han bajado de su rango seguro."]
         : order.SupplierName;
 
     protected override async Task OnParametersSetAsync()
@@ -397,7 +397,7 @@ else if (order is not null)
 
         if (pickedQuantity is not { } quantity || quantity <= 0)
         {
-            lineError = "Escribe una cantidad mayor que cero.";
+            lineError = L["Escribe una cantidad mayor que cero."];
             return;
         }
 
@@ -422,7 +422,7 @@ else if (order is not null)
         saveError = null;
         if (lines.FirstOrDefault(l => l.Quantity <= 0) is { } empty)
         {
-            saveError = new ApiException(HttpStatusCode.BadRequest, $"La cantidad de {empty.Sku} tiene que ser mayor que cero, o quita la línea.");
+            saveError = new ApiException(HttpStatusCode.BadRequest, L["La cantidad de {0} tiene que ser mayor que cero, o quita la línea.", empty.Sku]);
             return;
         }
 
@@ -446,7 +446,7 @@ else if (order is not null)
         }
         catch (ApiException ex)
         {
-            saveError = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m))) : ex;
+            saveError = ex.Errors.Count > 0 ? new ApiException(ex.Status, string.Join(" ", ex.Errors.Values.SelectMany(m => m).Select(m => L[m].Value))) : ex;
         }
         finally
         {

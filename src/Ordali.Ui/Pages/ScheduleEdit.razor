@@ -6,9 +6,9 @@
 @inject TimeProvider Time
 @inject NavigationManager Navigation
 
-<PageTitle>@(IsNew ? "Programar" : "Cambiar cita") · Ordali</PageTitle>
+<PageTitle>@(IsNew ? L["Programar"] : L["Cambiar cita"]) · Ordali</PageTitle>
 
-<PageHeader Title="@(IsNew ? "Programar" : "Cambiar cita")" />
+<PageHeader Title="@(IsNew ? L["Programar"] : L["Cambiar cita"])" />
 
 @if (products is null)
 {
@@ -21,7 +21,7 @@
 else
 {
     <form class="card form-card" @onsubmit="SaveAsync">
-        <div class="segmented" role="radiogroup" aria-label="Tipo">
+        <div class="segmented" role="radiogroup" aria-label="@L["Tipo"]">
             @foreach (var type in Types)
             {
                 <button type="button" role="radio" aria-checked="@(input.Type == type)" class="@(input.Type == type ? "active" : "")"
@@ -33,18 +33,18 @@ else
 
         <div class="form-grid">
             <label class="field field-wide">
-                <span>Título</span>
+                <span>@L["Título"]</span>
                 <input type="text" @bind="input.Title" placeholder="@TitleHint" maxlength="120" autocomplete="off" />
                 <ApiFieldError Errors="fieldErrors" Name="title" />
             </label>
             <label class="field">
-                <span>@PartnerLabel (opcional)</span>
+                <span>@L["{0} (opcional)", PartnerLabel]</span>
                 <input type="text" @bind="input.Partner" maxlength="120" autocomplete="off" />
             </label>
             <label class="field">
-                <span>@(input.Type == ScheduledEventType.Other ? "Lugar" : "Muelle") (opcional)</span>
+                <span>@L["{0} (opcional)", input.Type == ScheduledEventType.Other ? L["Lugar"] : L["Muelle"]]</span>
                 <select @bind="dockId">
-                    <option value="">Sin reservar</option>
+                    <option value="">@L["Sin reservar"]</option>
                     @foreach (var dock in Docks)
                     {
                         <option value="@dock.Id">@dock.Code · @dock.Zone</option>
@@ -53,17 +53,17 @@ else
                 <ApiFieldError Errors="fieldErrors" Name="dockLocationId" />
             </label>
             <label class="field">
-                <span>Día</span>
+                <span>@L["Día"]</span>
                 <input type="date" @bind="date" @bind:format="yyyy-MM-dd" />
                 <ApiFieldError Errors="fieldErrors" Name="startsAt" />
             </label>
             <div class="field-row">
                 <label class="field">
-                    <span>Desde</span>
+                    <span>@L["Desde"]</span>
                     <input type="time" @bind="startTime" />
                 </label>
                 <label class="field">
-                    <span>Hasta</span>
+                    <span>@L["Hasta"]</span>
                     <input type="time" @bind="endTime" />
                 </label>
             </div>
@@ -71,31 +71,31 @@ else
             @if (IsNew)
             {
                 <label class="field">
-                    <span>Repetir</span>
+                    <span>@L["Repetir"]</span>
                     <select @bind="input.RepeatWeeks">
-                        <option value="0">Solo esta vez</option>
+                        <option value="0">@L["Solo esta vez"]</option>
                         @foreach (var weeks in RepeatOptions)
                         {
-                            <option value="@weeks">Cada semana, @(weeks + 1) veces</option>
+                            <option value="@weeks">@L["Cada semana, {0} veces", weeks + 1]</option>
                         }
                     </select>
                 </label>
             }
             <label class="field field-wide">
-                <span>Notas (opcional)</span>
-                <textarea rows="2" @bind="input.Notes" maxlength="500" placeholder="Matrícula, contacto del chófer, si trae palés de cambio…"></textarea>
+                <span>@L["Notas (opcional)"]</span>
+                <textarea rows="2" @bind="input.Notes" maxlength="500" placeholder="@L["Matrícula, contacto del chófer, si trae palés de cambio…"]"></textarea>
             </label>
         </div>
 
         @if (input.Type != ScheduledEventType.Other)
         {
-            <h2 class="card-title">Mercancía prevista</h2>
-            <p class="muted small">Opcional. Sirve para preparar el muelle y rellena la entrada o la salida cuando llegue el camión.</p>
+            <h2 class="card-title">@L["Mercancía prevista"]</h2>
+            <p class="muted small">@L["Opcional. Sirve para preparar el muelle y rellena la entrada o la salida cuando llegue el camión."]</p>
             <div class="line-entry">
                 <label class="field">
-                    <span>Artículo</span>
+                    <span>@L["Artículo"]</span>
                     <select @bind="lineProductId">
-                        <option value="">Elige un artículo</option>
+                        <option value="">@L["Elige un artículo"]</option>
                         @foreach (var product in products)
                         {
                             <option value="@product.Id">@product.Sku · @product.Name</option>
@@ -103,28 +103,28 @@ else
                     </select>
                 </label>
                 <label class="field field-quantity">
-                    <span>Cantidad</span>
+                    <span>@L["Cantidad"]</span>
                     <input type="number" min="0" step="any" inputmode="decimal" @bind="lineQuantity" />
                 </label>
                 <button type="button" class="btn" disabled="@(lineProductId is null || lineQuantity is not > 0)" @onclick="AddLine">
-                    <Icon Name="plus" /><span>Añadir</span>
+                    <Icon Name="plus" /><span>@L["Añadir"]</span>
                 </button>
             </div>
             <ApiFieldError Errors="fieldErrors" Name="lines" />
             @if (input.Lines.Count > 0)
             {
                 <table class="table table-compact">
-                    <thead><tr><th>SKU</th><th>Artículo</th><th class="num">Cantidad</th><th></th></tr></thead>
+                    <thead><tr><th>@L["SKU"]</th><th>@L["Artículo"]</th><th class="num">@L["Cantidad"]</th><th></th></tr></thead>
                     <tbody>
                         @foreach (var line in input.Lines)
                         {
                             var product = products.FirstOrDefault(p => p.Id == line.ProductId);
                             <tr>
-                                <td data-label="SKU"><strong class="mono">@product?.Sku</strong></td>
-                                <td data-label="Artículo">@product?.Name</td>
-                                <td data-label="Cantidad" class="num">@Labels.Quantity(line.Quantity) @product?.Unit</td>
+                                <td data-label="@L["SKU"]"><strong class="mono">@product?.Sku</strong></td>
+                                <td data-label="@L["Artículo"]">@product?.Name</td>
+                                <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @(product is null ? "" : Labels.Unit(product.Unit))</td>
                                 <td class="row-actions">
-                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="Quitar" aria-label="Quitar @product?.Sku"
+                                    <button type="button" class="btn btn-icon btn-danger-ghost" title="@L["Quitar"]" aria-label="@L["Quitar {0}", product?.Sku ?? ""]"
                                             @onclick="() => input.Lines.Remove(line)">
                                         <Icon Name="trash" />
                                     </button>
@@ -140,15 +140,15 @@ else
         {
             <div class="alert alert-warning" role="alert">
                 <Icon Name="alert" />
-                <span>@overlapWarning</span>
+                <span>@L[overlapWarning]</span>
             </div>
         }
         <ErrorAlert Error="error" />
 
         <div class="form-actions">
-            <a class="btn" href="@(IsNew ? "calendario" : $"calendario/{Id}")">Cancelar</a>
+            <a class="btn" href="@(IsNew ? "calendario" : $"calendario/{Id}")">@L["Cancelar"]</a>
             <button type="submit" class="btn btn-primary" disabled="@busy">
-                @(busy ? "Guardando…" : overlapWarning is not null ? "Programar igualmente" : IsNew ? "Programar" : "Guardar cambios")
+                @(busy ? L["Guardando…"] : overlapWarning is not null ? L["Programar igualmente"] : IsNew ? L["Programar"] : L["Guardar cambios"])
             </button>
         </div>
     </form>
@@ -187,16 +187,16 @@ else
 
     private string PartnerLabel => input.Type switch
     {
-        ScheduledEventType.Inbound => "Proveedor",
-        ScheduledEventType.Outbound => "Cliente o transportista",
-        _ => "Con quién",
+        ScheduledEventType.Inbound => L["Proveedor"],
+        ScheduledEventType.Outbound => L["Cliente o transportista"],
+        _ => L["Con quién"],
     };
 
     private string TitleHint => input.Type switch
     {
-        ScheduledEventType.Inbound => "Descarga semanal de aceite",
-        ScheduledEventType.Outbound => "Pedido cliente 10240",
-        _ => "Recuento del pasillo B",
+        ScheduledEventType.Inbound => L["Descarga semanal de aceite"],
+        ScheduledEventType.Outbound => L["Pedido cliente 10240"],
+        _ => L["Recuento del pasillo B"],
     };
 
     protected override async Task OnInitializedAsync()

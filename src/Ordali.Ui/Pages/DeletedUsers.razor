@@ -2,11 +2,11 @@
 @attribute [Authorize(Policy = Policies.Admin)]
 @inject IOrdaliApi Api
 
-<PageTitle>Usuarios eliminados · Ordali</PageTitle>
+<PageTitle>@L["Usuarios eliminados"] · Ordali</PageTitle>
 
-<PageHeader Title="Usuarios eliminados" Subtitle="Perfiles que ya no pueden entrar. Al recuperarlos vuelven con su categoría y sus permisos.">
+<PageHeader Title="@L["Usuarios eliminados"]" Subtitle="@L["Perfiles que ya no pueden entrar. Al recuperarlos vuelven con su categoría y sus permisos."]">
     <Actions>
-        <a class="btn" href="registros/usuarios">Volver a usuarios</a>
+        <a class="btn" href="registros/usuarios">@L["Volver a usuarios"]</a>
     </Actions>
 </PageHeader>
 
@@ -16,8 +16,8 @@
     <div class="alert alert-ok" role="status">
         <Icon Name="check" />
         <span class="alert-text">
-            Has recuperado el perfil de <strong>@restored.Name</strong>.
-            <a href="registros/usuarios/@restored.Id">Revisar sus permisos</a>
+            @L["Has recuperado el perfil de"] <strong>@restored.Name</strong>.
+            <a href="registros/usuarios/@restored.Id">@L["Revisar sus permisos"]</a>
         </span>
     </div>
 }
@@ -31,7 +31,7 @@
 }
 else if (users.Count == 0)
 {
-    <EmptyState IconName="users" Text="No hay perfiles eliminados." />
+    <EmptyState IconName="users" Text="@L["No hay perfiles eliminados."]" />
 }
 else
 {
@@ -39,10 +39,10 @@ else
         <table class="table">
             <thead>
                 <tr>
-                    <th>Nombre</th>
-                    <th>Email</th>
-                    <th>Categoría</th>
-                    <th>Eliminado</th>
+                    <th>@L["Nombre"]</th>
+                    <th>@L["Email"]</th>
+                    <th>@L["Categoría"]</th>
+                    <th>@L["Eliminado"]</th>
                     <th></th>
                 </tr>
             </thead>
@@ -50,19 +50,19 @@ else
                 @foreach (var user in users)
                 {
                     <tr>
-                        <td data-label="Nombre"><strong>@user.Name</strong></td>
-                        <td data-label="Email">@user.Email</td>
-                        <td data-label="Categoría">@Labels.Of(user.Category)</td>
-                        <td data-label="Eliminado">
+                        <td data-label="@L["Nombre"]"><strong>@user.Name</strong></td>
+                        <td data-label="@L["Email"]">@user.Email</td>
+                        <td data-label="@L["Categoría"]">@Labels.Of(user.Category)</td>
+                        <td data-label="@L["Eliminado"]">
                             @Labels.DateTime(user.DeletedAt)
                             @if (user.DeletedByName is not null)
                             {
-                                <span class="muted small"> por @user.DeletedByName</span>
+                                <span class="muted small"> @L["por {0}", user.DeletedByName]</span>
                             }
                         </td>
                         <td class="row-actions">
                             <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => RestoreAsync(user)">
-                                <Icon Name="restore" /><span>Recuperar</span>
+                                <Icon Name="restore" /><span>@L["Recuperar"]</span>
                             </button>
                         </td>
                     </tr>

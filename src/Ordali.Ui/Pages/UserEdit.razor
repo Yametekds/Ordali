@@ -84,22 +84,22 @@ else
     {
         <div class="card form-card form-card-wide">
             <section class="form-section">
-                <h2 class="card-title">Eliminar perfil</h2>
+                <h2 class="card-title">@L["Eliminar perfil"]</h2>
                 @if (confirmingDelete)
                 {
                     <div class="alert alert-warning" role="alertdialog" aria-labelledby="confirm-delete">
                         <Icon Name="alert" />
-                        <span class="alert-text" id="confirm-delete">¿Seguro? @user.Name dejará de poder entrar.</span>
+                        <span class="alert-text" id="confirm-delete">@L["¿Seguro? {0} dejará de poder entrar.", user.Name]</span>
                         <span class="alert-actions">
-                            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => confirmingDelete = false">Cancelar</button>
-                            <button class="btn btn-sm btn-primary" type="button" disabled="@busy" @onclick="DeleteAsync">@(busy ? "Eliminando…" : "Eliminar")</button>
+                            <button class="btn btn-sm" type="button" disabled="@busy" @onclick="() => confirmingDelete = false">@L["Cancelar"]</button>
+                            <button class="btn btn-sm btn-primary" type="button" disabled="@busy" @onclick="DeleteAsync">@(busy ? L["Eliminando…"] : L["Eliminar"])</button>
                         </span>
                     </div>
                 }
                 else
                 {
-                    <p class="muted">Deja de poder entrar y desaparece de la lista. Su historial se conserva y puedes recuperarlo desde Usuarios eliminados.</p>
-                    <button class="btn btn-danger-ghost" type="button" @onclick="() => confirmingDelete = true"><Icon Name="trash" /><span>Eliminar perfil</span></button>
+                    <p class="muted">@L["Deja de poder entrar y desaparece de la lista. Su historial se conserva y puedes recuperarlo desde Usuarios eliminados."]</p>
+                    <button class="btn btn-danger-ghost" type="button" @onclick="() => confirmingDelete = true"><Icon Name="trash" /><span>@L["Eliminar perfil"]</span></button>
                 }
             </section>
         </div>

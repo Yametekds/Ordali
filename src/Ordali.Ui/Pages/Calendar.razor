@@ -6,14 +6,14 @@
 @inject SessionState Session
 @inject NavigationManager Navigation
 
-<PageTitle>Calendario · Ordali</PageTitle>
+<PageTitle>@L["Calendario"] · Ordali</PageTitle>
 
-<PageHeader Title="Calendario">
+<PageHeader Title="@L["Calendario"]">
     <Actions>
         @if (Can(Permissions.CalendarEdit))
         {
             <a class="btn btn-primary" href="calendario/nueva?fecha=@selected.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">
-                <Icon Name="plus" /><span>Programar</span>
+                <Icon Name="plus" /><span>@L["Programar"]</span>
             </a>
         }
     </Actions>
@@ -21,15 +21,15 @@
 
 <div class="cal-toolbar">
     <div class="cal-nav">
-        <button type="button" class="btn btn-icon btn-sm" aria-label="Mes anterior" @onclick="() => GoToMonth(-1)"><Icon Name="chevron-left" /></button>
+        <button type="button" class="btn btn-icon btn-sm" aria-label="@L["Mes anterior"]" @onclick="() => GoToMonth(-1)"><Icon Name="chevron-left" /></button>
         <h2 class="cal-month">@MonthTitle</h2>
-        <button type="button" class="btn btn-icon btn-sm" aria-label="Mes siguiente" @onclick="() => GoToMonth(1)"><Icon Name="chevron" /></button>
+        <button type="button" class="btn btn-icon btn-sm" aria-label="@L["Mes siguiente"]" @onclick="() => GoToMonth(1)"><Icon Name="chevron" /></button>
     </div>
-    <button type="button" class="btn btn-sm" disabled="@(selected == Today)" @onclick="() => Select(Today)">Hoy</button>
-    <ul class="cal-legend" aria-label="Leyenda">
-        <li><span class="type-dot type-in"></span>Descarga</li>
-        <li><span class="type-dot type-out"></span>Carga</li>
-        <li><span class="type-dot type-other"></span>Otra cita</li>
+    <button type="button" class="btn btn-sm" disabled="@(selected == Today)" @onclick="() => Select(Today)">@L["Hoy"]</button>
+    <ul class="cal-legend" aria-label="@L["Leyenda"]">
+        <li><span class="type-dot type-in"></span>@L["Descarga"]</li>
+        <li><span class="type-dot type-out"></span>@L["Carga"]</li>
+        <li><span class="type-dot type-other"></span>@L["Otra cita"]</li>
     </ul>
 </div>
 
@@ -63,7 +63,7 @@
                         }
                         @if (dayEvents.Count > 3)
                         {
-                            <span class="cal-more">+@(dayEvents.Count - 3) más</span>
+                            <span class="cal-more">@L["+{0} más", dayEvents.Count - 3]</span>
                         }
                         @* Phones only show a dot per entry. *@
                         <span class="cal-dots" aria-hidden="true">
@@ -100,10 +100,10 @@
         }
         else
         {
-            <EmptyState IconName="calendar" Text="No hay nada programado este día.">
+            <EmptyState IconName="calendar" Text="@L["No hay nada programado este día."]">
                 @if (Can(Permissions.CalendarEdit) && selected >= Today)
                 {
-                    <a class="link" href="calendario/nueva?fecha=@selected.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">Programar una cita <Icon Name="arrow-right" /></a>
+                    <a class="link" href="calendario/nueva?fecha=@selected.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">@L["Programar una cita"] <Icon Name="arrow-right" /></a>
                 }
             </EmptyState>
         }
@@ -111,7 +111,7 @@
 </div>
 
 @code {
-    private static readonly string[] WeekDays = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+    private string[] WeekDays => [L["lun"], L["mar"], L["mié"], L["jue"], L["vie"], L["sáb"], L["dom"]];
 
     [SupplyParameterFromQuery(Name = "dia")] private string? Day { get; set; }
 
@@ -171,8 +171,12 @@
             ? []
             : [.. events.Where(e => e.StartsAt.ToLocalTime().Date <= date && e.EndsAt.AddTicks(-1).ToLocalTime().Date >= date).OrderBy(e => e.StartsAt)];
 
-    private static string DayLabel(DateTime date, int count) =>
-        count == 0 ? Labels.LongDate(date) : $"{Labels.LongDate(date)}, {count} {(count == 1 ? "cita" : "citas")}";
+    private string DayLabel(DateTime date, int count) => count switch
+    {
+        0 => Labels.LongDate(date),
+        1 => L["{0}, 1 cita", Labels.LongDate(date)],
+        _ => L["{0}, {1} citas", Labels.LongDate(date), count],
+    };
 
     private string ChipState(ScheduledEvent item) =>
         item.Status == ScheduledEventStatus.Cancelled ? "is-cancelled"

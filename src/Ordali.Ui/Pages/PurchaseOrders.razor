@@ -3,14 +3,14 @@
 @inject IOrdaliApi Api
 @inject SessionState Session
 
-<PageTitle>Pedidos · Ordali</PageTitle>
+<PageTitle>@L["Pedidos"] · Ordali</PageTitle>
 
-<PageHeader Title="Pedidos a distribuidores" Subtitle="Lo que baja del rango seguro se propone solo; después se ajusta y se añade lo que haga falta.">
+<PageHeader Title="@L["Pedidos a distribuidores"]" Subtitle="@L["Lo que baja del rango seguro se propone solo; después se ajusta y se añade lo que haga falta."]">
     <Actions>
         @if (CanEdit)
         {
-            <a class="btn" href="distribuidores"><Icon Name="truck" /><span>Distribuidores</span></a>
-            <a class="btn btn-primary" href="pedidos/nuevo"><Icon Name="plus" /><span>Nuevo pedido</span></a>
+            <a class="btn" href="distribuidores"><Icon Name="truck" /><span>@L["Distribuidores"]</span></a>
+            <a class="btn btn-primary" href="pedidos/nuevo"><Icon Name="plus" /><span>@L["Nuevo pedido"]</span></a>
         }
     </Actions>
 </PageHeader>
@@ -18,10 +18,10 @@
 @if (CanEdit && suggestions is not null)
 {
     <section class="group">
-        <h2 class="group-title">Por pedir</h2>
+        <h2 class="group-title">@L["Por pedir"]</h2>
         @if (suggestions.Count == 0)
         {
-            <p class="muted">Todo el stock está dentro de su rango seguro.</p>
+            <p class="muted">@L["Todo el stock está dentro de su rango seguro."]</p>
         }
         else
         {
@@ -30,31 +30,31 @@
                 {
                     var draft = suggestion.SupplierId is { } supplierId ? Draft(supplierId) : null;
                     <article class="reorder-card">
-                        <h3>@(suggestion.SupplierName ?? "Sin distribuidor asignado")</h3>
+                        <h3>@(suggestion.SupplierName ?? L["Sin distribuidor asignado"])</h3>
                         <span class="muted small">
-                            @suggestion.Lines.Count @(suggestion.Lines.Count == 1 ? "artículo" : "artículos") por debajo del mínimo
+                            @(suggestion.Lines.Count == 1 ? L["1 artículo por debajo del mínimo"] : L["{0} artículos por debajo del mínimo", suggestion.Lines.Count])
                         </span>
                         <ul>
                             @foreach (var line in suggestion.Lines.Take(4))
                             {
-                                <li><strong>@line.Sku</strong> · quedan @Labels.Quantity(line.Available), pedir @Labels.Quantity(line.SuggestedQuantity) @line.Unit</li>
+                                <li><strong>@line.Sku</strong> · @L["quedan {0}, pedir {1} {2}", Labels.Quantity(line.Available), Labels.Quantity(line.SuggestedQuantity), Labels.Unit(line.Unit)]</li>
                             }
                             @if (suggestion.Lines.Count > 4)
                             {
-                                <li class="muted">y @(suggestion.Lines.Count - 4) más</li>
+                                <li class="muted">@L["y {0} más", suggestion.Lines.Count - 4]</li>
                             }
                         </ul>
                         @if (suggestion.SupplierId is null)
                         {
-                            <span class="muted small">Asigna un distribuidor en la ficha de cada artículo para pedirlos.</span>
+                            <span class="muted small">@L["Asigna un distribuidor en la ficha de cada artículo para pedirlos."]</span>
                         }
                         else if (draft is not null)
                         {
-                            <a class="btn btn-sm" href="pedidos/@draft.Id">Seguir con el borrador @draft.Code</a>
+                            <a class="btn btn-sm" href="pedidos/@draft.Id">@L["Seguir con el borrador {0}", draft.Code]</a>
                         }
                         else
                         {
-                            <a class="btn btn-sm btn-primary" href="pedidos/nuevo?distribuidor=@suggestion.SupplierId">Preparar pedido</a>
+                            <a class="btn btn-sm btn-primary" href="pedidos/nuevo?distribuidor=@suggestion.SupplierId">@L["Preparar pedido"]</a>
                         }
                     </article>
                 }
@@ -63,9 +63,9 @@
     </section>
 }
 
-<nav class="tabs" aria-label="Estado">
-    <button type="button" class="tab @(openOnly ? "active" : "")" @onclick="() => openOnly = true">Abiertos</button>
-    <button type="button" class="tab @(openOnly ? "" : "active")" @onclick="() => openOnly = false">Todos</button>
+<nav class="tabs" aria-label="@L["Estado"]">
+    <button type="button" class="tab @(openOnly ? "active" : "")" @onclick="() => openOnly = true">@L["Abiertos"]</button>
+    <button type="button" class="tab @(openOnly ? "" : "active")" @onclick="() => openOnly = false">@L["Todos"]</button>
 </nav>
 
 <ErrorAlert Error="error" />
@@ -79,7 +79,7 @@
 }
 else if (Visible.Count == 0)
 {
-    <EmptyState IconName="cart" Text="@(openOnly ? "No hay pedidos en curso." : "Todavía no hay pedidos.")" />
+    <EmptyState IconName="cart" Text="@(openOnly ? L["No hay pedidos en curso."] : L["Todavía no hay pedidos."])" />
 }
 else
 {
@@ -87,12 +87,12 @@ else
         <table class="table">
             <thead>
                 <tr>
-                    <th>Pedido</th>
-                    <th>Distribuidor</th>
-                    <th class="num">Líneas</th>
-                    <th>Entrega</th>
-                    <th>Estado</th>
-                    <th>Preparado</th>
+                    <th>@L["Pedido"]</th>
+                    <th>@L["Distribuidor"]</th>
+                    <th class="num">@L["Líneas"]</th>
+                    <th>@L["Entrega"]</th>
+                    <th>@L["Estado"]</th>
+                    <th>@L["Preparado"]</th>
                     <th></th>
                 </tr>
             </thead>
@@ -100,14 +100,14 @@ else
                 @foreach (var order in Visible)
                 {
                     <tr>
-                        <td data-label="Pedido" class="mono"><strong>@order.Code</strong></td>
-                        <td data-label="Distribuidor">@order.SupplierName</td>
-                        <td data-label="Líneas" class="num">@order.Lines.Count</td>
-                        <td data-label="Entrega">@(order.DeliveryDate is { } date ? Labels.Date(date) : "—")</td>
-                        <td data-label="Estado"><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></td>
-                        <td data-label="Preparado">@order.UserName · @Labels.DateTime(order.CreatedAt)</td>
+                        <td data-label="@L["Pedido"]" class="mono"><strong>@order.Code</strong></td>
+                        <td data-label="@L["Distribuidor"]">@order.SupplierName</td>
+                        <td data-label="@L["Líneas"]" class="num">@order.Lines.Count</td>
+                        <td data-label="@L["Entrega"]">@(order.DeliveryDate is { } date ? Labels.Date(date) : "—")</td>
+                        <td data-label="@L["Estado"]"><span class="badge @Labels.BadgeClass(order.Status)">@Labels.Of(order.Status)</span></td>
+                        <td data-label="@L["Preparado"]">@order.UserName · @Labels.DateTime(order.CreatedAt)</td>
                         <td class="row-actions">
-                            <a class="btn btn-sm" href="pedidos/@order.Id">@(order.Status == PurchaseOrderStatus.Draft && CanEdit ? "Editar" : "Ver")</a>
+                            <a class="btn btn-sm" href="pedidos/@order.Id">@(order.Status == PurchaseOrderStatus.Draft && CanEdit ? L["Editar"] : L["Ver"])</a>
                         </td>
                     </tr>
                 }
