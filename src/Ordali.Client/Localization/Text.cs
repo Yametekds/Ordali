@@ -84,5 +84,14 @@ internal static class Text
         ("El perfil no existe.", "The profile doesn't exist."),
         ("Ya hay una plantilla con ese nombre.", "There is already a template with that name."),
         ("Las plantillas no pueden crear administradores; asciende el perfil después.", "Templates can't create administrators; promote the profile afterwards."),
+
+        // Delivery notes
+        ("El albarán no existe.", "The delivery note doesn't exist."),
+        ("Indica el cliente.", "Enter the customer."),
+        ("Esta carga ya tiene su albarán.", "This load already has its delivery note."),
+        ("Solo una carga lleva albarán.", "Only a loading has a delivery note."),
+        ("Registra primero la carga; el albarán sale de lo que se ha cargado.", "Record the loading first; the delivery note comes from what was loaded."),
+        ("Línea {0}: el palet tiene que ir del 1 al {1}.", "Line {0}: the pallet must be between 1 and {1}."),
+        ("Revisa los datos enviados.", "Check the data you sent."),
     ];
 }

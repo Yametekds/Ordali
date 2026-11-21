@@ -35,6 +35,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         SeedMovements();
         SeedOrders();
         SeedCalendar();
+        SeedDeliveryNotes();
     }
 
     public Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)

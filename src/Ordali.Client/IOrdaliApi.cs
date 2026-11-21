@@ -89,6 +89,17 @@ public interface IOrdaliApi
     /// <summary>Ships the goods of a loading slot and closes it.</summary>
     Task<ScheduledEvent> ShipScheduledEventAsync(Guid id, ShipEventInput input, CancellationToken cancellationToken = default);
 
+    /// <summary>Delivery notes, newest first; <paramref name="eventId"/> finds the one of a loading slot.</summary>
+    Task<IReadOnlyList<DeliveryNote>> GetDeliveryNotesAsync(Guid? eventId = null, CancellationToken cancellationToken = default);
+
+    Task<DeliveryNote> GetDeliveryNoteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>The customer and the goods that left on a recorded load, all on pallet 1.</summary>
+    Task<DeliveryNoteDraft> GetDeliveryNoteDraftAsync(Guid eventId, CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the note. It doesn't move stock: the goods left when the load was recorded.</summary>
+    Task<DeliveryNote> CreateDeliveryNoteAsync(DeliveryNoteInput input, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default);
 
     Task<ProfileTemplate> GetTemplateAsync(Guid id, CancellationToken cancellationToken = default);

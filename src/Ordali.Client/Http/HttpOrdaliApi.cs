@@ -128,6 +128,18 @@ public sealed class HttpOrdaliApi : IOrdaliApi
     public Task<ScheduledEvent> ShipScheduledEventAsync(Guid id, ShipEventInput input, CancellationToken cancellationToken = default) =>
         SendAsync<ScheduledEvent>(HttpMethod.Post, $"api/v1/calendar/{id}/ship", input, cancellationToken);
 
+    public Task<IReadOnlyList<DeliveryNote>> GetDeliveryNotesAsync(Guid? eventId = null, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<DeliveryNote>>(HttpMethod.Get, "api/v1/delivery-notes" + Query(("eventId", eventId?.ToString())), null, cancellationToken);
+
+    public Task<DeliveryNote> GetDeliveryNoteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<DeliveryNote>(HttpMethod.Get, $"api/v1/delivery-notes/{id}", null, cancellationToken);
+
+    public Task<DeliveryNoteDraft> GetDeliveryNoteDraftAsync(Guid eventId, CancellationToken cancellationToken = default) =>
+        SendAsync<DeliveryNoteDraft>(HttpMethod.Get, $"api/v1/delivery-notes/draft?eventId={eventId}", null, cancellationToken);
+
+    public Task<DeliveryNote> CreateDeliveryNoteAsync(DeliveryNoteInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<DeliveryNote>(HttpMethod.Post, "api/v1/delivery-notes", input, cancellationToken);
+
     public Task<IReadOnlyList<ProfileTemplate>> GetTemplatesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyList<ProfileTemplate>>(HttpMethod.Get, "api/v1/profile-templates", null, cancellationToken);
 
