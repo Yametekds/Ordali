@@ -20,6 +20,9 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
 
     public DbSet<Receipt> Receipts => Set<Receipt>();
 
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<ScheduledEvent> ScheduledEvents => Set<ScheduledEvent>();
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
@@ -65,6 +68,9 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             user.HasIndex(u => u.Category);
             // Parallel wrong passwords must not overwrite each other's count (see IdentityModule).
             user.Property(u => u.FailedLoginCount).IsConcurrencyToken();
+
+            // Removed profiles are left out of every query unless one asks for them on purpose.
+            user.HasQueryFilter(u => u.DeletedAt == null);
         });
 
         modelBuilder.Entity<ProfileTemplate>(template =>
@@ -103,6 +109,8 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             product.Property(p => p.Gtin).HasMaxLength(14);
             product.Property(p => p.Unit).HasMaxLength(16);
             product.Property(p => p.MinStock).HasPrecision(18, 3);
+            product.Property(p => p.MaxStock).HasPrecision(18, 3);
+            product.HasOne<Supplier>().WithMany().HasForeignKey(p => p.SupplierId).OnDelete(DeleteBehavior.SetNull);
             product.HasIndex(p => p.Sku).IsUnique();
             product.HasIndex(p => p.Gtin);
             product.HasOne<Location>().WithMany().HasForeignKey(p => p.DefaultLocationId).OnDelete(DeleteBehavior.Restrict);
@@ -155,6 +163,37 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
             line.Property(l => l.Quantity).HasPrecision(18, 3);
             line.Property(l => l.PutAwayQuantity).HasPrecision(18, 3);
             line.Property(l => l.Version).IsConcurrencyToken();
+            line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Supplier>(supplier =>
+        {
+            supplier.ToTable("Suppliers", "purchasing");
+            supplier.Property(s => s.Name).HasMaxLength(120);
+            supplier.Property(s => s.ContactName).HasMaxLength(120);
+            supplier.Property(s => s.Email).HasMaxLength(256);
+            supplier.Property(s => s.Phone).HasMaxLength(32);
+            supplier.HasIndex(s => s.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<PurchaseOrder>(order =>
+        {
+            order.ToTable("PurchaseOrders", "purchasing");
+            order.Property(o => o.Code).HasMaxLength(16);
+            order.Property(o => o.Status).HasConversion<string>().HasMaxLength(16);
+            order.Property(o => o.Notes).HasMaxLength(500);
+            order.Property(o => o.UserName).HasMaxLength(120);
+            order.HasIndex(o => o.Code).IsUnique();
+            order.HasIndex(o => new { o.SupplierId, o.Status });
+            order.HasOne<Supplier>().WithMany().HasForeignKey(o => o.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            order.HasMany(o => o.Lines).WithOne().HasForeignKey(l => l.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PurchaseOrderLine>(line =>
+        {
+            line.ToTable("PurchaseOrderLines", "purchasing");
+            line.Property(l => l.Quantity).HasPrecision(18, 3);
+            line.Property(l => l.SuggestedQuantity).HasPrecision(18, 3);
             line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
         });
 

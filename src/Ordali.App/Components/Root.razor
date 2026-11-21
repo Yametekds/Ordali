@@ -2,6 +2,6 @@
 <OrdaliRoutes AdditionalAssemblies="[typeof(MauiProgram).Assembly]" HostLinks="settingsLink" />
 
 @code {
-    private readonly RenderFragment settingsLink =
-        @<NavLink class="nav-link" href="ajustes"><Icon Name="edit" /><span>Ajustes</span></NavLink>;
+    private RenderFragment settingsLink =>
+        @<NavLink class="nav-link" href="ajustes"><Icon Name="edit" /><span>@L["Ajustes"]</span></NavLink>;
 }

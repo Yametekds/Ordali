@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Ordali.Client.Auth;
+using Ordali.Client.Localization;
 using Ordali.Client.Models;
 
 namespace Ordali.Client.Http;
@@ -71,6 +72,34 @@ public sealed class HttpOrdaliApi : IOrdaliApi
     public Task<Receipt> PutAwayAsync(Guid receiptId, PutAwayInput input, CancellationToken cancellationToken = default) =>
         SendAsync<Receipt>(HttpMethod.Post, $"api/v1/receipts/{receiptId}/putaway", input, cancellationToken);
 
+    public Task<IReadOnlyList<Supplier>> GetSuppliersAsync(bool activeOnly = false, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<Supplier>>(HttpMethod.Get, "api/v1/suppliers" + (activeOnly ? "?active=true" : ""), null, cancellationToken);
+
+    public Task<Supplier> CreateSupplierAsync(SupplierInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<Supplier>(HttpMethod.Post, "api/v1/suppliers", input, cancellationToken);
+
+    public Task<Supplier> UpdateSupplierAsync(Guid id, SupplierInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<Supplier>(HttpMethod.Put, $"api/v1/suppliers/{id}", input, cancellationToken);
+
+    public Task<IReadOnlyList<ReorderSuggestion>> GetReorderSuggestionsAsync(Guid? supplierId = null, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<ReorderSuggestion>>(
+            HttpMethod.Get, "api/v1/purchase-orders/suggestions" + Query(("supplierId", supplierId?.ToString())), null, cancellationToken);
+
+    public Task<IReadOnlyList<PurchaseOrder>> GetPurchaseOrdersAsync(PurchaseOrderStatus? status = null, CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<PurchaseOrder>>(HttpMethod.Get, "api/v1/purchase-orders" + Query(("status", status?.ToString())), null, cancellationToken);
+
+    public Task<PurchaseOrder> GetPurchaseOrderAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<PurchaseOrder>(HttpMethod.Get, $"api/v1/purchase-orders/{id}", null, cancellationToken);
+
+    public Task<PurchaseOrder> CreatePurchaseOrderAsync(PurchaseOrderInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<PurchaseOrder>(HttpMethod.Post, "api/v1/purchase-orders", input, cancellationToken);
+
+    public Task<PurchaseOrder> UpdatePurchaseOrderAsync(Guid id, PurchaseOrderInput input, CancellationToken cancellationToken = default) =>
+        SendAsync<PurchaseOrder>(HttpMethod.Put, $"api/v1/purchase-orders/{id}", input, cancellationToken);
+
+    public Task<PurchaseOrder> ChangePurchaseOrderStatusAsync(Guid id, PurchaseOrderStatus status, CancellationToken cancellationToken = default) =>
+        SendAsync<PurchaseOrder>(HttpMethod.Post, $"api/v1/purchase-orders/{id}/status", new { status }, cancellationToken);
+
     public Task<IReadOnlyList<ScheduledEvent>> GetCalendarAsync(DateTimeOffset start, DateTimeOffset until, CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyList<ScheduledEvent>>(
             HttpMethod.Get,
@@ -126,6 +155,15 @@ public sealed class HttpOrdaliApi : IOrdaliApi
     public Task<UserProfile> UpdateUserAccessAsync(Guid id, UserAccessInput input, CancellationToken cancellationToken = default) =>
         SendAsync<UserProfile>(HttpMethod.Put, $"api/v1/users/{id}/access", input, cancellationToken);
 
+    public Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<object?>(HttpMethod.Delete, $"api/v1/users/{id}", null, cancellationToken, expectBody: false);
+
+    public Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<DeletedUser>>(HttpMethod.Get, "api/v1/users/deleted", null, cancellationToken);
+
+    public Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<UserProfile>(HttpMethod.Post, $"api/v1/users/{id}/restore", null, cancellationToken);
+
     private async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken, bool expectBody = true)
     {
         using var request = new HttpRequestMessage(method, path);
@@ -133,6 +171,9 @@ public sealed class HttpOrdaliApi : IOrdaliApi
         {
             request.Content = JsonContent.Create(body, options: ApiJson.Options);
         }
+
+        // Lets the API answer in the language the app is shown in.
+        request.Headers.AcceptLanguage.Add(new StringWithQualityHeaderValue(Language.Current));
 
         if (_session.Current is { } current)
         {
@@ -146,7 +187,7 @@ public sealed class HttpOrdaliApi : IOrdaliApi
         }
         catch (HttpRequestException ex)
         {
-            throw new ApiException(HttpStatusCode.ServiceUnavailable, "No se puede conectar con la API. Comprueba que está en marcha.", null, ex);
+            throw new ApiException(HttpStatusCode.ServiceUnavailable, Text.Get("No se puede conectar con la API. Comprueba que está en marcha."), null, ex);
         }
 
         using (response)
@@ -159,7 +200,7 @@ public sealed class HttpOrdaliApi : IOrdaliApi
                 }
 
                 var result = await response.Content.ReadFromJsonAsync<T>(ApiJson.Options, cancellationToken);
-                return result ?? throw new ApiException(response.StatusCode, "La API devolvió una respuesta vacía.");
+                return result ?? throw new ApiException(response.StatusCode, Text.Get("La API devolvió una respuesta vacía."));
             }
 
             // An expired or revoked token signs the user out so the UI sends them back to the login page.
@@ -186,10 +227,10 @@ public sealed class HttpOrdaliApi : IOrdaliApi
 
         var message = problem?.Detail ?? problem?.Title ?? response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => "Tu sesión ha caducado. Vuelve a entrar.",
-            HttpStatusCode.Forbidden => "No tienes permiso para esta acción.",
-            HttpStatusCode.NotFound => "No existe.",
-            _ => $"La API respondió con el error {(int)response.StatusCode}.",
+            HttpStatusCode.Unauthorized => Text.Get("Tu sesión ha caducado. Vuelve a entrar."),
+            HttpStatusCode.Forbidden => Text.Get("No tienes permiso para esta acción."),
+            HttpStatusCode.NotFound => Text.Get("No existe."),
+            _ => Text.Format("La API respondió con el error {0}.", (int)response.StatusCode),
         };
 
         return new ApiException(response.StatusCode, message, problem?.Errors);

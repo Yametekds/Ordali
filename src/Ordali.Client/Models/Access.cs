@@ -20,6 +20,16 @@ public sealed record UserProfile(
     bool Active,
     DateTimeOffset CreatedAt);
 
+/// <summary>A profile an administrator removed. It can't sign in, but it can be restored as it was.</summary>
+public sealed record DeletedUser(
+    Guid Id,
+    string Name,
+    string Email,
+    UserCategory Category,
+    string? TemplateName,
+    DateTimeOffset DeletedAt,
+    string? DeletedByName);
+
 public sealed class ProfileTemplateInput
 {
     [Required(ErrorMessage = "Ponle un nombre a la plantilla.")]

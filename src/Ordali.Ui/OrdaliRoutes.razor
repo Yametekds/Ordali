@@ -2,21 +2,23 @@
 
 @* Everything a host needs to render the app: routing, sign-in redirects and the shared layout. *@
 <CascadingAuthenticationState>
-    <CascadingValue Name="HostLinks" Value="HostLinks" IsFixed="true">
-        <Router AppAssembly="typeof(OrdaliRoutes).Assembly" AdditionalAssemblies="AdditionalAssemblies" NotFoundPage="typeof(Pages.NotFound)">
-            <Found Context="routeData">
-                <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
-                    <NotAuthorized>
-                        <RedirectToLogin />
-                    </NotAuthorized>
-                    <Authorizing>
-                        <Loading />
-                    </Authorizing>
-                </AuthorizeRouteView>
-                <FocusOnNavigate RouteData="routeData" Selector="h1" />
-            </Found>
-        </Router>
-    </CascadingValue>
+    <LanguageScope>
+        <CascadingValue Name="HostLinks" Value="HostLinks" IsFixed="true">
+            <Router AppAssembly="typeof(OrdaliRoutes).Assembly" AdditionalAssemblies="AdditionalAssemblies" NotFoundPage="typeof(Pages.NotFound)">
+                <Found Context="routeData">
+                    <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+                        <NotAuthorized>
+                            <RedirectToLogin />
+                        </NotAuthorized>
+                        <Authorizing>
+                            <Loading />
+                        </Authorizing>
+                    </AuthorizeRouteView>
+                    <FocusOnNavigate RouteData="routeData" Selector="h1" />
+                </Found>
+            </Router>
+        </CascadingValue>
+    </LanguageScope>
 </CascadingAuthenticationState>
 
 @code {

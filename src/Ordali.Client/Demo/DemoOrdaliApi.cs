@@ -20,6 +20,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     private readonly List<DemoReceipt> _receipts = [];
     private readonly List<UserProfile> _users;
     private readonly List<ProfileTemplate> _templates;
+    private readonly List<(UserProfile Profile, DateTimeOffset DeletedAt, string DeletedBy)> _deletedUsers = [];
     private readonly Dictionary<Guid, string> _passwords = [];
 
     public DemoOrdaliApi(SessionState session, TimeProvider time)
@@ -32,6 +33,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         _templates = [.. DemoData.Templates()];
         _stock = [.. DemoData.Stock().Select(s => new StockLine(DemoData.ProductId(s.Product), DemoData.LocationId(s.Location), s.Lot, s.Quantity))];
         SeedMovements();
+        SeedOrders();
         SeedCalendar();
     }
 
@@ -42,12 +44,12 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var user = _users.FirstOrDefault(u => string.Equals(u.Email, request.Email, StringComparison.OrdinalIgnoreCase));
             if (user is null || request.Password != PasswordOf(user))
             {
-                throw new ApiException(HttpStatusCode.Unauthorized, "Email o contraseña incorrectos.");
+                throw new ApiException(HttpStatusCode.Unauthorized, Text.Get("Email o contraseña incorrectos."));
             }
 
             if (!user.Active)
             {
-                throw new ApiException(HttpStatusCode.Forbidden, "Este perfil está desactivado. Habla con un administrador.");
+                throw new ApiException(HttpStatusCode.Forbidden, Text.Get("Este perfil está desactivado. Habla con un administrador."));
             }
 
             var info = new UserInfo(user.Id, user.Name, user.Email, user.Category, user.Permissions);
@@ -138,7 +140,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var siteId = input.SiteId ?? DemoData.Getafe.Id;
             if (siteId != DemoData.Getafe.Id)
             {
-                throw Invalid(nameof(LocationInput.SiteId), "El almacén no existe.");
+                throw Invalid(nameof(LocationInput.SiteId), Text.Get("El almacén no existe."));
             }
 
             var code = input.Code.Trim().ToUpperInvariant();
@@ -147,7 +149,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             {
                 throw new ApiException(
                     HttpStatusCode.Conflict,
-                    $"Ya existe la ubicación {existing.Code} en {existing.Zone}. Si creas otra con el mismo código, al escanearlo habrá que elegir entre las dos.");
+                    Text.Format("Ya existe la ubicación {0} en {1}. Si creas otra con el mismo código, al escanearlo habrá que elegir entre las dos.", existing.Code, existing.Zone));
             }
 
             var location = new Location(Guid.NewGuid(), siteId, code, input.Zone.Trim(), input.Type);
@@ -187,12 +189,12 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         var user = Ensure(Permissions.MovementsCreate);
         if (input.Type == MovementType.Receipt)
         {
-            throw Invalid(nameof(MovementInput.Type), "Las entradas se registran en Entradas y se ubican con traslados.");
+            throw Invalid(nameof(MovementInput.Type), Text.Get("Las entradas se registran en Entradas y se ubican con traslados."));
         }
 
         if (input.Type == MovementType.Adjustment && !user.Can(Permissions.MovementsAdjust))
         {
-            throw new ApiException(HttpStatusCode.Forbidden, "Tu perfil no permite hacer ajustes de inventario.");
+            throw new ApiException(HttpStatusCode.Forbidden, Text.Get("Tu perfil no permite hacer ajustes de inventario."));
         }
 
         lock (_lock)
@@ -297,6 +299,14 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
                 }
             }
 
+            for (var i = 0; i < _deletedUsers.Count; i++)
+            {
+                if (_deletedUsers[i].Profile.TemplateId == id)
+                {
+                    _deletedUsers[i] = _deletedUsers[i] with { Profile = _deletedUsers[i].Profile with { TemplateId = null, TemplateName = null } };
+                }
+            }
+
             return Task.CompletedTask;
         }
     }
@@ -327,7 +337,12 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var email = input.Email.Trim().ToLowerInvariant();
             if (_users.Any(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase)))
             {
-                throw Invalid(nameof(NewUserInput.Email), "Ya hay un perfil con ese email.");
+                throw Invalid(nameof(NewUserInput.Email), Text.Get("Ya hay un perfil con ese email."));
+            }
+
+            if (_deletedUsers.Any(d => string.Equals(d.Profile.Email, email, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw Invalid(nameof(NewUserInput.Email), "Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados.");
             }
 
             var template = input.TemplateId is { } templateId
@@ -335,13 +350,13 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
                 : null;
             if (template is null)
             {
-                throw Invalid(nameof(NewUserInput.TemplateId), "Elige una plantilla.");
+                throw Invalid(nameof(NewUserInput.TemplateId), Text.Get("Elige una plantilla."));
             }
 
             // Nobody can hand out permissions they do not hold themselves.
             if (!template.Permissions.All(creator.Can))
             {
-                throw new ApiException(HttpStatusCode.Forbidden, "Esa plantilla da permisos que tú no tienes.");
+                throw new ApiException(HttpStatusCode.Forbidden, Text.Get("Esa plantilla da permisos que tú no tienes."));
             }
 
             var user = new UserProfile(
@@ -361,7 +376,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var user = FindUser(id);
             if (user.Id == admin.Id && (input.Category != UserCategory.Admin || !input.Active))
             {
-                throw new ApiException(HttpStatusCode.Conflict, "No puedes quitarte a ti mismo el rol de administrador ni desactivarte.");
+                throw new ApiException(HttpStatusCode.Conflict, Text.Get("No puedes quitarte a ti mismo el rol de administrador ni desactivarte."));
             }
 
             var updated = user with
@@ -372,6 +387,53 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             };
             _users[_users.IndexOf(user)] = updated;
             return Result(updated);
+        }
+    }
+
+    public Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var admin = EnsureAdmin();
+        lock (_lock)
+        {
+            var user = FindUser(id);
+            if (user.Id == admin.Id)
+            {
+                throw new ApiException(HttpStatusCode.Conflict, "No puedes eliminar tu propio perfil.");
+            }
+
+            _users.Remove(user);
+            _deletedUsers.Add((user, _time.GetUtcNow(), admin.Name));
+            return Task.CompletedTask;
+        }
+    }
+
+    public Task<IReadOnlyList<DeletedUser>> GetDeletedUsersAsync(CancellationToken cancellationToken = default)
+    {
+        EnsureAdmin();
+        lock (_lock)
+        {
+            return Result<IReadOnlyList<DeletedUser>>([.. _deletedUsers
+                .OrderByDescending(d => d.DeletedAt)
+                .Select(d => new DeletedUser(
+                    d.Profile.Id, d.Profile.Name, d.Profile.Email, d.Profile.Category, d.Profile.TemplateName, d.DeletedAt, d.DeletedBy))]);
+        }
+    }
+
+    public Task<UserProfile> RestoreUserAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        EnsureAdmin();
+        lock (_lock)
+        {
+            var index = _deletedUsers.FindIndex(d => d.Profile.Id == id);
+            if (index < 0)
+            {
+                throw new ApiException(HttpStatusCode.NotFound, "El perfil no existe.");
+            }
+
+            var user = _deletedUsers[index].Profile;
+            _deletedUsers.RemoveAt(index);
+            _users.Add(user);
+            return Result(user);
         }
     }
 
@@ -389,12 +451,12 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         var name = input.Name.Trim();
         if (_templates.Any(t => t.Id != id && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            throw Invalid(nameof(ProfileTemplateInput.Name), "Ya hay una plantilla con ese nombre.");
+            throw Invalid(nameof(ProfileTemplateInput.Name), Text.Get("Ya hay una plantilla con ese nombre."));
         }
 
         if (input.Category == UserCategory.Admin)
         {
-            throw Invalid(nameof(ProfileTemplateInput.Category), "Las plantillas no pueden crear administradores; asciende el perfil después.");
+            throw Invalid(nameof(ProfileTemplateInput.Category), Text.Get("Las plantillas no pueden crear administradores; asciende el perfil después."));
         }
 
         return new ProfileTemplate(
@@ -408,7 +470,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         var unknown = list.Where(p => !Permissions.IsKnown(p)).ToList();
         if (unknown.Count > 0)
         {
-            throw Invalid("Permissions", $"Permisos desconocidos: {string.Join(", ", unknown)}.");
+            throw Invalid("Permissions", Text.Format("Permisos desconocidos: {0}.", string.Join(", ", unknown)));
         }
 
         // Keep the catalogue order so lists read the same everywhere.
@@ -418,24 +480,24 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     private string PasswordOf(UserProfile user) => _passwords.GetValueOrDefault(user.Id, DemoData.Password);
 
     private ProfileTemplate FindTemplate(Guid id) =>
-        _templates.FirstOrDefault(t => t.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "La plantilla no existe.");
+        _templates.FirstOrDefault(t => t.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("La plantilla no existe."));
 
     private UserProfile FindUser(Guid id) =>
-        _users.FirstOrDefault(u => u.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "El perfil no existe.");
+        _users.FirstOrDefault(u => u.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("El perfil no existe."));
 
     private Movement Apply(MovementInput input, string userName, DateTimeOffset at, string? reference = null)
     {
         var errors = MovementRules.Validate(input);
         if (errors.Count > 0)
         {
-            throw new ApiException(HttpStatusCode.BadRequest, "Revisa los datos del movimiento.", errors);
+            throw new ApiException(HttpStatusCode.BadRequest, Text.Get("Revisa los datos del movimiento."), errors);
         }
 
         var product = FindProduct(input.ProductId!.Value);
         var lot = string.IsNullOrWhiteSpace(input.Lot) ? null : input.Lot.Trim();
         if (product.TracksLots && lot is null)
         {
-            throw Invalid(nameof(MovementInput.Lot), "Este artículo se controla por lotes: indica el lote.");
+            throw Invalid(nameof(MovementInput.Lot), Text.Get("Este artículo se controla por lotes: indica el lote."));
         }
 
         if (!product.TracksLots)
@@ -462,7 +524,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
                 var line = Line(product.Id, to!.Id, lot);
                 if (line.Quantity + input.Quantity < 0)
                 {
-                    throw new ApiException(HttpStatusCode.Conflict, $"El ajuste dejaría el stock en negativo (hay {line.Quantity:0.##}).");
+                    throw new ApiException(HttpStatusCode.Conflict, Text.Format("El ajuste dejaría el stock en negativo (hay {0:0.##}).", line.Quantity));
                 }
 
                 line.Quantity += input.Quantity;
@@ -481,7 +543,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     {
         if (input.Lines.Count == 0)
         {
-            throw Invalid(nameof(ReceiptInput.Lines), "Añade al menos un artículo.");
+            throw Invalid(nameof(ReceiptInput.Lines), Text.Get("Añade al menos un artículo."));
         }
 
         var lines = new List<DemoReceiptLine>();
@@ -492,19 +554,19 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var product = _products.FirstOrDefault(p => p.Id == line.ProductId);
             if (product is null)
             {
-                errors.Add($"Línea {i + 1}: el artículo no existe.");
+                errors.Add(Text.Format("Línea {0}: el artículo no existe.", i + 1));
                 continue;
             }
 
             var lot = product.TracksLots && !string.IsNullOrWhiteSpace(line.Lot) ? line.Lot.Trim() : null;
             if (product.TracksLots && lot is null)
             {
-                errors.Add($"Línea {i + 1}: {product.Sku} se controla por lotes, indica el lote.");
+                errors.Add(Text.Format("Línea {0}: {1} se controla por lotes, indica el lote.", i + 1, product.Sku));
             }
 
             if (line.Quantity <= 0)
             {
-                errors.Add($"Línea {i + 1}: la cantidad tiene que ser mayor que cero.");
+                errors.Add(Text.Format("Línea {0}: la cantidad tiene que ser mayor que cero.", i + 1));
             }
 
             var existing = lines.FirstOrDefault(l => l.ProductId == product.Id && string.Equals(l.Lot, lot, StringComparison.OrdinalIgnoreCase));
@@ -520,17 +582,17 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
 
         if (errors.Count > 0)
         {
-            throw new ApiException(HttpStatusCode.BadRequest, "Revisa las líneas de la entrada.", new Dictionary<string, string[]> { [nameof(ReceiptInput.Lines)] = [.. errors] });
+            throw new ApiException(HttpStatusCode.BadRequest, Text.Get("Revisa las líneas de la entrada."), new Dictionary<string, string[]> { [nameof(ReceiptInput.Lines)] = [.. errors] });
         }
 
         var code = string.IsNullOrWhiteSpace(input.Code) ? NextReceiptCode() : input.Code.Trim().ToUpperInvariant();
         if (_receipts.Any(r => r.Code == code))
         {
-            throw Invalid(nameof(ReceiptInput.Code), $"Ya hay una entrada con el código {code}.");
+            throw Invalid(nameof(ReceiptInput.Code), Text.Format("Ya hay una entrada con el código {0}.", code));
         }
 
         var dock = _locations.Where(l => l.Type == LocationType.Receiving).OrderBy(l => l.Code, StringComparer.Ordinal).FirstOrDefault()
-            ?? throw new ApiException(HttpStatusCode.Conflict, "No hay ninguna ubicación de recepción donde dejar la mercancía. Crea una de tipo Recepción.");
+            ?? throw new ApiException(HttpStatusCode.Conflict, Text.Get("No hay ninguna ubicación de recepción donde dejar la mercancía. Crea una de tipo Recepción."));
         var reference = string.IsNullOrWhiteSpace(input.Reference) ? null : input.Reference.Trim();
         foreach (var line in lines)
         {
@@ -552,49 +614,49 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         var errors = new Dictionary<string, string[]>();
         if (input.ProductId is null)
         {
-            errors[nameof(PutAwayInput.ProductId)] = ["Escanea o elige el artículo."];
+            errors[nameof(PutAwayInput.ProductId)] = [Text.Get("Escanea o elige el artículo.")];
         }
 
         if (input.ToLocationId is null)
         {
-            errors[nameof(PutAwayInput.ToLocationId)] = ["Escanea o elige la ubicación de destino."];
+            errors[nameof(PutAwayInput.ToLocationId)] = [Text.Get("Escanea o elige la ubicación de destino.")];
         }
         else if (input.ToLocationId == receipt.DockLocationId)
         {
-            errors[nameof(PutAwayInput.ToLocationId)] = ["El destino tiene que ser distinto del muelle de recepción."];
+            errors[nameof(PutAwayInput.ToLocationId)] = [Text.Get("El destino tiene que ser distinto del muelle de recepción.")];
         }
 
         if (input.Quantity <= 0)
         {
-            errors[nameof(PutAwayInput.Quantity)] = ["Escribe la cantidad que mueves."];
+            errors[nameof(PutAwayInput.Quantity)] = [Text.Get("Escribe la cantidad que mueves.")];
         }
 
         if (errors.Count > 0)
         {
-            throw new ApiException(HttpStatusCode.BadRequest, "Revisa los datos del traslado.", errors);
+            throw new ApiException(HttpStatusCode.BadRequest, Text.Get("Revisa los datos del traslado."), errors);
         }
 
         var lot = string.IsNullOrWhiteSpace(input.Lot) ? null : input.Lot.Trim();
         var candidates = receipt.Lines.Where(l => l.ProductId == input.ProductId).ToList();
         if (candidates.Count == 0)
         {
-            throw Invalid(nameof(PutAwayInput.ProductId), $"Ese artículo no está en la entrada {receipt.Code}.");
+            throw Invalid(nameof(PutAwayInput.ProductId), Text.Format("Ese artículo no está en la entrada {0}.", receipt.Code));
         }
 
         var line = lot is null && candidates.Count == 1
             ? candidates[0]
             : candidates.FirstOrDefault(l => string.Equals(l.Lot, lot, StringComparison.OrdinalIgnoreCase))
-              ?? throw Invalid(nameof(PutAwayInput.Lot), lot is null ? "Indica el lote." : $"El lote {lot} no está en la entrada {receipt.Code}.");
+              ?? throw Invalid(nameof(PutAwayInput.Lot), lot is null ? Text.Get("Indica el lote.") : Text.Format("El lote {0} no está en la entrada {1}.", lot, receipt.Code));
 
         var pending = line.Quantity - line.PutAway;
         if (pending <= 0)
         {
-            throw new ApiException(HttpStatusCode.Conflict, "Este artículo ya está ubicado del todo.");
+            throw new ApiException(HttpStatusCode.Conflict, Text.Get("Este artículo ya está ubicado del todo."));
         }
 
         if (input.Quantity > pending)
         {
-            throw Invalid(nameof(PutAwayInput.Quantity), $"Solo quedan {pending:0.##} por ubicar.");
+            throw Invalid(nameof(PutAwayInput.Quantity), Text.Format("Solo quedan {0:0.##} por ubicar.", pending));
         }
 
         Apply(
@@ -626,7 +688,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     }
 
     private DemoReceipt FindReceipt(Guid id) =>
-        _receipts.FirstOrDefault(r => r.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "La entrada no existe.");
+        _receipts.FirstOrDefault(r => r.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("La entrada no existe."));
 
     private Receipt ToReceipt(DemoReceipt receipt) => new(
         receipt.Id,
@@ -655,7 +717,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         {
             throw new ApiException(
                 HttpStatusCode.Conflict,
-                $"No hay stock suficiente de {product.Sku} en {from.Code}: hay {available:0.##} y se piden {quantity:0.##}.");
+                Text.Format("No hay stock suficiente de {0} en {1}: hay {2:0.##} y se piden {3:0.##}.", product.Sku, from.Code, available, quantity));
         }
 
         line!.Quantity -= quantity;
@@ -718,24 +780,34 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     }
 
     private Product FindProduct(Guid id) =>
-        _products.FirstOrDefault(p => p.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "El artículo no existe.");
+        _products.FirstOrDefault(p => p.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("El artículo no existe."));
 
     private Location FindLocation(Guid id) =>
-        _locations.FirstOrDefault(l => l.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "La ubicación no existe.");
+        _locations.FirstOrDefault(l => l.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("La ubicación no existe."));
 
     private void EnsureUniqueSku(string sku, Guid? exceptId)
     {
         if (_products.Any(p => p.Id != exceptId && string.Equals(p.Sku, sku.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
-            throw Invalid(nameof(ProductInput.Sku), "Ya existe un artículo con ese SKU.");
+            throw Invalid(nameof(ProductInput.Sku), Text.Get("Ya existe un artículo con ese SKU."));
         }
     }
 
     private Product ToProduct(Guid id, ProductInput input)
     {
+        if (input.MaxStock > 0 && input.MaxStock < input.MinStock)
+        {
+            throw Invalid(nameof(ProductInput.MaxStock), "El stock máximo no puede ser menor que el mínimo.");
+        }
+
+        if (input.SupplierId is { } supplierId && _suppliers.All(s => s.Id != supplierId))
+        {
+            throw Invalid(nameof(ProductInput.SupplierId), "El distribuidor no existe.");
+        }
+
         if (input.DefaultLocationId is { } locationId && _locations.All(l => l.Id != locationId))
         {
-            throw Invalid(nameof(ProductInput.DefaultLocationId), "La ubicación no existe.");
+            throw Invalid(nameof(ProductInput.DefaultLocationId), Text.Get("La ubicación no existe."));
         }
 
         return new(
@@ -746,7 +818,9 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             input.Unit.Trim(),
             input.TracksLots,
             input.MinStock,
-            input.DefaultLocationId);
+            input.DefaultLocationId,
+            input.MaxStock,
+            input.SupplierId);
     }
 
     // Like the API, permissions are read from the stored profile on every call, so an admin's
@@ -755,16 +829,16 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     {
         if (!_session.IsAuthenticated)
         {
-            throw new ApiException(HttpStatusCode.Unauthorized, "Tu sesión ha caducado. Vuelve a entrar.");
+            throw new ApiException(HttpStatusCode.Unauthorized, Text.Get("Tu sesión ha caducado. Vuelve a entrar."));
         }
 
         lock (_lock)
         {
             var profile = _users.FirstOrDefault(u => u.Id == _session.Current!.User.Id)
-                ?? throw new ApiException(HttpStatusCode.Unauthorized, "Tu sesión ha caducado. Vuelve a entrar.");
+                ?? throw new ApiException(HttpStatusCode.Unauthorized, Text.Get("Tu sesión ha caducado. Vuelve a entrar."));
             return profile.Active
                 ? new UserInfo(profile.Id, profile.Name, profile.Email, profile.Category, profile.Permissions)
-                : throw new ApiException(HttpStatusCode.Forbidden, "Este perfil está desactivado. Habla con un administrador.");
+                : throw new ApiException(HttpStatusCode.Forbidden, Text.Get("Este perfil está desactivado. Habla con un administrador."));
         }
     }
 
@@ -780,7 +854,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
         return user.IsAdmin ? user : throw Forbidden();
     }
 
-    private static ApiException Forbidden() => new(HttpStatusCode.Forbidden, "No tienes permiso para esta acción.");
+    private static ApiException Forbidden() => new(HttpStatusCode.Forbidden, Text.Get("No tienes permiso para esta acción."));
 
     private static ApiException Invalid(string field, string message) =>
         new(HttpStatusCode.BadRequest, message, new Dictionary<string, string[]> { [field] = [message] });

@@ -31,10 +31,21 @@
     </div>
 
     <div id="blazor-error-ui">
-        Ha ocurrido un error inesperado.
+        <span class="error-text">Ha ocurrido un error inesperado.</span>
         <a href="." class="reload">Recargar</a>
         <span class="dismiss">🗙</span>
     </div>
+    <script>
+        // The app sets the language once it starts; this covers what shows before that.
+        try {
+            const lang = (localStorage.getItem("ordali.language") || navigator.language || "es").slice(0, 2);
+            if (lang === "en") {
+                document.documentElement.lang = "en";
+                document.querySelector("#blazor-error-ui .error-text").textContent = "Something went wrong.";
+                document.querySelector("#blazor-error-ui .reload").textContent = "Reload";
+            }
+        } catch { }
+    </script>
     <script src="js/install.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>

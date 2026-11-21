@@ -64,6 +64,22 @@ public class PageTests : BunitContext
         page.WaitForAssertion(() => Assert.Contains("CIN-050", page.Find(".pending").TextContent, StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Tutorial_explains_every_part_and_marks_the_ones_the_profile_cannot_open()
+    {
+        await SignInAsync("mozo@demo.local");
+
+        var page = Render<Tutorial>();
+
+        var topics = page.FindAll(".guide-topic");
+        Assert.Equal(7, topics.Count);
+        var users = topics.Single(t => t.QuerySelector("summary strong")!.TextContent == "Usuarios y permisos");
+        Assert.Contains("Sin acceso con tu perfil", users.TextContent, StringComparison.Ordinal);
+        Assert.Null(users.QuerySelector("a.link"));
+        var transfers = topics.Single(t => t.QuerySelector("summary strong")!.TextContent == "Traslados");
+        Assert.Equal("traslados", transfers.QuerySelector("a.link")!.GetAttribute("href"));
+    }
+
     private async Task<UserInfo> SignInAsync(string email)
     {
         // Services must be registered before the first one is resolved.
@@ -91,6 +107,42 @@ public class PageTests : BunitContext
 
         page.WaitForAssertion(() => Assert.Equal(3, page.FindAll(".group").Count));
         Assert.Equal(["Administradores (1)", "Encargados (1)", "Mozos (4)"], page.FindAll(".group-title").Select(h => h.TextContent.Trim()));
+    }
+
+    [Fact]
+    public async Task Admin_deletes_a_profile_after_confirming_and_can_undo_it()
+    {
+        await SignInAsync("admin@demo.local");
+
+        var page = Render<Users>();
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll("button[aria-label='Eliminar Javier Ruiz']")));
+        page.Find("button[aria-label='Eliminar Javier Ruiz']").Click();
+        page.Find(".alert-warning .btn-primary").Click();
+
+        page.WaitForAssertion(() => Assert.Contains("Has eliminado el perfil de Javier Ruiz", page.Find(".alert-ok").TextContent, StringComparison.Ordinal));
+        Assert.Equal("Mozos (3)", page.FindAll(".group-title")[2].TextContent.Trim());
+        // The admin's own row has no delete button.
+        Assert.Empty(page.FindAll("button[aria-label='Eliminar Lucía Martín']"));
+
+        page.Find(".alert-ok button").Click();
+
+        page.WaitForAssertion(() => Assert.Equal("Mozos (4)", page.FindAll(".group-title")[2].TextContent.Trim()));
+    }
+
+    [Fact]
+    public async Task Deleted_profiles_can_be_restored_from_their_own_page()
+    {
+        await SignInAsync("admin@demo.local");
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var mozo = (await api.GetUsersAsync()).Single(u => u.Email == "mozo@demo.local");
+        await api.DeleteUserAsync(mozo.Id);
+
+        var page = Render<DeletedUsers>();
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("tbody tr")));
+        page.Find("tbody button").Click();
+
+        page.WaitForAssertion(() => Assert.Contains("Has recuperado el perfil de Javier Ruiz", page.Find(".alert-ok").TextContent, StringComparison.Ordinal));
+        Assert.Contains("No hay perfiles eliminados.", page.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -162,6 +214,44 @@ public class PageTests : BunitContext
         var pending = await Services.GetRequiredService<IOrdaliApi>().GetReceiptsAsync(pendingOnly: true);
         Assert.Equal(15, pending.Single(r => r.Code == "ENTRADA9").Pending);
     }
+
+    [Fact]
+    public async Task Order_starts_with_the_items_below_their_range_and_takes_others_by_hand()
+    {
+        await SignInAsync("encargado@demo.local");
+        Services.GetRequiredService<NavigationManager>().NavigateTo($"pedidos/nuevo?distribuidor={HardwareSupplierId}");
+        var page = Render<PurchaseOrderEdit>();
+
+        page.WaitForAssertion(() => Assert.Single(page.FindAll("tbody tr")));
+        Assert.Contains("CIN-050", page.Find("tbody tr").TextContent, StringComparison.Ordinal);
+        Assert.Equal("122", page.Find("tbody .qty-input").GetAttribute("value"));
+
+        page.Find("tbody .qty-input").Input("100");
+        page.Find("form.add-line select").Change(GlovesId.ToString());
+        page.Find("form.add-line input[type=number]").Change("6");
+        page.Find("form.add-line").Submit();
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("tbody tr").Count));
+        page.FindAll(".form-actions .btn-primary")[0].Click();
+
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var sent = (await api.GetPurchaseOrdersAsync(PurchaseOrderStatus.Sent)).Single(o => o.Code == "PED-0003");
+        Assert.Equal([("CIN-050", 100m, (decimal?)122m), ("GUA-NIT", 6m, null)], sent.Lines.Select(l => (l.Sku, l.Quantity, l.SuggestedQuantity)));
+    }
+
+    [Fact]
+    public async Task Orders_page_lists_what_to_order_per_distributor()
+    {
+        await SignInAsync("encargado@demo.local");
+
+        var page = Render<PurchaseOrders>();
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll(".reorder-card").Count));
+        Assert.Contains("ARR-002", page.FindAll(".reorder-card")[0].TextContent, StringComparison.Ordinal);
+        Assert.Contains("PED-0002", page.Find("tbody").TextContent, StringComparison.Ordinal);
+    }
+
+    private static readonly Guid HardwareSupplierId = Guid.Parse("4b8e7a10-0000-4000-8000-300000000002");
+    private static readonly Guid GlovesId = Guid.Parse("4b8e7a10-0000-4000-8000-200000000006");
 
     [Fact]
     public async Task Calendar_lists_the_selected_day_and_pickers_cannot_schedule()

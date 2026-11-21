@@ -141,6 +141,24 @@ strong { font-weight: 700; }
 .sidebar-user .btn-ghost { color: var(--ink-muted); }
 .sidebar-user .btn-ghost:hover { background: var(--ink-2); color: #fff; }
 
+/* Language picker: two short codes, the current one filled. */
+.lang-picker { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.lang-option {
+    min-width: 36px; min-height: 28px; padding: 0 8px; border: 0; border-radius: 5px;
+    background: none; color: var(--muted); font: 600 .78rem var(--font); letter-spacing: .04em; cursor: pointer;
+}
+.lang-option:hover { color: var(--text); }
+.lang-option.active { background: var(--text); color: var(--surface); }
+.lang-picker-dark { border-color: var(--ink-line); background: none; }
+.lang-picker-dark .lang-option { color: var(--ink-muted); }
+.lang-picker-dark .lang-option:hover { color: #fff; }
+.lang-picker-dark .lang-option.active { background: var(--cream); color: var(--ink); }
+.sidebar-lang {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 16px;
+    border-top: 1px solid var(--ink-line); color: var(--ink-muted); font-size: .85rem;
+}
+.auth-lang { display: flex; width: fit-content; margin: 0 0 20px auto; }
+
 .scrim { display: none; }
 
 .content { margin-left: var(--sidebar-w); padding: 36px 44px 56px; max-width: calc(1200px + var(--sidebar-w)); }
@@ -341,6 +359,9 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 .alert-ok { background: var(--ok-bg); color: var(--ok); }
 .alert-info { background: var(--info-bg); color: var(--info); }
 .alert-warning { background: var(--warning-bg); color: var(--warning); }
+.alert-text { flex: 1; }
+.alert-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.row-actions { white-space: nowrap; }
 .note { margin: 10px 0 0; color: var(--muted); }
 .note-up { color: var(--ok); font-weight: 600; }
 
@@ -434,6 +455,43 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
 .auth-links .nav-link:hover { background: none; color: var(--text); }
 .auth-links .nav-link .icon { color: inherit; }
 
+/* Tutorial: the path of the goods, then one collapsible part per area, then tips */
+.guide-lead { max-width: 62ch; margin: -8px 0 20px; color: var(--muted); }
+.guide-flow { margin-bottom: 16px; }
+.guide-flow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; counter-reset: flow; }
+.guide-flow li { counter-increment: flow; display: flex; gap: 12px; align-items: flex-start; }
+.guide-flow li > .icon { flex: none; width: 36px; height: 36px; padding: 8px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }
+.guide-flow strong { display: block; margin-bottom: 2px; }
+.guide-flow strong::before { content: counter(flow) ". "; color: var(--accent-text); }
+.guide-flow span { color: var(--muted); font-size: .94rem; }
+
+.guide-topics { display: flex; flex-direction: column; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.guide-topic + .guide-topic { border-top: 1px solid var(--border); }
+.guide-topic summary {
+    display: flex; align-items: center; gap: 14px; padding: 14px 20px; cursor: pointer; list-style: none;
+    transition: background-color .12s var(--ease);
+}
+.guide-topic summary::-webkit-details-marker { display: none; }
+.guide-topic summary:hover { background: #faf6ef; }
+.guide-topic:first-child summary { border-radius: var(--radius) var(--radius) 0 0; }
+.guide-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--surface-2); color: var(--text); }
+.guide-summary { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.guide-summary span { color: var(--muted); font-size: .92rem; }
+.guide-summary .guide-locked { align-self: flex-start; margin-top: 6px; color: var(--muted); font-size: .8rem; }
+.guide-chevron { flex: none; color: var(--muted); transition: transform .15s var(--ease); }
+.guide-topic[open] .guide-chevron { transform: rotate(90deg); }
+.guide-topic[open] .guide-icon { background: var(--accent-soft); color: var(--accent-text); }
+.guide-body { padding: 0 20px 18px 70px; }
+.guide-steps { margin: 0 0 12px; padding-left: 20px; }
+.guide-steps li { padding: 3px 0; }
+.guide-steps li::marker { color: var(--muted); font-weight: 600; }
+.guide-tip { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--info-bg); color: var(--info); font-size: .94rem; }
+.guide-tip .icon { flex: none; margin-top: 2px; }
+
+.guide-tips ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px 24px; }
+.guide-tips li { display: flex; gap: 10px; align-items: flex-start; }
+.guide-tips li .icon { flex: none; margin-top: 2px; color: var(--muted); }
+
 /* Calendar: a month grid to see the week at the docks, and the chosen day as a list */
 .cal-toolbar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 16px; }
 .cal-nav { display: flex; align-items: center; gap: 6px; }
@@ -514,6 +572,37 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
     *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
 }
 
+/* Distributor orders: editable quantities inside the table and a sheet that prints cleanly. */
+.qty-input { width: 110px; text-align: right; }
+.qty-cell { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.qty-changed { color: var(--warning); font-size: .78rem; }
+.range { white-space: nowrap; }
+.badge-draft { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+.badge-sent { background: var(--info-bg); color: var(--info); }
+.badge-cancelled { background: var(--error-bg); color: var(--error); }
+.reorder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.reorder-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--warning-bar); border-radius: var(--radius); }
+.reorder-card h3 { font-size: 1rem; }
+.reorder-card ul { margin: 0; padding-left: 18px; font-size: .9rem; }
+.reorder-card .btn { align-self: flex-start; margin-top: auto; }
+h3.card-title { margin-top: 24px; }
+.add-line { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 14px 0; }
+.add-line .field { flex: 1 1 260px; }
+.add-line .field-qty { flex: 0 0 130px; }
+.order-sheet-head { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+.order-sheet-head dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; }
+.order-sheet-head dt { color: var(--muted); font-size: .85rem; font-weight: 600; padding-top: 1px; }
+.order-sheet-head dd { margin: 0; }
+.print-only { display: none; }
+
+@media print {
+    .topbar, .sidebar, .scrim, .page-actions, .form-actions, .no-print { display: none !important; }
+    .print-only { display: block; }
+    body, .content { background: #fff; }
+    .content { margin: 0; padding: 0; }
+    .card { box-shadow: none; border: 0; }
+}
+
 /* Tablets and phones: a top bar with the menu button, the sidebar becomes a drawer, tables become cards. */
 @media (max-width: 900px) {
     .topbar {
@@ -581,6 +670,10 @@ button.tab { background: none; border: 0; border-bottom: 2px solid transparent; 
     .auth-hero { flex-direction: row; align-items: center; gap: 12px; }
     .auth-name { margin-top: 0; font-size: 1.8rem; }
     .auth-tagline { display: none; }
+    .guide-lead { margin-top: -6px; }
+    .guide-flow ol { grid-template-columns: 1fr; }
+    .guide-topic summary { padding: 12px 14px; gap: 12px; }
+    .guide-body { padding: 0 14px 16px 14px; }
 
     .table thead { display: none; }
     .table, .table tbody, .table tr, .table td, .table tfoot { display: block; width: 100%; }
