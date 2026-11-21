@@ -125,5 +125,10 @@ internal static partial class English
         ("El email no puede pasar de 256 caracteres.", "The email can't be longer than 256 characters."),
         ("El teléfono no puede pasar de 32 caracteres.", "The phone can't be longer than 32 characters."),
         ("Elige el distribuidor.", "Choose the distributor."),
+        ("Indica el cliente.", "Enter the customer."),
+        ("El cliente no puede pasar de 120 caracteres.", "The customer can't be longer than 120 characters."),
+        ("La dirección no puede pasar de 300 caracteres.", "The address can't be longer than 300 characters."),
+        ("El transportista no puede pasar de 120 caracteres.", "The carrier can't be longer than 120 characters."),
+        ("La matrícula no puede pasar de 20 caracteres.", "The number plate can't be longer than 20 characters."),
     ];
 }

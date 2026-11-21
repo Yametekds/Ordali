@@ -72,7 +72,7 @@ public class PageTests : BunitContext
         var page = Render<Tutorial>();
 
         var topics = page.FindAll(".guide-topic");
-        Assert.Equal(7, topics.Count);
+        Assert.Equal(8, topics.Count);
         var users = topics.Single(t => t.QuerySelector("summary strong")!.TextContent == "Usuarios y permisos");
         Assert.Contains("Sin acceso con tu perfil", users.TextContent, StringComparison.Ordinal);
         Assert.Null(users.QuerySelector("a.link"));
@@ -310,6 +310,71 @@ public class PageTests : BunitContext
         await page.WaitForAssertionAsync(async () => Assert.Equal(ScheduledEventStatus.Completed, (await api.GetScheduledEventAsync(EventId(2))).Status));
         var rice = await api.GetStockAsync(productId: Guid.Parse("4b8e7a10-0000-4000-8000-200000000002"));
         Assert.Equal(40, rice.Sum(s => s.Quantity));
+    }
+
+    [Fact]
+    public async Task A_recorded_loading_becomes_a_delivery_note_with_one_sheet_per_pallet()
+    {
+        await SignInAsync("encargado@demo.local");
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var stock = await api.GetStockAsync();
+        var rice = stock.Single(s => s.Sku == "ARR-002");
+        var tape = stock.Single(s => s.Sku == "CIN-050");
+        await api.ShipScheduledEventAsync(EventId(2), new ShipEventInput
+        {
+            Lines =
+            [
+                new() { ProductId = rice.ProductId, FromLocationId = rice.LocationId, Lot = rice.Lot, Quantity = 20 },
+                new() { ProductId = tape.ProductId, FromLocationId = tape.LocationId, Quantity = 6 },
+            ],
+        });
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"albaranes/nuevo?cita={EventId(2)}");
+
+        var form = Render<DeliveryNoteNew>();
+        form.WaitForAssertion(() => Assert.Equal(2, form.FindAll(".pallet-group tbody tr").Count));
+        Assert.Equal("Hostelería Centro", form.Find("input[type=text]").GetAttribute("value"));
+        Assert.Contains(rice.Lot!, form.Find(".pallet-group").InnerHtml, StringComparison.Ordinal);
+        form.FindAll(".pallet-group tbody tr")[0].QuerySelector(".row-actions .btn:not(.btn-icon)")!.Click();
+        form.WaitForAssertion(() => Assert.Equal(2, form.FindAll(".pallet-group").Count));
+        form.Find(".form-actions .btn-primary").Click();
+
+        form.WaitForAssertion(() => Assert.Matches(@"albaranes/[0-9a-f-]{36}$", navigation.Uri));
+        var note = (await api.GetDeliveryNotesAsync(EventId(2))).Single();
+        Assert.Equal(("ALB-0002", 2), (note.Code, note.PalletCount));
+        Assert.Equal([10m, 6m, 10m], note.Lines.Select(l => l.Quantity));
+
+        var sheet = Render<DeliveryNoteView>(p => p.Add(x => x.Id, note.Id));
+        sheet.WaitForAssertion(() => Assert.Equal(2, sheet.FindAll(".pallet-row").Count));
+        Assert.Contains("Palet 2 de 2", sheet.Markup, StringComparison.Ordinal);
+
+        var labels = Render<PalletSheets>(p => p.Add(x => x.Id, note.Id));
+        labels.WaitForAssertion(() => Assert.Equal(2, labels.FindAll(".pallet-sheet").Count));
+        Assert.All(labels.FindAll(".pallet-sheet"), s => Assert.Contains("Hostelería Centro", s.TextContent, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Opening_the_note_of_a_loading_that_has_one_goes_to_it()
+    {
+        await SignInAsync("encargado@demo.local");
+        var api = Services.GetRequiredService<IOrdaliApi>();
+        var tape = (await api.GetStockAsync()).Single(s => s.Sku == "CIN-050");
+        await api.ShipScheduledEventAsync(EventId(2), new ShipEventInput
+        {
+            Lines = [new() { ProductId = tape.ProductId, FromLocationId = tape.LocationId, Quantity = 6 }],
+        });
+        var note = await api.CreateDeliveryNoteAsync(new DeliveryNoteInput
+        {
+            ScheduledEventId = EventId(2),
+            Customer = "Hostelería Centro",
+            Lines = [new() { ProductId = tape.ProductId, Quantity = 6 }],
+        });
+        var navigation = Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo($"albaranes/nuevo?cita={EventId(2)}");
+
+        Render<DeliveryNoteNew>();
+
+        Assert.EndsWith($"albaranes/{note.Id}", navigation.Uri, StringComparison.Ordinal);
     }
 
     private static Guid EventId(int n) => Guid.Parse($"6d3e0f50-0000-4000-8000-1000000000{n:D2}");

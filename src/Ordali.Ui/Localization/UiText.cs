@@ -18,6 +18,7 @@ public static class UiText
         English.Users,
         English.Planning,
         English.Purchasing,
+        English.Shipping,
         English.Forms,
         English.Help);
 

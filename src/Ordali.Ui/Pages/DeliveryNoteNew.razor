@@ -1,0 +1,332 @@
+@page "/albaranes/nuevo"
+@attribute [Authorize(Policy = Permissions.MovementsCreate)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+@inject NavigationManager Navigation
+
+<PageTitle>@L["Nuevo albarán"] · Ordali</PageTitle>
+
+<PageHeader Title="@L["Nuevo albarán"]" Subtitle="@Subtitle" />
+
+<ErrorAlert Error="error" />
+
+@if (loading)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (error is null)
+{
+    <div class="card form-card form-card-wide">
+        <div class="form-grid">
+            <label class="field">
+                <span>@L["Cliente"]</span>
+                <input type="text" @bind="customer" maxlength="120" autocomplete="off" />
+            </label>
+            <label class="field">
+                <span>@L["Referencia del pedido (opcional)"]</span>
+                <input type="text" @bind="reference" maxlength="40" autocomplete="off" />
+            </label>
+            <label class="field field-wide">
+                <span>@L["Dirección de entrega (opcional)"]</span>
+                <textarea rows="2" maxlength="300" @bind="address"></textarea>
+            </label>
+            <label class="field">
+                <span>@L["Transportista (opcional)"]</span>
+                <input type="text" @bind="carrier" maxlength="120" autocomplete="off" />
+            </label>
+            <label class="field">
+                <span>@L["Matrícula (opcional)"]</span>
+                <input type="text" @bind="plate" maxlength="20" autocomplete="off" />
+            </label>
+            <label class="field field-wide">
+                <span>@L["Observaciones (opcional)"]</span>
+                <textarea rows="2" maxlength="500" @bind="notes" placeholder="@L["Horario de entrega, mercancía frágil, remontable…"]"></textarea>
+            </label>
+        </div>
+
+        <h2 class="card-title ship-title">@L["Palets"]</h2>
+        @if (rows.Count == 0)
+        {
+            <p class="muted small">@L["Añade abajo lo que sale. Cada línea va en un palet; elige «Palet nuevo» para empezar otro."]</p>
+        }
+        else
+        {
+            <p class="muted small">@L["Elige en qué palet va cada línea. Al guardar, los palets se numeran 1, 2, 3… y se imprime una hoja por palet."]</p>
+            @foreach (var pallet in rows.GroupBy(r => r.Pallet).OrderBy(g => g.Key))
+            {
+                <section class="pallet-group">
+                    <h3 class="pallet-title">@L["Palet {0}", pallet.Key]</h3>
+                    <table class="table table-compact">
+                        <thead><tr><th>@L["Artículo"]</th><th>@L["Lote"]</th><th>@L["Cantidad"]</th><th>@L["Palet"]</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var row in pallet)
+                            {
+                                <tr>
+                                    <td data-label="@L["Artículo"]"><span><strong class="mono">@row.Sku</strong> @row.Name</span></td>
+                                    <td data-label="@L["Lote"]">
+                                        @if (row.TracksLots)
+                                        {
+                                            <input type="text" class="input-lot mono" maxlength="40" @bind="row.Lot" aria-label="@L["Lote de {0}", row.Sku]" />
+                                        }
+                                        else
+                                        {
+                                            <span class="muted">—</span>
+                                        }
+                                    </td>
+                                    <td data-label="@L["Cantidad"]">
+                                        <div class="qty-cell">
+                                            <input class="qty-input" type="number" min="0" step="any" inputmode="decimal" @bind="row.Quantity" aria-label="@L["Cantidad de {0}", row.Sku]" />
+                                            <span>@Labels.Unit(row.Unit)</span>
+                                        </div>
+                                    </td>
+                                    <td data-label="@L["Palet"]">
+                                        <select value="@row.Pallet" @onchange="e => MoveTo(row, e)" aria-label="@L["Palet de {0}", row.Sku]">
+                                            @for (var number = 1; number <= PalletCount; number++)
+                                            {
+                                                <option value="@number">@L["Palet {0}", number]</option>
+                                            }
+                                            <option value="@(PalletCount + 1)">@L["Palet nuevo"]</option>
+                                        </select>
+                                    </td>
+                                    <td class="row-actions">
+                                        <button type="button" class="btn btn-sm" title="@L["Repartir en otro palet"]" @onclick="() => Split(row)">
+                                            <Icon Name="plus" /><span>@L["Dividir"]</span>
+                                        </button>
+                                        <button type="button" class="btn btn-icon btn-sm btn-danger-ghost" title="@L["Quitar"]" aria-label="@L["Quitar {0}", row.Sku]" @onclick="() => Remove(row)">
+                                            <Icon Name="trash" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+            }
+        }
+
+        @if (products is not null)
+        {
+            <h3 class="card-title">@L["Añadir artículos"]</h3>
+            <form class="add-line" @onsubmit="AddLine">
+                <label class="field">
+                    <span>@L["Artículo"]</span>
+                    <select @bind="pickedId" aria-label="@L["Artículo para añadir"]">
+                        <option value="">@L["Elige un artículo"]</option>
+                        @foreach (var product in products)
+                        {
+                            <option value="@product.Id">@product.Sku · @product.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="field field-qty">
+                    <span>@L["Cantidad"]</span>
+                    <input type="number" min="0" step="any" inputmode="decimal" @bind="pickedQuantity" aria-label="@L["Cantidad para añadir"]" />
+                </label>
+                <button class="btn" type="submit" disabled="@(pickedId is null)"><Icon Name="plus" /><span>@L["Añadir"]</span></button>
+            </form>
+        }
+
+        @if (lineErrors.Count > 0)
+        {
+            <div class="alert alert-error" role="alert">
+                <Icon Name="alert" />
+                <ul class="error-list">
+                    @foreach (var message in lineErrors)
+                    {
+                        <li>@message</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <ErrorAlert Error="saveError" />
+
+        <div class="form-actions">
+            <a class="btn" href="@(EventId is { } id ? $"calendario/{id}" : "albaranes")">@L["Cancelar"]</a>
+            <button type="button" class="btn btn-primary" disabled="@(busy || !CanSave)" @onclick="SaveAsync">
+                <Icon Name="note" /><span>@(busy ? L["Guardando…"] : L["Guardar albarán"])</span>
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "cita")] public Guid? EventId { get; set; }
+
+    private readonly List<Row> rows = [];
+    private IReadOnlyList<Product>? products;
+    private DeliveryNoteDraft? draft;
+    private string customer = "";
+    private string? reference;
+    private string? address;
+    private string? carrier;
+    private string? plate;
+    private string? notes;
+    private Guid? pickedId;
+    private decimal? pickedQuantity;
+    private readonly List<string> lineErrors = [];
+    private Exception? error;
+    private Exception? saveError;
+    private bool loading = true;
+    private bool busy;
+
+    private int PalletCount => rows.Count == 0 ? 1 : rows.Max(r => r.Pallet);
+
+    private bool CanSave => !string.IsNullOrWhiteSpace(customer) && rows.Count > 0;
+
+    private string Subtitle => draft is null
+        ? L["Para una salida sin cita en el calendario. No mueve stock: regístralo en Movimientos."]
+        : L["Lo que salió en la carga del {0}. Reparte las líneas en palets antes de guardar.", Labels.DateTime(draft.ShippedAt)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (Session.Current?.User.Can(Permissions.ProductsView) == true)
+            {
+                products = await Api.GetProductsAsync();
+            }
+
+            if (EventId is { } eventId)
+            {
+                draft = await Api.GetDeliveryNoteDraftAsync(eventId);
+                if (draft.ExistingId is { } existing)
+                {
+                    Navigation.NavigateTo($"albaranes/{existing}", replace: true);
+                    return;
+                }
+
+                customer = draft.Customer;
+                reference = draft.Reference;
+                rows.AddRange(draft.Lines.Select(l => new Row
+                {
+                    ProductId = l.ProductId, Sku = l.Sku, Name = l.ProductName, Unit = l.Unit,
+                    TracksLots = l.Lot is not null, Lot = l.Lot, Quantity = l.Quantity, Pallet = 1,
+                }));
+            }
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void AddLine()
+    {
+        var product = products?.FirstOrDefault(p => p.Id == pickedId);
+        if (product is null)
+        {
+            return;
+        }
+
+        rows.Add(new Row
+        {
+            ProductId = product.Id, Sku = product.Sku, Name = product.Name, Unit = product.Unit,
+            TracksLots = product.TracksLots, Quantity = pickedQuantity ?? 1, Pallet = PalletCount,
+        });
+        pickedId = null;
+        pickedQuantity = null;
+    }
+
+    private void MoveTo(Row row, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var pallet) && pallet >= 1)
+        {
+            row.Pallet = pallet;
+            Compact();
+        }
+    }
+
+    // Half of the line goes on a new pallet; the quantities can be changed afterwards.
+    private void Split(Row row)
+    {
+        var half = Math.Floor((row.Quantity ?? 0) / 2);
+        if (half <= 0)
+        {
+            row.Pallet = PalletCount + 1;
+            Compact();
+            return;
+        }
+
+        var copy = new Row
+        {
+            ProductId = row.ProductId, Sku = row.Sku, Name = row.Name, Unit = row.Unit, TracksLots = row.TracksLots, Lot = row.Lot,
+            Quantity = half, Pallet = PalletCount + 1,
+        };
+        row.Quantity -= half;
+        rows.Add(copy);
+    }
+
+    private void Remove(Row row)
+    {
+        rows.Remove(row);
+        Compact();
+    }
+
+    // Keeps the pallets numbered 1..n on screen too, so "Palet nuevo" is always the next one.
+    private void Compact()
+    {
+        var numbers = rows.Select(r => r.Pallet).Distinct().Order().Select((n, i) => (n, i)).ToDictionary(x => x.n, x => x.i + 1);
+        foreach (var row in rows)
+        {
+            row.Pallet = numbers[row.Pallet];
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        saveError = null;
+        lineErrors.Clear();
+        try
+        {
+            var note = await Api.CreateDeliveryNoteAsync(new DeliveryNoteInput
+            {
+                ScheduledEventId = draft?.ScheduledEventId,
+                Customer = customer.Trim(),
+                Reference = reference,
+                Address = address,
+                Carrier = carrier,
+                VehiclePlate = plate,
+                Notes = notes,
+                Lines = [.. rows.Select(r => new DeliveryNoteLineInput { ProductId = r.ProductId, Lot = r.Lot, Quantity = r.Quantity ?? 0, Pallet = r.Pallet })],
+            });
+            Navigation.NavigateTo($"albaranes/{note.Id}");
+        }
+        catch (ApiException ex)
+        {
+            lineErrors.AddRange(ex.Errors.Values.SelectMany(m => m).Select(m => L[m].Value));
+            saveError = lineErrors.Count > 0 ? null : ex;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private sealed class Row
+    {
+        public Guid ProductId { get; init; }
+
+        public required string Sku { get; init; }
+
+        public required string Name { get; init; }
+
+        public required string Unit { get; init; }
+
+        public bool TracksLots { get; init; }
+
+        public string? Lot { get; set; }
+
+        public decimal? Quantity { get; set; }
+
+        public int Pallet { get; set; } = 1;
+    }
+}

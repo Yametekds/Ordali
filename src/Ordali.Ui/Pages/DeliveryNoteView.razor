@@ -1,0 +1,138 @@
+@page "/albaranes/{Id:guid}"
+@attribute [Authorize(Policy = Permissions.MovementsView)]
+@inject IOrdaliApi Api
+@inject IJSRuntime JS
+
+<PageTitle>@Title · Ordali</PageTitle>
+
+<PageHeader Title="@Title" Subtitle="@note?.Customer">
+    <Actions>
+        @if (note is not null)
+        {
+            <a class="btn" href="albaranes/@note.Id/palets"><Icon Name="layers" /><span>@L["Hojas de palet"]</span></a>
+            <button class="btn btn-primary" type="button" @onclick="PrintAsync"><Icon Name="printer" /><span>@L["Imprimir albarán"]</span></button>
+        }
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (note is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    <div class="card form-card form-card-wide order-sheet delivery-sheet">
+        <div class="delivery-sheet-top">
+            <BrandLogo Size="34" />
+            <div class="delivery-sheet-title">
+                <span>@L["Albarán de entrega"]</span>
+                <strong class="mono">@note.Code</strong>
+            </div>
+        </div>
+        <div class="order-sheet-head">
+            <dl>
+                <dt>@L["Fecha"]</dt><dd>@Labels.DateTime(note.CreatedAt)</dd>
+                @if (note.Reference is not null)
+                {
+                    <dt>@L["Referencia"]</dt><dd>@note.Reference</dd>
+                }
+                <dt>@L["Palets"]</dt><dd>@note.PalletCount</dd>
+                <dt>@L["Preparado por"]</dt><dd>@note.UserName</dd>
+            </dl>
+            <dl>
+                <dt>@L["Cliente"]</dt><dd><strong>@note.Customer</strong></dd>
+                @if (note.Address is not null)
+                {
+                    <dt>@L["Dirección"]</dt><dd class="pre-line">@note.Address</dd>
+                }
+                @if (note.Carrier is not null)
+                {
+                    <dt>@L["Transportista"]</dt><dd>@note.Carrier</dd>
+                }
+                @if (note.VehiclePlate is not null)
+                {
+                    <dt>@L["Matrícula"]</dt><dd>@note.VehiclePlate</dd>
+                }
+            </dl>
+        </div>
+
+        <table class="table table-compact delivery-lines">
+            <thead>
+                <tr><th>SKU</th><th>@L["Artículo"]</th><th>@L["Lote"]</th><th class="num">@L["Cantidad"]</th></tr>
+            </thead>
+            @foreach (var pallet in note.Pallets)
+            {
+                <tbody>
+                    <tr class="pallet-row"><th colspan="4">@L["Palet {0} de {1}", pallet.Key, note.PalletCount]</th></tr>
+                    @foreach (var line in pallet)
+                    {
+                        <tr>
+                            <td data-label="SKU"><strong class="mono">@line.Sku</strong></td>
+                            <td data-label="@L["Artículo"]">@line.ProductName</td>
+                            <td data-label="@L["Lote"]"><span class="mono">@(line.Lot ?? "—")</span></td>
+                            <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @Labels.Unit(line.Unit)</td>
+                        </tr>
+                    }
+                </tbody>
+            }
+        </table>
+
+        <p class="muted small">@L["Líneas"]: @note.Lines.Count · @L["Palets"]: @note.PalletCount</p>
+
+        @if (note.Notes is not null)
+        {
+            <p><strong>@L["Observaciones"]:</strong> @note.Notes</p>
+        }
+
+        <div class="signatures">
+            <div><span>@L["Entregado por"]</span></div>
+            <div><span>@L["Recibí conforme (nombre, DNI y firma)"]</span></div>
+        </div>
+
+        <div class="form-actions">
+            <a class="btn" href="albaranes">@L["Volver"]</a>
+            @if (note.ScheduledEventId is { } eventId)
+            {
+                <a class="btn" href="calendario/@eventId"><Icon Name="calendar" /><span>@L["Ver la carga"]</span></a>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private DeliveryNote? note;
+    private Exception? error;
+
+    private string Title => note is null ? L["Albarán"] : L["Albarán {0}", note.Code];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            note = await Api.GetDeliveryNoteAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("print");
+        }
+        catch (JSException)
+        {
+            // Printing isn't available in this host.
+        }
+    }
+}

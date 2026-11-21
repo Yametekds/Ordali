@@ -1,0 +1,82 @@
+@page "/albaranes"
+@attribute [Authorize(Policy = Permissions.MovementsView)]
+@inject IOrdaliApi Api
+@inject SessionState Session
+
+<PageTitle>@L["Albaranes"] · Ordali</PageTitle>
+
+<PageHeader Title="@L["Albaranes"]" Subtitle="@L["Lo que sale en cada carga, para el cliente y para cada palet."]">
+    <Actions>
+        @if (CanCreate)
+        {
+            <a class="btn btn-primary" href="albaranes/nuevo"><Icon Name="plus" /><span>@L["Nuevo albarán"]</span></a>
+        }
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (notes is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else if (notes.Count == 0)
+{
+    <EmptyState IconName="note" Text="@L["Todavía no hay albaranes. Se hacen desde una carga ya registrada en el calendario o desde aquí."]" />
+}
+else
+{
+    <div class="card card-flush">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>@L["Albarán"]</th>
+                    <th>@L["Cliente"]</th>
+                    <th>@L["Referencia"]</th>
+                    <th class="num">@L["Palets"]</th>
+                    <th>@L["Artículos"]</th>
+                    <th>@L["Fecha"]</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var note in notes)
+                {
+                    <tr>
+                        <td data-label="@L["Albarán"]" class="mono"><strong>@note.Code</strong></td>
+                        <td data-label="@L["Cliente"]">@note.Customer</td>
+                        <td data-label="@L["Referencia"]" class="muted">@note.Reference</td>
+                        <td data-label="@L["Palets"]" class="num">@note.PalletCount</td>
+                        <td data-label="@L["Artículos"]">@string.Join(", ", note.Lines.Select(l => l.Sku).Distinct())</td>
+                        <td data-label="@L["Fecha"]">@Labels.DateTime(note.CreatedAt)</td>
+                        <td class="row-actions">
+                            <a class="btn btn-sm" href="albaranes/@note.Id">@L["Ver"]</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<DeliveryNote>? notes;
+    private Exception? error;
+
+    private bool CanCreate => Session.Current?.User.Can(Permissions.MovementsCreate) == true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            notes = await Api.GetDeliveryNotesAsync();
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+}

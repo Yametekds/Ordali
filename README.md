@@ -64,6 +64,7 @@ Las migraciones se aplican al arrancar (`Database:MigrateOnStartup`). En producc
 | `POST /api/v1/receipts/{id}/putaway` | Traslada parte de una entrada desde recepción a su ubicación |
 | `GET`/`POST /api/v1/calendar` | Calendario: cargas, descargas y otras citas; `repeatWeeks` las repite cada semana y un muelle ocupado pide confirmación (409 y `allowOverlap`) |
 | `POST /api/v1/calendar/{id}/receive`, `/ship` | Cierra una descarga registrando su entrada, o una carga registrando la salida de cada línea |
+| `GET`/`POST /api/v1/delivery-notes`, `GET /api/v1/delivery-notes/draft?eventId=` | Albaranes de salida con el palet de cada línea; el borrador de una carga registrada trae el cliente y lo que salió con sus lotes |
 | `GET`/`POST /api/v1/movements` | Movimientos (salidas, traslados y ajustes) con quién los hizo y la entrada a la que pertenecen |
 | `GET`/`POST`/`PUT /api/v1/suppliers` | Distribuidores; cada artículo indica a cuál se le pide |
 | `GET /api/v1/purchase-orders/suggestions` | Artículos por debajo de su rango seguro, agrupados por distribuidor, con la cantidad que los devuelve al máximo |
@@ -91,6 +92,15 @@ El encargado programa en el **calendario** los camiones que vienen a descargar o
 - Lo que toca hoy, y lo que se quedó sin hacer, aparece en *Pendiente* en la pantalla de inicio.
 
 Las pantallas funcionan con lectores USB, Bluetooth y terminales Android (Zebra, Honeywell…) que escriben el código y pulsan Intro: cada paso deja el cursor en el campo siguiente y avisa con un pitido si el código no encaja. En móviles con Chrome o Edge también se puede escanear con la cámara.
+
+## Albaranes de pedido y de palet
+
+Cuando una carga queda registrada, la cita ofrece *Albarán y hojas de palet*. El albarán se rellena con el cliente, la referencia y lo que ha salido, con sus lotes; solo queda repartir cada línea en su palet (*Dividir* pasa parte de una línea a un palet nuevo) y, si se quiere, añadir dirección, transportista y matrícula. También se puede hacer un albarán suelto desde **Albaranes**.
+
+- **Albarán:** una hoja para el cliente con las líneas agrupadas por palet y los recuadros de firma.
+- **Hojas de palet:** una página por palet («Palet 2 / 3») con el destinatario, el número de albarán y lo que lleva, para pegar en el film.
+
+El albarán no mueve stock: la mercancía ya salió al registrar la carga. Cada carga tiene como mucho un albarán.
 
 ## Pedidos a distribuidores
 

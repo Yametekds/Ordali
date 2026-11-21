@@ -36,6 +36,10 @@ else
                     <button type="button" class="btn btn-primary" disabled="@busy" @onclick="CompleteAsync"><Icon Name="check" /><span>Marcar como hecha</span></button>
                 }
             }
+            else if (item.Type == ScheduledEventType.Outbound && item.Status == ScheduledEventStatus.Completed && Can(Permissions.MovementsCreate))
+            {
+                <a class="btn btn-primary" href="albaranes/nuevo?cita=@item.Id"><Icon Name="note" /><span>@L["Albarán y hojas de palet"]</span></a>
+            }
         </Actions>
     </PageHeader>
 

@@ -127,6 +127,15 @@
         ],
         L["Para mover algo que ya está ubicado, usa Traslado sin entrada."], "traslados", Can(Permissions.MovementsCreate)),
 
+        new("note", L["Albaranes"], L["El papel que viaja con la carga."],
+        [
+            L["Cuando registras una carga del calendario, pulsa Albarán y hojas de palet en la cita: se rellena con el cliente y lo que ha salido, con sus lotes."],
+            L["Reparte cada línea en su palet. Con Dividir, parte de una línea pasa a un palet nuevo."],
+            L["Añade la dirección, el transportista y la matrícula si los tienes, y guarda."],
+            L["Imprime el albarán para el cliente y las hojas de palet, una por palet, para pegarlas en el film."],
+        ],
+        L["El albarán no descuenta stock: la mercancía ya salió al registrar la carga."], "albaranes", Can(Permissions.MovementsView)),
+
         new("layers", L["Stock y movimientos"], L["Qué hay, dónde y qué ha pasado."],
         [
             L["En Stock filtra por artículo o por ubicación para ver cuántas unidades hay en cada sitio."],

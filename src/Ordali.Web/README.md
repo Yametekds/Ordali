@@ -79,6 +79,9 @@ Todas las rutas bajo `/api/v1`, JSON en camelCase y enums como texto (`"Transfer
 | POST | `/calendar/{id}/cancel`, `/calendar/{id}/complete` (solo tipo `Other`) | `calendar.edit` |
 | POST | `/calendar/{id}/receive` (mismo cuerpo que `/receipts`) | `movements.create` |
 | POST | `/calendar/{id}/ship` (`{ reference, lines: [{ productId, fromLocationId, lot, quantity }] }`) | `movements.create` |
+| GET | `/delivery-notes?eventId=`, `/delivery-notes/{id}` | `movements.view` |
+| GET | `/delivery-notes/draft?eventId=` (solo cargas registradas; `existingId` si ya tiene albarán) | `movements.create` |
+| POST | `/delivery-notes` (`{ scheduledEventId, customer, address, carrier, vehiclePlate, reference, notes, lines: [{ productId, lot, quantity, pallet }] }`; 409 si la carga ya tiene albarán) | `movements.create` |
 | GET | `/profile-templates`, `/profile-templates/{id}` | `users.view` o `users.create` |
 | POST / PUT / DELETE | `/profile-templates`, `/profile-templates/{id}` | Administrador |
 | GET | `/users`, `/users/{id}` | `users.view` |

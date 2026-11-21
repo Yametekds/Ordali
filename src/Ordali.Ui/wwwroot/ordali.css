@@ -595,12 +595,43 @@ h3.card-title { margin-top: 24px; }
 .order-sheet-head dd { margin: 0; }
 .print-only { display: none; }
 
+/* Delivery notes: pallets while filling it in, the note for the customer and one sheet per pallet. */
+.pallet-group { margin-top: 14px; }
+.pallet-title { font-size: .95rem; margin: 0 0 6px; }
+.input-lot { width: 130px; }
+.error-list { margin: 0; padding-left: 18px; }
+.pre-line { white-space: pre-line; }
+.delivery-sheet-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.delivery-sheet-title { display: flex; flex-direction: column; align-items: flex-end; }
+.delivery-sheet-title span { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.delivery-sheet-title strong { font-size: 1.3rem; }
+.delivery-lines .pallet-row th { background: var(--surface-2); font-size: .85rem; text-align: left; }
+.signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 28px; }
+.signatures div { height: 90px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; }
+.signatures span { color: var(--muted); font-size: .8rem; }
+.pallet-sheet { max-width: 760px; margin-bottom: 18px; }
+.pallet-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
+.pallet-number { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.pallet-number span { color: var(--muted); font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.pallet-number strong { font-size: 3.4rem; }
+.pallet-number small { font-size: 1.4rem; color: var(--muted); }
+.pallet-sheet-to { display: flex; flex-direction: column; gap: 2px; margin: 18px 0; }
+.pallet-sheet-to strong { font-size: 1.6rem; line-height: 1.2; }
+.pallet-sheet-facts { display: flex; flex-wrap: wrap; gap: 10px 28px; margin: 0 0 16px; }
+.pallet-sheet-facts dt { color: var(--muted); font-size: .8rem; font-weight: 600; }
+.pallet-sheet-facts dd { margin: 0; font-size: 1.05rem; }
+
 @media print {
     .topbar, .sidebar, .scrim, .page-actions, .form-actions, .no-print { display: none !important; }
     .print-only { display: block; }
-    body, .content { background: #fff; }
+    html, body, .shell, .content { background: #fff !important; }
+    .shell { min-height: 0; }
     .content { margin: 0; padding: 0; }
     .card { box-shadow: none; border: 0; }
+    body:has(.delivery-sheet, .pallet-sheet) .page-header { display: none; }
+    .pallet-sheet { max-width: none; margin: 0; break-after: page; }
+    .pallet-sheet:last-of-type { break-after: auto; }
+    .signatures div { border-color: #999; }
 }
 
 /* Tablets and phones: a top bar with the menu button, the sidebar becomes a drawer, tables become cards. */
@@ -635,6 +666,8 @@ h3.card-title { margin-top: 24px; }
 }
 
 @media (max-width: 640px) {
+    .signatures { grid-template-columns: 1fr; }
+    .delivery-lines .pallet-row th { display: block; width: 100%; }
     h1 { font-size: 1.45rem; }
     .grid-2, .form-grid { grid-template-columns: 1fr; }
     .page-header { margin-bottom: 20px; }

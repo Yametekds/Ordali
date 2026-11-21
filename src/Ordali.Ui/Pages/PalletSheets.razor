@@ -1,0 +1,115 @@
+@page "/albaranes/{Id:guid}/palets"
+@attribute [Authorize(Policy = Permissions.MovementsView)]
+@inject IOrdaliApi Api
+@inject IJSRuntime JS
+
+<PageTitle>@L["Hojas de palet"] · Ordali</PageTitle>
+
+<PageHeader Title="@L["Hojas de palet"]" Subtitle="@Subtitle">
+    <Actions>
+        @if (note is not null)
+        {
+            <a class="btn" href="albaranes/@note.Id"><Icon Name="note" /><span>@L["Ver albarán"]</span></a>
+            <button class="btn btn-primary" type="button" @onclick="PrintAsync"><Icon Name="printer" /><span>@L["Imprimir hojas"]</span></button>
+        }
+    </Actions>
+</PageHeader>
+
+<ErrorAlert Error="error" />
+
+@if (note is null)
+{
+    @if (error is null)
+    {
+        <Loading />
+    }
+}
+else
+{
+    @foreach (var pallet in note.Pallets)
+    {
+        <article class="card pallet-sheet">
+            <header class="pallet-sheet-head">
+                <BrandLogo Size="30" />
+                <div class="pallet-number">
+                    <span>@L["Palet"]</span>
+                    <strong>@pallet.Key<small> / @note.PalletCount</small></strong>
+                </div>
+            </header>
+
+            <div class="pallet-sheet-to">
+                <span class="muted">@L["Destinatario"]</span>
+                <strong>@note.Customer</strong>
+                @if (note.Address is not null)
+                {
+                    <span class="pre-line">@note.Address</span>
+                }
+            </div>
+
+            <dl class="pallet-sheet-facts">
+                <div><dt>@L["Albarán"]</dt><dd class="mono">@note.Code</dd></div>
+                @if (note.Reference is not null)
+                {
+                    <div><dt>@L["Referencia"]</dt><dd>@note.Reference</dd></div>
+                }
+                <div><dt>@L["Fecha"]</dt><dd>@Labels.DateTime(note.CreatedAt)</dd></div>
+                @if (note.Carrier is not null)
+                {
+                    <div><dt>@L["Transportista"]</dt><dd>@note.Carrier</dd></div>
+                }
+            </dl>
+
+            <table class="table table-compact">
+                <thead><tr><th>SKU</th><th>@L["Artículo"]</th><th>@L["Lote"]</th><th class="num">@L["Cantidad"]</th></tr></thead>
+                <tbody>
+                    @foreach (var line in pallet)
+                    {
+                        <tr>
+                            <td data-label="SKU"><strong class="mono">@line.Sku</strong></td>
+                            <td data-label="@L["Artículo"]">@line.ProductName</td>
+                            <td data-label="@L["Lote"]"><span class="mono">@(line.Lot ?? "—")</span></td>
+                            <td data-label="@L["Cantidad"]" class="num">@Labels.Quantity(line.Quantity) @Labels.Unit(line.Unit)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </article>
+    }
+
+    <div class="form-actions no-print">
+        <a class="btn" href="albaranes/@note.Id">@L["Volver"]</a>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private DeliveryNote? note;
+    private Exception? error;
+
+    private string? Subtitle => note is null ? null : L["{0} · {1} · una hoja por palet para pegar en el film.", note.Code, note.Customer].Value;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            note = await Api.GetDeliveryNoteAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            error = ex;
+        }
+    }
+
+    private async Task PrintAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("print");
+        }
+        catch (JSException)
+        {
+            // Printing isn't available in this host.
+        }
+    }
+}
