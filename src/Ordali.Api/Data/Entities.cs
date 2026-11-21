@@ -370,3 +370,58 @@ public sealed class ScheduledEventLine
 
     public decimal Quantity { get; set; }
 }
+
+/// <summary>
+/// The delivery note that travels with an outbound load. Each line says which pallet it goes on,
+/// so the same note prints as one sheet for the customer and one label per pallet.
+/// </summary>
+public sealed class DeliveryNote
+{
+    public Guid Id { get; set; }
+
+    /// <summary>"ALB-0001", numbered in order.</summary>
+    public required string Code { get; set; }
+
+    /// <summary>The loading slot it was made from, if any. A slot has at most one note.</summary>
+    public Guid? ScheduledEventId { get; set; }
+
+    public required string Customer { get; set; }
+
+    public string? Address { get; set; }
+
+    public string? Carrier { get; set; }
+
+    public string? VehiclePlate { get; set; }
+
+    /// <summary>The customer's order number or the reference the shipments were recorded with.</summary>
+    public string? Reference { get; set; }
+
+    public string? Notes { get; set; }
+
+    public Guid UserId { get; set; }
+
+    public required string UserName { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public List<DeliveryNoteLine> Lines { get; set; } = [];
+}
+
+public sealed class DeliveryNoteLine
+{
+    public Guid Id { get; set; }
+
+    public Guid DeliveryNoteId { get; set; }
+
+    public Guid ProductId { get; set; }
+
+    public string? Lot { get; set; }
+
+    public decimal Quantity { get; set; }
+
+    /// <summary>Pallet number inside the note, from 1.</summary>
+    public int Pallet { get; set; }
+
+    /// <summary>Keeps the lines in the order they were entered.</summary>
+    public int Position { get; set; }
+}

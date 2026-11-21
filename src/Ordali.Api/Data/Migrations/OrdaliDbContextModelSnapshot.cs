@@ -22,6 +22,105 @@ namespace Ordali.Api.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Ordali.Api.Data.DeliveryNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Carrier")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Customer")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid?>("ScheduledEventId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("VehiclePlate")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ScheduledEventId")
+                        .IsUnique()
+                        .HasFilter("[ScheduledEventId] IS NOT NULL");
+
+                    b.ToTable("DeliveryNotes", "shipping");
+                });
+
+            modelBuilder.Entity("Ordali.Api.Data.DeliveryNoteLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeliveryNoteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Lot")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("Pallet")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("DeliveryNoteLines", "shipping");
+                });
+
             modelBuilder.Entity("Ordali.Api.Data.Location", b =>
                 {
                     b.Property<Guid>("Id")
@@ -614,6 +713,29 @@ namespace Ordali.Api.Data.Migrations
                     b.ToTable("Users", "identity");
                 });
 
+            modelBuilder.Entity("Ordali.Api.Data.DeliveryNote", b =>
+                {
+                    b.HasOne("Ordali.Api.Data.ScheduledEvent", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduledEventId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Ordali.Api.Data.DeliveryNoteLine", b =>
+                {
+                    b.HasOne("Ordali.Api.Data.DeliveryNote", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("DeliveryNoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Ordali.Api.Data.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Ordali.Api.Data.Location", b =>
                 {
                     b.HasOne("Ordali.Api.Data.Site", null)
@@ -747,6 +869,11 @@ namespace Ordali.Api.Data.Migrations
                         .WithMany()
                         .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Ordali.Api.Data.DeliveryNote", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("Ordali.Api.Data.PurchaseOrder", b =>

@@ -23,7 +23,10 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
     public DbSet<Supplier> Suppliers => Set<Supplier>();
 
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+
     public DbSet<ScheduledEvent> ScheduledEvents => Set<ScheduledEvent>();
+
+    public DbSet<DeliveryNote> DeliveryNotes => Set<DeliveryNote>();
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
@@ -215,6 +218,32 @@ public sealed class OrdaliDbContext(DbContextOptions<OrdaliDbContext> options) :
         modelBuilder.Entity<ScheduledEventLine>(line =>
         {
             line.ToTable("ScheduledEventLines", "planning");
+            line.Property(l => l.Quantity).HasPrecision(18, 3);
+            line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DeliveryNote>(note =>
+        {
+            note.ToTable("DeliveryNotes", "shipping");
+            note.Property(n => n.Code).HasMaxLength(16);
+            note.Property(n => n.Customer).HasMaxLength(120);
+            note.Property(n => n.Address).HasMaxLength(300);
+            note.Property(n => n.Carrier).HasMaxLength(120);
+            note.Property(n => n.VehiclePlate).HasMaxLength(20);
+            note.Property(n => n.Reference).HasMaxLength(40);
+            note.Property(n => n.Notes).HasMaxLength(500);
+            note.Property(n => n.UserName).HasMaxLength(120);
+            note.HasIndex(n => n.Code).IsUnique();
+            note.HasIndex(n => n.CreatedAt);
+            note.HasIndex(n => n.ScheduledEventId).IsUnique().HasFilter("[ScheduledEventId] IS NOT NULL");
+            note.HasOne<ScheduledEvent>().WithMany().HasForeignKey(n => n.ScheduledEventId).OnDelete(DeleteBehavior.Restrict);
+            note.HasMany(n => n.Lines).WithOne().HasForeignKey(l => l.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DeliveryNoteLine>(line =>
+        {
+            line.ToTable("DeliveryNoteLines", "shipping");
+            line.Property(l => l.Lot).HasMaxLength(40);
             line.Property(l => l.Quantity).HasPrecision(18, 3);
             line.HasOne<Product>().WithMany().HasForeignKey(l => l.ProductId).OnDelete(DeleteBehavior.Restrict);
         });

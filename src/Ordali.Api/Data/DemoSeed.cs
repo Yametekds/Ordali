@@ -130,6 +130,21 @@ public static class DemoSeed
             supervisor.Id, supervisor.Name, cancellationToken, now.AddHours(-3));
         await movements.RecordAsync(Move(MovementType.Adjustment, 4, null, 8, null, -2, "Recuento: rollos dañados"), admin.Id, admin.Name, cancellationToken, now.AddHours(-2));
 
+        // The paperwork of the shipment above, so the delivery notes page has something to print.
+        db.DeliveryNotes.Add(new DeliveryNote
+        {
+            Id = Guid.NewGuid(),
+            Code = "ALB-0001",
+            Customer = "Ferretería Getafe Centro",
+            Address = "Av. de España 12, 28901 Getafe (Madrid)",
+            Carrier = "Reparto propio",
+            Reference = "10233",
+            UserId = picker.Id,
+            UserName = picker.Name,
+            CreatedAt = now.AddHours(-5),
+            Lines = [new DeliveryNoteLine { ProductId = ProductId(3), Quantity = 4, Pallet = 1 }],
+        });
+
         // One order already received and one on its way; rice and tape are left below their range to order.
         db.PurchaseOrders.AddRange(
             Order(1, 1, PurchaseOrderStatus.Received, supervisor, now.AddDays(-4), null, (1, 48, 48)),

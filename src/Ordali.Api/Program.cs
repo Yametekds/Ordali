@@ -8,6 +8,7 @@ using Ordali.Api.Identity;
 using Ordali.Api.Inventory;
 using Ordali.Api.Locations;
 using Ordali.Api.Purchasing;
+using Ordali.Api.Shipping;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +80,7 @@ v1.MapInventoryEndpoints();
 v1.MapReceiptEndpoints();
 v1.MapPurchasingEndpoints();
 v1.MapCalendarEndpoints();
+v1.MapShippingEndpoints();
 
 await app.InitializeDatabaseAsync();
 await app.RunAsync();
