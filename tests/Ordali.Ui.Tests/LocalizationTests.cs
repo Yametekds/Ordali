@@ -170,6 +170,51 @@ public sealed class EnglishPageTests : BunitContext
     }
 
     [Fact]
+    public void Api_messages_with_values_are_translated()
+    {
+        Language.Set(Language.English);
+        var localizer = Services.GetRequiredService<IStringLocalizer>();
+
+        Assert.Equal("Line 2: choose the item.", localizer["Línea 2: elige el artículo."].Value);
+        Assert.Equal(
+            "Order PED-0003 is a draft and can't be changed to received.",
+            localizer["El pedido PED-0003 está en borrador y no puede pasar a recibido."].Value);
+        Assert.Equal(
+            "MUE-01 is already booked at that time for “Weekly unloading”. You can schedule it anyway.",
+            localizer["MUE-01 ya está reservado a esa hora para «Weekly unloading». Puedes programarlo igualmente."].Value);
+    }
+
+    [Fact]
+    public async Task Calendar_orders_and_deleted_users_come_in_english()
+    {
+        Language.Set(Language.English);
+        await SignInAsync("admin@demo.local");
+
+        var calendar = Render<Calendar>();
+        calendar.WaitForAssertion(() => Assert.Contains("Loading", calendar.Find(".cal-agenda").TextContent, StringComparison.Ordinal));
+        Assert.Equal("Calendar", calendar.Find("h1").TextContent);
+        Assert.Contains("Mon", calendar.Find(".cal-head").TextContent, StringComparison.Ordinal);
+        Assert.Contains("Schedule", calendar.Find(".page-header").TextContent, StringComparison.Ordinal);
+
+        var orders = Render<PurchaseOrders>();
+        orders.WaitForAssertion(() => Assert.Contains("To order", orders.Markup, StringComparison.Ordinal));
+        Assert.Contains("Distributor orders", orders.Find("h1").TextContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("Pedido", orders.Find("thead").TextContent, StringComparison.Ordinal);
+
+        var deleted = Render<DeletedUsers>();
+        deleted.WaitForAssertion(() => Assert.Equal("Deleted users", deleted.Find("h1").TextContent));
+    }
+
+    private async Task SignInAsync(string email)
+    {
+        var auth = AddAuthorization();
+        var response = await Services.GetRequiredService<IOrdaliApi>().LoginAsync(new Client.Models.LoginRequest(email, "Demo1234!"));
+        Services.GetRequiredService<SessionState>().Set(response);
+        var user = response.User;
+        auth.SetAuthorized(user.Name).SetPolicies([.. Client.Models.Permissions.All.Where(user.Can), Policies.Admin]);
+    }
+
+    [Fact]
     public void Missing_translations_fall_back_to_spanish()
     {
         Language.Set(Language.English);

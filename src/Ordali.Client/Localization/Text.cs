@@ -16,6 +16,9 @@ internal static class Text
 
     internal static IReadOnlyDictionary<string, string> EnglishTexts => Messages.English;
 
+    /// <summary>The same messages, for translating the ones the API sends in Spanish.</summary>
+    internal static Translations Translations => Messages;
+
     private static (string, string)[] English =>
     [
         // Connection and session
@@ -84,5 +87,63 @@ internal static class Text
         ("El perfil no existe.", "The profile doesn't exist."),
         ("Ya hay una plantilla con ese nombre.", "There is already a template with that name."),
         ("Las plantillas no pueden crear administradores; asciende el perfil después.", "Templates can't create administrators; promote the profile afterwards."),
+        ("Una plantilla no puede crear administradores.", "A template can't create administrators."),
+        ("Esa plantilla da permisos que tú no tienes. Pide a un administrador que cree el perfil.",
+            "That template grants permissions you don't have. Ask an administrator to create the profile."),
+        ("No puedes quitarte a ti mismo la categoría de administrador ni desactivar tu perfil.",
+            "You can't remove your own administrator category or deactivate your profile."),
+        ("Ya existe un perfil con ese email.", "There is already a profile with that email."),
+        ("Ya existe una plantilla con ese nombre.", "There is already a template with that name."),
+        ("Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados.",
+            "There is a deleted profile with that email. An administrator can restore it from Deleted users."),
+        ("No puedes eliminar tu propio perfil.", "You can't delete your own profile."),
+        ("Ese perfil no está eliminado.", "That profile isn't deleted."),
+
+        // Calendar
+        ("La cita no existe.", "The appointment doesn't exist."),
+        ("El final tiene que ser posterior al inicio.", "The end must be after the start."),
+        ("Pide como mucho 100 días de calendario.", "Ask for 100 calendar days at most."),
+        ("Indica cuándo empieza.", "Say when it starts."),
+        ("Tiene que terminar después de empezar.", "It must end after it starts."),
+        ("No puede durar más de una semana.", "It can't last more than a week."),
+        ("Esa fecha ya ha pasado.", "That date has already passed."),
+        ("Una descarga se reserva en una ubicación de recepción.", "An unloading is booked at a receiving location."),
+        ("Una carga se reserva en una ubicación de expedición.", "A loading is booked at a shipping location."),
+        ("Revisa los datos de la cita.", "Check the appointment details."),
+        ("{0} ya está reservado a esa hora para «{1}». Puedes programarlo igualmente.", "{0} is already booked at that time for “{1}”. You can schedule it anyway."),
+        ("Esta cita ya está hecha.", "This appointment is already done."),
+        ("Esta cita está anulada.", "This appointment is cancelled."),
+        ("Una descarga se cierra registrando su entrada.", "An unloading is closed by recording its receipt."),
+        ("Una carga se cierra registrando la salida de la mercancía.", "A loading is closed by recording the shipment of the goods."),
+        ("Solo se registra una entrada desde una descarga.", "A receipt can only be recorded from an unloading."),
+        ("Solo se registra una salida desde una carga.", "A shipment can only be recorded from a loading."),
+        ("Línea {0}: elige el artículo.", "Line {0}: choose the item."),
+        ("Línea {0}: elige de qué ubicación sale.", "Line {0}: choose the location it comes from."),
+        ("Revisa las líneas de la carga.", "Check the loading lines."),
+        ("{0} se controla por lotes: indica el lote.", "{0} is tracked by lot: enter the lot."),
+
+        // Distributors and orders
+        ("El distribuidor no existe.", "The distributor doesn't exist."),
+        ("Ya hay un distribuidor con ese nombre.", "There is already a distributor with that name."),
+        ("El pedido no existe.", "The order doesn't exist."),
+        ("El pedido {0} ya no está en borrador y no se puede cambiar.", "Order {0} is no longer a draft and can't be changed."),
+        ("El pedido {0} está {1} y no puede pasar a {2}.", "Order {0} is {1} and can't be changed to {2}."),
+        ("en borrador", "a draft"),
+        ("enviado", "sent"),
+        ("recibido", "received"),
+        ("anulado", "cancelled"),
+        ("{0} está dado de baja.", "{0} is inactive."),
+        ("Revisa las líneas del pedido.", "Check the order lines."),
+        ("El stock máximo no puede ser menor que el mínimo.", "The maximum stock can't be lower than the minimum."),
+
+        // Generic API answers
+        ("Revisa los datos enviados.", "Check the details you sent."),
+        ("Falta el cuerpo de la petición.", "The request body is missing."),
+        ("Valor no válido.", "Invalid value."),
+        ("La cantidad está fuera de rango.", "The quantity is out of range."),
+        ("No tienes permiso para registrar ajustes.", "You don't have permission to record adjustments."),
+        ("La ubicación ya existe.", "The location already exists."),
+        ("El stock ha cambiado mientras se guardaba el movimiento. Vuelve a intentarlo.", "Stock changed while the movement was being saved. Please try again."),
+        ("Tipo de movimiento desconocido.", "Unknown movement type."),
     ];
 }

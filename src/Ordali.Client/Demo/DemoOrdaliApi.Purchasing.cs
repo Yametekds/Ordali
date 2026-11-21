@@ -118,7 +118,7 @@ public sealed partial class DemoOrdaliApi
             var order = FindOrder(id);
             if (order.Status != PurchaseOrderStatus.Draft)
             {
-                throw new ApiException(HttpStatusCode.Conflict, $"El pedido {order.Code} ya no está en borrador y no se puede cambiar.");
+                throw new ApiException(HttpStatusCode.Conflict, Text.Format("El pedido {0} ya no está en borrador y no se puede cambiar.", order.Code));
             }
 
             Fill(order, input);
@@ -137,7 +137,7 @@ public sealed partial class DemoOrdaliApi
             {
                 throw new ApiException(
                     HttpStatusCode.Conflict,
-                    $"El pedido {order.Code} está {ReorderRules.StatusName(order.Status)} y no puede pasar a {ReorderRules.StatusName(status)}.");
+                    Text.Format("El pedido {0} está {1} y no puede pasar a {2}.", order.Code, Text.Get(ReorderRules.StatusName(order.Status)), Text.Get(ReorderRules.StatusName(status))));
             }
 
             var now = _time.GetUtcNow();
@@ -157,17 +157,17 @@ public sealed partial class DemoOrdaliApi
         var supplier = input.SupplierId is { } supplierId ? _suppliers.FirstOrDefault(s => s.Id == supplierId) : null;
         if (supplier is null)
         {
-            throw Invalid(nameof(PurchaseOrderInput.SupplierId), "Elige el distribuidor.");
+            throw Invalid(nameof(PurchaseOrderInput.SupplierId), Text.Get("Elige el distribuidor."));
         }
 
         if (!supplier.Active && supplier.Id != order.SupplierId)
         {
-            throw Invalid(nameof(PurchaseOrderInput.SupplierId), $"{supplier.Name} está dado de baja.");
+            throw Invalid(nameof(PurchaseOrderInput.SupplierId), Text.Format("{0} está dado de baja.", supplier.Name));
         }
 
         if (input.Lines.Count == 0)
         {
-            throw Invalid(nameof(PurchaseOrderInput.Lines), "Añade al menos un artículo.");
+            throw Invalid(nameof(PurchaseOrderInput.Lines), Text.Get("Añade al menos un artículo."));
         }
 
         var errors = new List<string>();
@@ -177,13 +177,13 @@ public sealed partial class DemoOrdaliApi
             var line = input.Lines[i];
             if (line.ProductId is not { } productId || _products.All(p => p.Id != productId))
             {
-                errors.Add($"Línea {i + 1}: el artículo no existe.");
+                errors.Add(Text.Format("Línea {0}: el artículo no existe.", i + 1));
                 continue;
             }
 
             if (line.Quantity <= 0)
             {
-                errors.Add($"Línea {i + 1}: la cantidad tiene que ser mayor que cero.");
+                errors.Add(Text.Format("Línea {0}: la cantidad tiene que ser mayor que cero.", i + 1));
                 continue;
             }
 
@@ -198,7 +198,7 @@ public sealed partial class DemoOrdaliApi
 
         if (errors.Count > 0)
         {
-            throw new ApiException(HttpStatusCode.BadRequest, "Revisa las líneas del pedido.", new Dictionary<string, string[]> { ["lines"] = [.. errors] });
+            throw new ApiException(HttpStatusCode.BadRequest, Text.Get("Revisa las líneas del pedido."), new Dictionary<string, string[]> { ["lines"] = [.. errors] });
         }
 
         order.SupplierId = supplier.Id;
@@ -212,7 +212,7 @@ public sealed partial class DemoOrdaliApi
         var name = input.Name.Trim();
         if (_suppliers.Any(s => s.Id != id && string.Equals(s.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
-            throw Invalid(nameof(SupplierInput.Name), "Ya hay un distribuidor con ese nombre.");
+            throw Invalid(nameof(SupplierInput.Name), Text.Get("Ya hay un distribuidor con ese nombre."));
         }
 
         return new Supplier(id, name, Clean(input.ContactName), Clean(input.Email), Clean(input.Phone), input.Active);
@@ -230,10 +230,10 @@ public sealed partial class DemoOrdaliApi
     }
 
     private Supplier FindSupplier(Guid id) =>
-        _suppliers.FirstOrDefault(s => s.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "El distribuidor no existe.");
+        _suppliers.FirstOrDefault(s => s.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("El distribuidor no existe."));
 
     private DemoOrder FindOrder(Guid id) =>
-        _orders.FirstOrDefault(o => o.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "El pedido no existe.");
+        _orders.FirstOrDefault(o => o.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("El pedido no existe."));
 
     private PurchaseOrder ToOrder(DemoOrder order) => new(
         order.Id,

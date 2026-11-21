@@ -14,7 +14,7 @@ public sealed partial class DemoOrdaliApi
         Ensure(Permissions.CalendarView);
         if (until <= start || until - start > TimeSpan.FromDays(100))
         {
-            throw Invalid("to", "Pide como mucho 100 días de calendario.");
+            throw Invalid("to", Text.Get("Pide como mucho 100 días de calendario."));
         }
 
         lock (_lock)
@@ -100,8 +100,8 @@ public sealed partial class DemoOrdaliApi
                 throw new ApiException(
                     HttpStatusCode.Conflict,
                     scheduled.Type == ScheduledEventType.Inbound
-                        ? "Una descarga se cierra registrando su entrada."
-                        : "Una carga se cierra registrando la salida de la mercancía.");
+                        ? Text.Get("Una descarga se cierra registrando su entrada.")
+                        : Text.Get("Una carga se cierra registrando la salida de la mercancía."));
             }
 
             return Result(Replace(Close(scheduled, ScheduledEventStatus.Completed, user.Name, null)));
@@ -116,7 +116,7 @@ public sealed partial class DemoOrdaliApi
             var scheduled = FindOpenEvent(id);
             if (scheduled.Type != ScheduledEventType.Inbound)
             {
-                throw new ApiException(HttpStatusCode.Conflict, "Solo se registra una entrada desde una descarga.");
+                throw new ApiException(HttpStatusCode.Conflict, Text.Get("Solo se registra una entrada desde una descarga."));
             }
 
             if (string.IsNullOrWhiteSpace(input.Reference))
@@ -137,7 +137,7 @@ public sealed partial class DemoOrdaliApi
             var scheduled = FindOpenEvent(id);
             if (scheduled.Type != ScheduledEventType.Outbound)
             {
-                throw new ApiException(HttpStatusCode.Conflict, "Solo se registra una salida desde una carga.");
+                throw new ApiException(HttpStatusCode.Conflict, Text.Get("Solo se registra una salida desde una carga."));
             }
 
             var lines = input.Lines.Where(l => l.Quantity != 0 || l.ProductId is not null).ToList();
@@ -153,17 +153,17 @@ public sealed partial class DemoOrdaliApi
                 var line = lines[i];
                 if (line.ProductId is null)
                 {
-                    errors.Add($"Línea {i + 1}: elige el artículo.");
+                    errors.Add(Text.Format("Línea {0}: elige el artículo.", i + 1));
                 }
 
                 if (line.FromLocationId is null)
                 {
-                    errors.Add($"Línea {i + 1}: elige de qué ubicación sale.");
+                    errors.Add(Text.Format("Línea {0}: elige de qué ubicación sale.", i + 1));
                 }
 
                 if (line.Quantity <= 0)
                 {
-                    errors.Add($"Línea {i + 1}: la cantidad tiene que ser mayor que cero.");
+                    errors.Add(Text.Format("Línea {0}: la cantidad tiene que ser mayor que cero.", i + 1));
                 }
 
                 shipments.Add(new MovementInput
@@ -180,7 +180,7 @@ public sealed partial class DemoOrdaliApi
             if (errors.Count > 0)
             {
                 throw new ApiException(
-                    HttpStatusCode.BadRequest, "Revisa las líneas de la carga.", new Dictionary<string, string[]> { [nameof(ShipEventInput.Lines)] = [.. errors] });
+                    HttpStatusCode.BadRequest, Text.Get("Revisa las líneas de la carga."), new Dictionary<string, string[]> { [nameof(ShipEventInput.Lines)] = [.. errors] });
             }
 
             // All or nothing, like the API's single save: check every line against the stock first.
@@ -191,7 +191,7 @@ public sealed partial class DemoOrdaliApi
                 var lot = product.TracksLots ? group.Key.Lot : null;
                 if (product.TracksLots && lot is null)
                 {
-                    throw Invalid(nameof(ShipLineInput.Lot), $"{product.Sku} se controla por lotes: indica el lote.");
+                    throw Invalid(nameof(ShipLineInput.Lot), Text.Format("{0} se controla por lotes: indica el lote.", product.Sku));
                 }
 
                 var available = _stock.FirstOrDefault(s => s.ProductId == product.Id && s.LocationId == from.Id && s.Lot == lot)?.Quantity ?? 0;
@@ -199,7 +199,7 @@ public sealed partial class DemoOrdaliApi
                 if (available < wanted)
                 {
                     throw new ApiException(
-                        HttpStatusCode.Conflict, $"No hay stock suficiente de {product.Sku} en {from.Code}: hay {available:0.##} y se piden {wanted:0.##}.");
+                        HttpStatusCode.Conflict, Text.Format("No hay stock suficiente de {0} en {1}: hay {2:0.##} y se piden {3:0.##}.", product.Sku, from.Code, available, wanted));
                 }
             }
 
@@ -219,29 +219,29 @@ public sealed partial class DemoOrdaliApi
         var errors = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(input.Title))
         {
-            errors[nameof(ScheduledEventInput.Title)] = ["Escribe un título."];
+            errors[nameof(ScheduledEventInput.Title)] = [Text.Get("Escribe un título.")];
         }
 
         if (input.StartsAt == default)
         {
-            errors[nameof(ScheduledEventInput.StartsAt)] = ["Indica cuándo empieza."];
+            errors[nameof(ScheduledEventInput.StartsAt)] = [Text.Get("Indica cuándo empieza.")];
         }
         else if (input.EndsAt <= input.StartsAt)
         {
-            errors[nameof(ScheduledEventInput.EndsAt)] = ["Tiene que terminar después de empezar."];
+            errors[nameof(ScheduledEventInput.EndsAt)] = [Text.Get("Tiene que terminar después de empezar.")];
         }
         else if (input.EndsAt - input.StartsAt > LongestEvent)
         {
-            errors[nameof(ScheduledEventInput.EndsAt)] = ["No puede durar más de una semana."];
+            errors[nameof(ScheduledEventInput.EndsAt)] = [Text.Get("No puede durar más de una semana.")];
         }
         else if (isNew && input.EndsAt < _time.GetUtcNow())
         {
-            errors[nameof(ScheduledEventInput.StartsAt)] = ["Esa fecha ya ha pasado."];
+            errors[nameof(ScheduledEventInput.StartsAt)] = [Text.Get("Esa fecha ya ha pasado.")];
         }
 
         if (input.RepeatWeeks is < 0 or > 26)
         {
-            errors[nameof(ScheduledEventInput.RepeatWeeks)] = ["Se puede repetir como mucho 26 semanas."];
+            errors[nameof(ScheduledEventInput.RepeatWeeks)] = [Text.Get("Se puede repetir como mucho 26 semanas.")];
         }
 
         if (input.DockLocationId is { } dockId)
@@ -255,13 +255,13 @@ public sealed partial class DemoOrdaliApi
             };
             if (dock is null)
             {
-                errors[nameof(ScheduledEventInput.DockLocationId)] = ["La ubicación no existe."];
+                errors[nameof(ScheduledEventInput.DockLocationId)] = [Text.Get("La ubicación no existe.")];
             }
             else if (expected is { } type && dock.Type != type)
             {
                 errors[nameof(ScheduledEventInput.DockLocationId)] = [type == LocationType.Receiving
-                    ? "Una descarga se reserva en una ubicación de recepción."
-                    : "Una carga se reserva en una ubicación de expedición."];
+                    ? Text.Get("Una descarga se reserva en una ubicación de recepción.")
+                    : Text.Get("Una carga se reserva en una ubicación de expedición.")];
             }
         }
 
@@ -275,13 +275,13 @@ public sealed partial class DemoOrdaliApi
                 var product = line.ProductId is { } productId ? _products.FirstOrDefault(p => p.Id == productId) : null;
                 if (product is null)
                 {
-                    lineErrors.Add($"Línea {i + 1}: el artículo no existe.");
+                    lineErrors.Add(Text.Format("Línea {0}: el artículo no existe.", i + 1));
                     continue;
                 }
 
                 if (line.Quantity <= 0)
                 {
-                    lineErrors.Add($"Línea {i + 1}: la cantidad tiene que ser mayor que cero.");
+                    lineErrors.Add(Text.Format("Línea {0}: la cantidad tiene que ser mayor que cero.", i + 1));
                     continue;
                 }
 
@@ -304,7 +304,7 @@ public sealed partial class DemoOrdaliApi
 
         if (errors.Count > 0)
         {
-            throw new ApiException(HttpStatusCode.BadRequest, "Revisa los datos de la cita.", errors);
+            throw new ApiException(HttpStatusCode.BadRequest, Text.Get("Revisa los datos de la cita."), errors);
         }
 
         return [.. lines.OrderBy(l => l.Sku, StringComparer.Ordinal)];
@@ -347,12 +347,12 @@ public sealed partial class DemoOrdaliApi
         if (clash is not null)
         {
             throw new ApiException(
-                HttpStatusCode.Conflict, $"{scheduled.DockLocationCode} ya está reservado a esa hora para «{clash.Title}». Puedes programarlo igualmente.");
+                HttpStatusCode.Conflict, Text.Format("{0} ya está reservado a esa hora para «{1}». Puedes programarlo igualmente.", scheduled.DockLocationCode, clash.Title));
         }
     }
 
     private ScheduledEvent FindEvent(Guid id) =>
-        _events.FirstOrDefault(e => e.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, "La cita no existe.");
+        _events.FirstOrDefault(e => e.Id == id) ?? throw new ApiException(HttpStatusCode.NotFound, Text.Get("La cita no existe."));
 
     private ScheduledEvent FindOpenEvent(Guid id)
     {
@@ -361,7 +361,7 @@ public sealed partial class DemoOrdaliApi
             ? scheduled
             : throw new ApiException(
                 HttpStatusCode.Conflict,
-                scheduled.Status == ScheduledEventStatus.Completed ? "Esta cita ya está hecha." : "Esta cita está anulada.");
+                scheduled.Status == ScheduledEventStatus.Completed ? Text.Get("Esta cita ya está hecha.") : Text.Get("Esta cita está anulada."));
     }
 
     private ScheduledEvent Replace(ScheduledEvent scheduled)

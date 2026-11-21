@@ -342,7 +342,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
 
             if (_deletedUsers.Any(d => string.Equals(d.Profile.Email, email, StringComparison.OrdinalIgnoreCase)))
             {
-                throw Invalid(nameof(NewUserInput.Email), "Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados.");
+                throw Invalid(nameof(NewUserInput.Email), Text.Get("Hay un perfil eliminado con ese email. Un administrador puede recuperarlo desde Usuarios eliminados."));
             }
 
             var template = input.TemplateId is { } templateId
@@ -398,7 +398,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var user = FindUser(id);
             if (user.Id == admin.Id)
             {
-                throw new ApiException(HttpStatusCode.Conflict, "No puedes eliminar tu propio perfil.");
+                throw new ApiException(HttpStatusCode.Conflict, Text.Get("No puedes eliminar tu propio perfil."));
             }
 
             _users.Remove(user);
@@ -427,7 +427,7 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
             var index = _deletedUsers.FindIndex(d => d.Profile.Id == id);
             if (index < 0)
             {
-                throw new ApiException(HttpStatusCode.NotFound, "El perfil no existe.");
+                throw new ApiException(HttpStatusCode.NotFound, Text.Get("El perfil no existe."));
             }
 
             var user = _deletedUsers[index].Profile;
@@ -797,12 +797,12 @@ public sealed partial class DemoOrdaliApi : IOrdaliApi
     {
         if (input.MaxStock > 0 && input.MaxStock < input.MinStock)
         {
-            throw Invalid(nameof(ProductInput.MaxStock), "El stock máximo no puede ser menor que el mínimo.");
+            throw Invalid(nameof(ProductInput.MaxStock), Text.Get("El stock máximo no puede ser menor que el mínimo."));
         }
 
         if (input.SupplierId is { } supplierId && _suppliers.All(s => s.Id != supplierId))
         {
-            throw Invalid(nameof(ProductInput.SupplierId), "El distribuidor no existe.");
+            throw Invalid(nameof(ProductInput.SupplierId), Text.Get("El distribuidor no existe."));
         }
 
         if (input.DefaultLocationId is { } locationId && _locations.All(l => l.Id != locationId))

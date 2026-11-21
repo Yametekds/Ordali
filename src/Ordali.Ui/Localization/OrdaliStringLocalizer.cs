@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Localization;
+using Ordali.Client;
 using Ordali.Client.Localization;
 
 namespace Ordali.Ui.Localization;
@@ -6,14 +7,14 @@ namespace Ordali.Ui.Localization;
 /// <summary>
 /// The <see cref="IStringLocalizer"/> pages inject as <c>L</c>. The key is the Spanish text, so
 /// Spanish needs no lookup and a missing translation still shows readable text. It looks in the
-/// shared UI's texts first and then in any <see cref="Translations"/> the host registers for its
-/// own pages.
+/// shared UI's texts first, then in any <see cref="Translations"/> the host registers for its
+/// own pages and last in the client's messages, which are also the ones the API sends.
 /// </summary>
 public sealed class OrdaliStringLocalizer : IStringLocalizer
 {
     private readonly Translations[] _sets;
 
-    public OrdaliStringLocalizer(IEnumerable<Translations> hostTexts) => _sets = [UiText.Translations, .. hostTexts];
+    public OrdaliStringLocalizer(IEnumerable<Translations> hostTexts) => _sets = [UiText.Translations, .. hostTexts, Text.Translations];
 
     public LocalizedString this[string name]
     {
@@ -53,6 +54,7 @@ public sealed class OrdaliStringLocalizer : IStringLocalizer
             }
         }
 
-        return false;
+        // API messages arrive with their values filled in ("Línea 2: …").
+        return Text.Translations.TryMatch(spanish, out value);
     }
 }
