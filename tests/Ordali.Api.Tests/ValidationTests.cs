@@ -45,6 +45,22 @@ public class ValidationTests(OrdaliApiFactory factory) : IClassFixture<OrdaliApi
         Assert.Equal(["Línea 2: la cantidad está fuera de rango."], errors["lines"]);
     }
 
+    [Fact]
+    public async Task Purchase_order_lines_are_validated_too()
+    {
+        var client = await factory.SignInRawAsync(OrdaliApiFactory.SupervisorEmail);
+
+        var response = await client.PostAsJsonAsync("/api/v1/purchase-orders", new
+        {
+            supplierId = Guid.Parse("4b8e7a10-0000-4000-8000-300000000001"),
+            lines = new[] { new { productId = DemoIds.Product(DemoIds.Rice), quantity = 2_000_000m } },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var errors = await ErrorsAsync(response);
+        Assert.Equal(["Línea 1: la cantidad está fuera de rango."], errors["lines"]);
+    }
+
     private static async Task<Dictionary<string, string[]>> ErrorsAsync(HttpResponseMessage response)
     {
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(OrdaliApiFactory.Json);
