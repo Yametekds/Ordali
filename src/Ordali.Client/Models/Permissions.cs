@@ -14,13 +14,15 @@ public static class Permissions
     public const string MovementsView = "movements.view";
     public const string MovementsCreate = "movements.create";
     public const string MovementsAdjust = "movements.adjust";
+    public const string CalendarView = "calendar.view";
+    public const string CalendarEdit = "calendar.edit";
     public const string UsersView = "users.view";
     public const string UsersCreate = "users.create";
 
     public static IReadOnlyList<string> All { get; } =
     [
         ProductsView, ProductsEdit, LocationsView, LocationsEdit, StockView,
-        MovementsView, MovementsCreate, MovementsAdjust, UsersView, UsersCreate,
+        MovementsView, MovementsCreate, MovementsAdjust, CalendarView, CalendarEdit, UsersView, UsersCreate,
     ];
 
     public static bool IsKnown(string permission) => All.Contains(permission);

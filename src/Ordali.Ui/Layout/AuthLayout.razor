@@ -1,6 +1,13 @@
 @inherits LayoutComponentBase
 
 <div class="auth">
+    <aside class="auth-side">
+        <div class="auth-hero">
+            <BrandLogo Size="72" ShowName="false" />
+            <span class="auth-name">Ordali</span>
+            <span class="auth-tagline">Entradas, ubicaciones y stock de tu almacén, al día desde el móvil o el ordenador.</span>
+        </div>
+    </aside>
     <div class="auth-column">
         @Body
         @if (HostLinks is not null)

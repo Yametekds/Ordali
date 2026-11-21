@@ -74,6 +74,11 @@ Todas las rutas bajo `/api/v1`, JSON en camelCase y enums como texto (`"Transfer
 | GET | `/receipts?pending=&code=`, `/receipts/{id}` | `movements.view` |
 | POST | `/receipts` (`{ code, reference, lines: [{ productId, lot, quantity }] }`) | `movements.create` |
 | POST | `/receipts/{id}/putaway` (`{ productId, lot, toLocationId, quantity }`) | `movements.create` |
+| GET | `/calendar?from=&to=` (como mucho 100 días), `/calendar/{id}` | `calendar.view` |
+| POST / PUT | `/calendar`, `/calendar/{id}` (`{ type, title, partner, startsAt, endsAt, dockLocationId, notes, lines: [{ productId, quantity }], repeatWeeks, allowOverlap }`; 409 si el muelle está reservado) | `calendar.edit` |
+| POST | `/calendar/{id}/cancel`, `/calendar/{id}/complete` (solo tipo `Other`) | `calendar.edit` |
+| POST | `/calendar/{id}/receive` (mismo cuerpo que `/receipts`) | `movements.create` |
+| POST | `/calendar/{id}/ship` (`{ reference, lines: [{ productId, fromLocationId, lot, quantity }] }`) | `movements.create` |
 | GET | `/profile-templates`, `/profile-templates/{id}` | `users.view` o `users.create` |
 | POST / PUT / DELETE | `/profile-templates`, `/profile-templates/{id}` | Administrador |
 | GET | `/users`, `/users/{id}` | `users.view` |
@@ -88,4 +93,4 @@ Los modelos exactos están en `src/Ordali.Client/Models`.
 ## Logo y fuentes
 
 - `src/Ordali.Ui/wwwroot/img/ordali-logo.png`: logo sin fondo. `ordali-icon.png`: logo sobre fondo oscuro, para iconos de app.
-- Roboto y Roboto Condensed van incluidas en `src/Ordali.Ui/wwwroot/fonts` (licencia SIL OFL), para que la app funcione sin conexión.
+- Atkinson Hyperlegible Next (texto) y Atkinson Hyperlegible Mono (códigos de artículo, ubicación y lote) van incluidas en `src/Ordali.Ui/wwwroot/fonts` (licencia SIL OFL), para que la app funcione sin conexión. Se eligieron porque distinguen bien caracteres parecidos (0/O, 1/l/I, 5/S), algo que importa al leer códigos en una pistola o un móvil.
